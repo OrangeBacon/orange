@@ -4,6 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Interface"
+        xmlns:vmlib="clr-namespace:VMLib;assembly=VMLib"
+        xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
@@ -27,11 +29,47 @@
                         <RowDefinition Height="85"/>
                     </Grid.RowDefinitions>
                     <GroupBox Header="Components" Grid.Column="0">
-                        <ItemsControl></ItemsControl>
+                        <ItemsControl Name="ComponentsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock>
+                                            <TextBlock.Text>
+                                                <MultiBinding StringFormat="{}{0} ID: {1}">
+                                                    <Binding Path="TypeName"/>
+                                                    <Binding Path="ComponentID"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </GroupBox>
                     <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"/>
                     <GroupBox Header="Microcode Control" Grid.Column="2">
-                        <ItemsControl></ItemsControl>
+                        <ItemsControl Name="CommandList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Commands}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="20"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox Grid.Column="0" Name="Check"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Name}"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </GroupBox>
                     <GroupBox Header ="Run Controls"  Grid.ColumnSpan="3" Grid.Row="1">
                         <Grid Margin="10">

@@ -6,5 +6,10 @@ using System.Threading.Tasks;
 
 namespace VMLib {
     public class MicrocodeCommand {
+        public string Name { get; }
+
+        public MicrocodeCommand(string name) {
+            Name = name;
+        }
     }
 }

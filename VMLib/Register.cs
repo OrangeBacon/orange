@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace VMLib {
     public class Register : Component {
-        public int Value { get => Value; }
-        private int value;
-        
+        public int Value { get; private set; }
 
-        public Register(VMCore core) : base(core) {
-            Commands.Add(new MicrocodeCommand());
-            Commands.Add(new MicrocodeCommand());
+        public static string TypeName { get; } = nameof(Register);
+
+        public Register(VMCore core, string name) : base(core) {
+            Commands.Add(new MicrocodeCommand($"Store Register {name}"));
+            Commands.Add(new MicrocodeCommand($"Load Register {name}"));
+            OnPropertyChanged("Value");
         }
-
     }
 }

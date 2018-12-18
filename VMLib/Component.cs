@@ -7,9 +7,9 @@ using System.Text;
 namespace VMLib {
     public class Component : INotifyPropertyChanged {
         static int ComponentIDCounter = 0;
-        public readonly int ComponentID;
+        public int ComponentID { get; }
 
-        public readonly List<MicrocodeCommand> Commands = new List<MicrocodeCommand>();
+        public List<MicrocodeCommand> Commands { get; } = new List<MicrocodeCommand>();
 
         public Component(VMCore core) {
             core.Add(this);
