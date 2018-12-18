@@ -22,9 +22,8 @@ namespace Interface {
         public MainWindow() {
             InitializeComponent();
             var logger = new Logger(LogList);
-            for (int i = 0; i < 100; i++) {
-                logger.Info($"Application Started {i}");
-            }
+
+            var vm = new StarfishVM(logger);
         }
     }
 }
