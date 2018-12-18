@@ -12,9 +12,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Menu Grid.Row="0">
-            <MenuItem Header="_File">
-                <MenuItem Header="_Exit"/>
-            </MenuItem>
+            <MenuItem Header="This is a menu item - unsure if needed"/>
         </Menu>
         <TabControl Grid.Row ="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,10,10,10">
             <TabItem Header="Microcode Process">
@@ -43,9 +41,9 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0"/>
-                            <Button Content="Step" Grid.Column="1" Margin="0,0,10,0"/>
+                            <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0"/>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="Run Speed (seconds)" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Delay Between Steps While Running (seconds)" HorizontalAlignment="Center"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -58,6 +56,17 @@
                         </Grid>
                     </GroupBox>
                 </Grid>
+            </TabItem>
+            <TabItem Header="Log">
+                <ScrollViewer>
+                    <ItemsControl Name="LogList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </Grid>

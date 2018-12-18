@@ -21,6 +21,10 @@ namespace Interface {
     public partial class MainWindow : Window {
         public MainWindow() {
             InitializeComponent();
+            var logger = new Logger(LogList);
+            for (int i = 0; i < 100; i++) {
+                logger.Info($"Application Started {i}");
+            }
         }
     }
 }
