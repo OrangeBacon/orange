@@ -7,7 +7,8 @@
         xmlns:vmlib="clr-namespace:VMLib;assembly=VMLib"
         xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="450" Width="800"
+        x:Name="root">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
@@ -97,7 +98,7 @@
             </TabItem>
             <TabItem Header="Log">
                 <ScrollViewer>
-                    <ItemsControl Name="LogList">
+                    <ItemsControl Name="LogList" ItemsSource="{Binding list, ElementName=root}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}"/>

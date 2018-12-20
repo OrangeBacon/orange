@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,11 +23,13 @@ namespace Interface {
         VMCore vm;
         private Logger logger;
 
+        ObservableCollection<string> _list = new ObservableCollection<string>();
+        public ObservableCollection<string> list { get { return _list; } }
+
         public MainWindow() {
             InitializeComponent();
-            logger = new Logger(LogList);
+            logger = new Logger(ref _list);
             vm = new StarfishVM(logger).VM;
-
             ComponentsList.ItemsSource = vm.Components;
 
             CommandList.ItemsSource = vm.Components;
