@@ -5,13 +5,16 @@ using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace VMLib {
-    public class Component : INotifyPropertyChanged {
+    public abstract class Component : INotifyPropertyChanged {
         static int ComponentIDCounter = 0;
         public int ComponentID { get; }
+
+        public string TypeName { get; private set;}
 
         public List<MicrocodeCommand> Commands { get; } = new List<MicrocodeCommand>();
 
         public Component(VMCore core) {
+            TypeName = this.GetType().Name;
             core.Add(this);
             ComponentID = ComponentIDCounter++;
         }

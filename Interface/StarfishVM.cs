@@ -14,8 +14,10 @@ namespace Interface {
             if(logger != null) {
                 VM.Log = logger;
             }
-            var regA = new Register(VM, "A");
-            var regB = new Register(VM, "B");
+
+            var dataBus = new Bus(VM);
+            var regA = new Register(VM, "A", dataBus);
+            var regB = new Register(VM, "B", dataBus);
         }
     }
 }

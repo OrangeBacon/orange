@@ -19,14 +19,30 @@ namespace Interface {
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window {
+        VMCore vm;
+        private Logger logger;
+
         public MainWindow() {
             InitializeComponent();
-            var logger = new Logger(LogList);
-            var vm = new StarfishVM(logger).VM;
-            logger.Info(vm.Components[0].ComponentID.ToString());
-            ComponentsList.ItemsSource = new List<Component>(vm.Components);
-            logger.Info(ComponentsList.ItemsSource.ToString());
-            CommandList.ItemsSource = new List<Component>(vm.Components);
+            logger = new Logger(LogList);
+            vm = new StarfishVM(logger).VM;
+
+            ComponentsList.ItemsSource = vm.Components;
+
+            CommandList.ItemsSource = vm.Components;
+        }
+
+        private void SingleStep(object sender, RoutedEventArgs e) {
+            logger.Info("STEP");
+            foreach (Component component in vm.Components) {
+                foreach (MicrocodeCommand command in component.Commands) {
+                    if (command.Active) {
+                        logger.Info(command.Name);
+                    }
+                }
+            }
+            e.Handled = true;
+            logger.Info(e.Source.ToString());
         }
     }
 }

@@ -17,7 +17,7 @@
             <MenuItem Header="This is a menu item - unsure if needed"/>
         </Menu>
         <TabControl Grid.Row ="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="10,10,10,10">
-            <TabItem Header="Microcode Process">
+            <TabItem Header="Microcode Process" Name="MicrocodeProcessTab">
                 <Grid Background="#FFE5E5E5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -60,7 +60,7 @@
                                                             <ColumnDefinition Width="20"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <CheckBox Grid.Column="0" Name="Check"/>
+                                                        <CheckBox Grid.Column="0" Name="Check" IsChecked="{Binding Active}"/>
                                                         <TextBlock Grid.Column="1" Text="{Binding Name}"/>
                                                     </Grid>
                                                 </DataTemplate>
@@ -79,7 +79,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0"/>
-                            <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0"/>
+                            <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0" Click="SingleStep" Name="SingleStepButton"/>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="Delay Between Steps While Running (seconds)" HorizontalAlignment="Center"/>
                                 <Grid>
