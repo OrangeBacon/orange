@@ -11,7 +11,7 @@ namespace Interface {
     class Logger : ILogger {
         public ObservableCollection<string> Log;
 
-        public Logger(ref ObservableCollection<string> log) {
+        public Logger(ObservableCollection<string> log) {
             Log = log;
         }
 

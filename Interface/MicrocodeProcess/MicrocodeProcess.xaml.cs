@@ -15,20 +15,17 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using VMLib;
 
-namespace Interface {
+namespace Interface.Views {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window {
+    public partial class MicrocodeProcess : Window {
         VMCore vm;
         private Logger logger;
 
-        ObservableCollection<string> _list = new ObservableCollection<string>();
-        public ObservableCollection<string> list { get { return _list; } }
-
-        public MainWindow() {
+        public MicrocodeProcess() {
             InitializeComponent();
-            logger = new Logger(ref _list);
+            logger = new Logger(((Models.App)Application.Current.Properties[Models.App.Name]).Log);
             vm = new StarfishVM(logger).VM;
             ComponentsList.ItemsSource = vm.Components;
 
