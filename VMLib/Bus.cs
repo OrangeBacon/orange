@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VMLib {
     public class Bus : Component {
-        private int Value;
+        public int Value { get; private set; }
 
         public Bus(VMCore core) : base(core) { }
 
@@ -16,6 +16,7 @@ namespace VMLib {
 
         public void Write(int val) {
             Value = val;
+            OnPropertyChanged("Value");
         }
     }
 }

@@ -12,13 +12,24 @@
     <Window.DataContext>
         <ViewModels:MicrocodeProcess/>
     </Window.DataContext>
+    <Window.Resources>
+        <Style TargetType="{x:Type DataGridCell}">
+            <Setter Property="Foreground" Value="Black" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{x:Null}" />
+                    <Setter Property="BorderBrush" Value="{x:Null}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Menu Grid.Row="0">
-            <MenuItem Header="Show Log" Command="{Binding ShowLog}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" />
+            <MenuItem Header="Show Log" Command="{Binding ShowLog}"/>
         </Menu>
         <Grid Grid.Row="1" Background="#FFE5E5E5">
             <Grid.ColumnDefinitions>
@@ -31,7 +42,7 @@
                 <RowDefinition Height="85"/>
             </Grid.RowDefinitions>
             <GroupBox Header="Components" Grid.Column="0">
-                <ItemsControl Name="ComponentsList">
+                <ItemsControl ItemsSource="{Binding VM.Components}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
@@ -50,28 +61,18 @@
             </GroupBox>
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"/>
             <GroupBox Header="Microcode Control" Grid.Column="2">
-                <ItemsControl Name="CommandList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <ItemsControl ItemsSource="{Binding Commands}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="20"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <CheckBox Grid.Column="0" Name="Check" IsChecked="{Binding Active}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Name}"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <DataGrid CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderBrush="#00000000" Background="#00000000" ItemsSource="{Binding VM.Controller.Commands, Mode=OneWay}" AutoGenerateColumns="False" GridLinesVisibility="None" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="Active" CanUserResize="False" CanUserReorder="False" CanUserSort="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Description" Binding="{Binding Name}" Width="*" CanUserResize="False" CanUserReorder="False" CanUserSort="False"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </GroupBox>
             <GroupBox Header ="Run Controls"  Grid.ColumnSpan="3" Grid.Row="1">
                 <Grid Margin="10">
@@ -81,7 +82,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0"/>
-                    <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0" Click="SingleStep" Name="SingleStepButton"/>
+                    <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0" Command="{Binding SingleStep}" Name="SingleStepButton"/>
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Delay Between Steps While Running (seconds)" HorizontalAlignment="Center"/>
                         <Grid>

@@ -22,6 +22,7 @@ namespace VMLib {
 
         private void Store() {
             Value = bus.Read();
+            OnPropertyChanged("Value");
         }
 
         private void Load() {

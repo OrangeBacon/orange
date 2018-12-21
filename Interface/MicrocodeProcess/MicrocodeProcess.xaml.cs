@@ -21,19 +21,8 @@ namespace Interface.Views {
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MicrocodeProcess : Window {
-        private VMCore vm;
-        private ILogger logger;
-
         public MicrocodeProcess() {
             InitializeComponent();
-
-            logger = (ViewModels.App)Application.Current.Properties[ViewModels.App.TypeName];
-
-            vm = new StarfishVM(logger).VM;
-            ComponentsList.ItemsSource = vm.Components;
-
-            CommandList.ItemsSource = vm.Components;
-
             ((ViewModels.MicrocodeProcess)DataContext).ShowLogEvent += ShowLog;
         }
 
@@ -42,7 +31,7 @@ namespace Interface.Views {
             if (LogWindow == null) {
                 LogWindow = new Log {
                     Owner = this,
-                    DataContext = (ViewModels.App)Application.Current.Properties[ViewModels.App.TypeName]
+                    DataContext = Globals.Log
                 };
                 LogWindow.Show();
                 LogWindow.Closed += LogClose;
@@ -57,19 +46,6 @@ namespace Interface.Views {
 
         private void LogClose(object sender, EventArgs e) {
             LogWindow = null;
-        }
-
-        private void SingleStep(object sender, RoutedEventArgs e) {
-            logger.Info("STEP");
-            foreach (Component component in vm.Components) {
-                foreach (MicrocodeCommand command in component.Commands) {
-                    if (command.Active) {
-                        logger.Info(command.Name);
-                    }
-                }
-            }
-            e.Handled = true;
-            logger.Info(e.Source.ToString());
         }
     }
 }

@@ -5,10 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace VMLib {
-    public class MicrocodeCommand {
+    public class MicrocodeCommand : ObservableObject {
         public string Name { get; }
-
-        public bool Active { get; set; }
 
         private readonly Action action;
 

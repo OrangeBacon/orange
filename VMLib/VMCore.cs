@@ -2,15 +2,25 @@
 using System.Collections.ObjectModel;
 
 namespace VMLib {
-    public class VMCore {
-        readonly List<Component> Comp = new List<Component>();
-        public ReadOnlyCollection<Component> Components { get => Comp.AsReadOnly(); }
-        public ILogger Log = new NullLogger();
-        public readonly MicrocodeController controller = new MicrocodeController();
-        
+    public class VMCore : ObservableObject {
+        private readonly ObservableCollection<Component> _components = new ObservableCollection<Component>();
+        public ReadOnlyObservableCollection<Component> Components { get; }
+
+        public MicrocodeController Controller { get; }
+
+        private ILogger _log = new NullLogger();
+        public ILogger Log { get=>_log; set { _log = value; OnPropertyChanged(); } }
+
+        public VMCore() {
+            Components = new ReadOnlyObservableCollection<Component>(_components);
+            Controller = new MicrocodeController(this, Log);
+            Controller.PropertyChanged += (a, b) => { OnPropertyChanged("Controller"); };
+        }
+
         public void Add(Component c) {
-            Comp.Add(c);
-            controller.AddRange(c.Commands);
+            _components.Add(c);
+            OnPropertyChanged("Components");
+            Controller.Add(c);
             Log.Info("Added Component");
         }
     }

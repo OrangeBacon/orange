@@ -11,10 +11,6 @@ namespace Interface {
     /// Interaction logic for App.xaml
     /// </summary>
     public partial class App : Application {
-        App() {
-            Current.Properties.Add(ViewModels.App.TypeName, new ViewModels.App());
-        }
-
         private void Application_Startup(object sender, StartupEventArgs e) {
             var win = new Views.MicrocodeProcess {
                 Title = "Starfish Virtual Machine"

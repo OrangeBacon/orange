@@ -7,21 +7,39 @@ using Interface.Framework;
 using Interface;
 using System.Windows;
 using System.Windows.Input;
+using VMLib;
 
 namespace Interface.ViewModels {
     class MicrocodeProcess : ObservableObject {
+
+        public VMCore VM { get; } = new StarfishVM(Globals.Log).VM;
+
         public event EventHandler ShowLogEvent;
 
         private ICommand _showLog;
         public ICommand ShowLog {
             get {
                 if (_showLog == null) {
-                    _showLog = new RelayCommand(() => {
-                        ShowLogEvent?.Invoke(this, new EventArgs());
-                    });
+                    _showLog = new RelayCommand(ShowLogExecute);
                 }
                 return _showLog;
             }
+        }
+        private void ShowLogExecute() {
+            ShowLogEvent?.Invoke(this, new EventArgs());
+        }
+
+        private ICommand _singleStep;
+        public ICommand SingleStep {
+            get {
+                if(_singleStep == null) {
+                    _singleStep = new RelayCommand(SingleStepExecute);
+                }
+                return _singleStep;
+            }
+        }
+        private void SingleStepExecute() {
+            Globals.Log.Info("STEP");
         }
     }
 }

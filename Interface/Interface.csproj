@@ -71,9 +71,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Framework\Globals.cs" />
     <Compile Include="Framework\RelayCommand.cs" />
-    <Compile Include="Framework\ObservableObject.cs" />
-    <Compile Include="App\AppModel.cs" />
     <Compile Include="MicrocodeProcess\MicrocodeProcessViewModel.cs" />
     <Compile Include="StarfishVM.cs" />
     <Page Include="Log\Log.xaml">
@@ -88,7 +87,6 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="App\AppViewModel.cs" />
     <Compile Include="Log\Log.xaml.cs">
       <DependentUpon>Log.xaml</DependentUpon>
     </Compile>

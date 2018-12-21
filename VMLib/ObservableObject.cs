@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 
-namespace Interface.Framework {
+namespace VMLib {
     public abstract class ObservableObject : INotifyPropertyChanged {
         public event PropertyChangedEventHandler PropertyChanged;
 
