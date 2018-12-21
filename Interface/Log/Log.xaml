@@ -8,7 +8,7 @@
         Title="Log" Height="450" Width="800">
     <Grid>
         <ScrollViewer>
-            <ItemsControl Name="LogList" ItemsSource="{Binding Log}">
+            <ItemsControl Margin="10"  Name="LogList" ItemsSource="{Binding Log}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding}"/>
