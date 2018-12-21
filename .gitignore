@@ -2,3 +2,7 @@ Debug/
 Release/
 obj/
 .vs/
+packages/
+.user
+bin/
+Releases/
