@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using VMLib;
+using Interface.Framework;
 
 namespace Interface.Views {
     /// <summary>
@@ -21,15 +22,26 @@ namespace Interface.Views {
     /// </summary>
     public partial class MicrocodeProcess : Window {
         VMCore vm;
-        private Logger logger;
+        private ILogger logger;
 
         public MicrocodeProcess() {
             InitializeComponent();
-            logger = new Logger(((Models.App)Application.Current.Properties[Models.App.Name]).Log);
+
+            logger = (ViewModels.App)Application.Current.Properties[ViewModels.App.TypeName];
+
             vm = new StarfishVM(logger).VM;
             ComponentsList.ItemsSource = vm.Components;
 
             CommandList.ItemsSource = vm.Components;
+
+            ((ViewModels.MicrocodeProcess)DataContext).ShowLogEvent += ShowLog;
+        }
+
+        private void ShowLog(object sender, EventArgs e) {
+            var win = new Log {
+                Owner = this
+            };
+            win.Show();
         }
 
         private void SingleStep(object sender, RoutedEventArgs e) {

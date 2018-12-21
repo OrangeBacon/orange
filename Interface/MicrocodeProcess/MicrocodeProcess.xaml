@@ -18,7 +18,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Menu Grid.Row="0">
-            <MenuItem Header="Show Log" Command="{Binding ShowLog, diag:PresentationTraceSources.TraceLevel=High}"/>
+            <MenuItem Header="Show Log" Command="{Binding ShowLog}" CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" />
         </Menu>
         <Grid Grid.Row="1" Background="#FFE5E5E5">
             <Grid.ColumnDefinitions>

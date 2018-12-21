@@ -19,6 +19,8 @@ namespace Interface.Views {
     public partial class Log : Window {
         public Log() {
             InitializeComponent();
+
+            DataContext = (ViewModels.App)Application.Current.Properties[ViewModels.App.TypeName];
         }
     }
 }

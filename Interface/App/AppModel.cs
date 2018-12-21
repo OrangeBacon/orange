@@ -6,8 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Interface.Models {
-    class App {
-        public static string Name = nameof(App);
+    class App : Framework.ObservableObject {
+        public static string TypeName = nameof(App);
 
         public ObservableCollection<string> Log { get; } = new ObservableCollection<string>();
     }
