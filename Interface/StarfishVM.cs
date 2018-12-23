@@ -12,7 +12,7 @@ namespace Interface {
         public StarfishVM(ILogger logger = null) {
             VM = new VMCore();
             if(logger != null) {
-                VM.Log = logger;
+                VMCore.Log = logger;
             }
 
             var dataBus = new Bus(VM, "Data");

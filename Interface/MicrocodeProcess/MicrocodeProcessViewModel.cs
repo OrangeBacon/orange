@@ -44,7 +44,7 @@ namespace Interface.ViewModels {
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
             foreach(var command in ActiveCommands) {
-                Globals.Log.Info(command.Name);
+                VM.Controller.Run(ActiveCommands);
             }
         }
 

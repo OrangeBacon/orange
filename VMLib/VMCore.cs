@@ -8,12 +8,11 @@ namespace VMLib {
 
         public MicrocodeController Controller { get; }
 
-        private ILogger _log = new NullLogger();
-        public ILogger Log { get=>_log; set { _log = value; OnPropertyChanged(); } }
+        public static ILogger Log = new NullLogger();
 
         public VMCore() {
             Components = new ReadOnlyObservableCollection<Component>(_components);
-            Controller = new MicrocodeController(this, Log);
+            Controller = new MicrocodeController();
             Controller.PropertyChanged += (a, b) => { OnPropertyChanged("Controller"); };
         }
 

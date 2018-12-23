@@ -13,8 +13,14 @@ namespace VMLib {
         private readonly VMCore core;
 
         public Register(VMCore core, string name, Bus bus) : base(core, nameof(Register) +" "+ name) {
-            Commands.Add(new MicrocodeCommand($"Store Register {name}", Store));
-            Commands.Add(new MicrocodeCommand($"Load Register {name}", Load));
+            Commands.Add(new MicrocodeCommand($"Store Register {name}", Store, this) {
+                Depends = {bus},
+                Changes = {this}
+            });
+            Commands.Add(new MicrocodeCommand($"Load Register {name}", Load, this) {
+                Depends = {this},
+                Changes = {bus}
+            });
             OnPropertyChanged("Value");
             this.bus = bus;
             this.core = core;
