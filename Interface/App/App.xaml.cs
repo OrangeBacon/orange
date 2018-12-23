@@ -21,8 +21,10 @@ namespace Interface {
         }
 
         private async Task Update() {
-            using (var mgr = UpdateManager.GitHubUpdateManager(@"https://github.com/ScratchOs/starfish")) { 
+            using (var mgr = UpdateManager.GitHubUpdateManager(@"https://github.com/ScratchOs/starfish")) {
+                Framework.Globals.Log.Info("Starting Update Check");
                 await mgr.Result.UpdateApp();
+                Framework.Globals.Log.Info("Finished Update Check");
             }
         }
     }

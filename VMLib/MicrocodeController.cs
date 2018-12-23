@@ -19,8 +19,6 @@ namespace VMLib {
                     _log = core.Log;
                 }
             };
-
-            Commands.CollectionChanged += (a, b) => System.Diagnostics.Trace.WriteLine("CHANGED!");
         }
 
         public void Add(Component c) {

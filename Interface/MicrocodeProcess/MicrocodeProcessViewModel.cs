@@ -40,6 +40,29 @@ namespace Interface.ViewModels {
         }
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
+            foreach (var command in ActiveCommands) {
+                Globals.Log.Info(command.Name);
+            }
+        }
+
+        private ICommand _checkBox;
+        public ICommand CheckBox {
+            get {
+                if(_checkBox == null) {
+                    _checkBox = new RelayCommand(CheckBoxExecute);
+                }
+                return _checkBox;
+            }
+        }
+        private readonly List<MicrocodeCommand> ActiveCommands = new List<MicrocodeCommand>();
+        private void CheckBoxExecute(object e) {
+            Globals.Log.Info("Click");
+            var command = e as MicrocodeCommand;
+            if (ActiveCommands.Contains(command)) {
+                ActiveCommands.Remove(command);
+            } else {
+                ActiveCommands.Add(command);
+            }
         }
     }
 }
