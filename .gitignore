@@ -6,3 +6,4 @@ packages/
 .user
 bin/
 Releases/
+*.nupkg
