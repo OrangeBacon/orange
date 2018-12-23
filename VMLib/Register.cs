@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 
 namespace VMLib {
     public class Register : Component {
-        public int Value { get; private set; }
+        public Int16 Value { get; private set; }
 
         private readonly Bus bus;
         private readonly VMCore core;
 
-        public Register(VMCore core, string name, Bus bus) : base(core) {
+        public Register(VMCore core, string name, Bus bus) : base(core, nameof(Register) +" "+ name) {
             Commands.Add(new MicrocodeCommand($"Store Register {name}", Store));
             Commands.Add(new MicrocodeCommand($"Load Register {name}", Load));
             OnPropertyChanged("Value");

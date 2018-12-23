@@ -15,7 +15,8 @@ namespace Interface {
                 VM.Log = logger;
             }
 
-            var dataBus = new Bus(VM);
+            var dataBus = new Bus(VM, "Data");
+            dataBus.Write(5);
             var regA = new Register(VM, "A", dataBus);
             var regB = new Register(VM, "B", dataBus);
         }

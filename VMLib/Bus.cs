@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace VMLib {
     public class Bus : Component {
-        public int Value { get; private set; }
+        public short Value { get; private set; }
 
-        public Bus(VMCore core) : base(core) { }
+        public Bus(VMCore core, string name) : base(core, name + " " + nameof(Bus)) { }
 
-        public int Read() {
+        public short Read() {
             return Value;
         }
 
-        public void Write(int val) {
+        public void Write(short val) {
             Value = val;
             OnPropertyChanged("Value");
         }

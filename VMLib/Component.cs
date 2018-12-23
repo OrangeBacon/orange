@@ -11,10 +11,12 @@ namespace VMLib {
         public int ComponentID { get; }
 
         public string TypeName { get; private set;}
+        public string Name { get; private set; }
 
         public ObservableCollection<MicrocodeCommand> Commands { get; } = new ObservableCollection<MicrocodeCommand>();
 
-        public Component(VMCore core) {
+        public Component(VMCore core, string name) {
+            Name = name;
             TypeName = GetType().Name;
             core.Add(this);
             ComponentID = ComponentIDCounter++;

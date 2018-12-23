@@ -42,19 +42,26 @@
                 <RowDefinition Height="85"/>
             </Grid.RowDefinitions>
             <GroupBox Header="Components" Grid.Column="0">
-                <ItemsControl ItemsSource="{Binding VM.Components}">
+                <ItemsControl ItemsSource="{Binding Components}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel>
-                                <TextBlock>
-                                    <TextBlock.Text>
-                                        <MultiBinding StringFormat="{}{0} ID: {1}">
-                                            <Binding Path="TypeName"/>
-                                            <Binding Path="ComponentID"/>
-                                        </MultiBinding>
-                                    </TextBlock.Text>
-                                </TextBlock>
-                            </StackPanel>
+                            <GroupBox Header="{Binding Name}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding TypeName, StringFormat='Type: {0}'}"/>
+                                    <TextBlock Text="{Binding ID, StringFormat='ID: {0}'}"/>
+                                    <ItemsControl ItemsSource="{Binding Properties, diag:PresentationTraceSources.TraceLevel=High}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Name}"/>
+                                                    <TextBlock Text=": "/>
+                                                    <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </GroupBox>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
