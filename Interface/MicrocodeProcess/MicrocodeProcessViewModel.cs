@@ -43,9 +43,7 @@ namespace Interface.ViewModels {
         }
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
-            foreach(var command in ActiveCommands) {
-                VM.Controller.Run(ActiveCommands);
-            }
+            VM.Controller.Run(ActiveCommands);
         }
 
         private ICommand _checkBox;

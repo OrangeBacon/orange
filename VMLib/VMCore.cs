@@ -12,7 +12,7 @@ namespace VMLib {
 
         public VMCore() {
             Components = new ReadOnlyObservableCollection<Component>(_components);
-            Controller = new MicrocodeController();
+            Controller = new MicrocodeController(this);
             Controller.PropertyChanged += (a, b) => { OnPropertyChanged("Controller"); };
         }
 

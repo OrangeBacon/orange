@@ -30,7 +30,6 @@ namespace Interface.Views {
         private void ShowLog(object sender, EventArgs e) {
             if (LogWindow == null) {
                 LogWindow = new Log {
-                    Owner = this,
                     DataContext = Globals.Log
                 };
                 LogWindow.Show();
@@ -46,6 +45,10 @@ namespace Interface.Views {
 
         private void LogClose(object sender, EventArgs e) {
             LogWindow = null;
+        }
+
+        private void WindowClosed(object sender, EventArgs e) {
+            Application.Current.Shutdown();
         }
     }
 }

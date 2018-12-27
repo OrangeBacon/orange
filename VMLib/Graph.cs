@@ -66,12 +66,4 @@ namespace VMLib {
             Nodes.Remove(node);
         }
     }
-
-    static class ListExt {
-        public static R PopFront<R>(this List<R> list) {
-            R r = list[0];
-            list.RemoveAt(0);
-            return r;
-        }
-    }
 }

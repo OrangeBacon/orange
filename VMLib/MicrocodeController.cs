@@ -10,6 +10,10 @@ namespace VMLib {
     public class MicrocodeController : ObservableObject {
         public ObservableCollection<MicrocodeCommand> Commands { get; } = new ObservableCollection<MicrocodeCommand>();
 
+        private readonly VMCore Core;
+        public MicrocodeController(VMCore core) {
+            Core = core;
+        }
 
         public void Add(Component c) {
             foreach(MicrocodeCommand command in c.Commands) {
@@ -37,8 +41,12 @@ namespace VMLib {
                     }
                 }
             }
-            foreach(var c in graph.TopologicalSort()) {
+            var sorted = graph.TopologicalSort();
+            foreach(var c in sorted) {
                 c.Run();
+            }
+            foreach(var c in Core.Components) {
+                c.OnClockTick();
             }
         }
     }

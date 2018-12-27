@@ -8,7 +8,8 @@
         xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800"
-        x:Name="root">
+        x:Name="root"
+        Closed="WindowClosed">
     <Window.DataContext>
         <ViewModels:MicrocodeProcess/>
     </Window.DataContext>
@@ -42,29 +43,31 @@
                 <RowDefinition Height="85"/>
             </Grid.RowDefinitions>
             <GroupBox Header="Components" Grid.Column="0">
-                <ItemsControl ItemsSource="{Binding Components}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <GroupBox Header="{Binding Name}">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding TypeName, StringFormat='Type: {0}'}"/>
-                                    <TextBlock Text="{Binding ID, StringFormat='ID: {0}'}"/>
-                                    <ItemsControl ItemsSource="{Binding Properties, diag:PresentationTraceSources.TraceLevel=High}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Name}"/>
-                                                    <TextBlock Text=": "/>
-                                                    <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </GroupBox>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Components}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <GroupBox Header="{Binding Name}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding TypeName, StringFormat='Type: {0}'}"/>
+                                        <TextBlock Text="{Binding ID, StringFormat='ID: {0}'}"/>
+                                        <ItemsControl ItemsSource="{Binding Properties, diag:PresentationTraceSources.TraceLevel=High}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Name}"/>
+                                                        <TextBlock Text=": "/>
+                                                        <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </GroupBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </GroupBox>
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"/>
             <GroupBox Header="Microcode Control" Grid.Column="2">
