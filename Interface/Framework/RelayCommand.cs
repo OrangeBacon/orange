@@ -14,6 +14,8 @@ namespace Interface.Framework {
 
         public RelayCommand(Action<object> action) : this(action, null) { }
 
+        public RelayCommand(Action action, Predicate<object> canExecute) : this(_ => action(), canExecute) { }
+
         public RelayCommand(Action<object> action, Predicate<object> canExecute) {
             _action = action ?? throw new ArgumentNullException("action");
             _canExecute = canExecute;

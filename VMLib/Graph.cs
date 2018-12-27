@@ -41,6 +41,8 @@ namespace VMLib {
         }
 
         public List<T> TopologicalSort() {
+            var n = new List<T>(Nodes);
+            var e = new List<Edge>(Edges);
             var ret = new List<T>();
             List<T> s = NodesNoInput();
             while(s.Count > 0) {
@@ -53,6 +55,9 @@ namespace VMLib {
                 VMCore.Log.Warn("Cyclic Microcode graph: did not execute");
                 return new List<T>();
             }
+
+            Nodes = n;
+            Edges = e;
             return ret;
         }
 

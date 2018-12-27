@@ -36,14 +36,17 @@ namespace Interface.ViewModels {
         public ICommand SingleStep {
             get {
                 if(_singleStep == null) {
-                    _singleStep = new RelayCommand(SingleStepExecute);
+                    _singleStep = new RelayCommand(SingleStepExecute, CanSingleStepExecute);
                 }
                 return _singleStep;
             }
         }
+        private bool CanSingleStepExecute(object obj) {
+            return VM.Controller.ActiveGraph.TopologicalSort().Count != 0 || VM.Controller.ActiveCommands.Count == 0;
+        }
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
-            VM.Controller.Run(ActiveCommands);
+            VM.Controller.RunActive();
         }
 
         private ICommand _checkBox;
@@ -55,14 +58,13 @@ namespace Interface.ViewModels {
                 return _checkBox;
             }
         }
-        private readonly List<MicrocodeCommand> ActiveCommands = new List<MicrocodeCommand>();
         private void CheckBoxExecute(object e) {
             Globals.Log.Info("Click");
             var command = e as MicrocodeCommand;
-            if(ActiveCommands.Contains(command)) {
-                ActiveCommands.Remove(command);
+            if(VM.Controller.ActiveCommands.Contains(command)) {
+                VM.Controller.ActiveCommands.Remove(command);
             } else {
-                ActiveCommands.Add(command);
+                VM.Controller.ActiveCommands.Add(command);
             }
         }
 

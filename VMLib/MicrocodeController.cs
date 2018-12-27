@@ -5,14 +5,22 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static VMLib.VMCore;
 
 namespace VMLib {
     public class MicrocodeController : ObservableObject {
         public ObservableCollection<MicrocodeCommand> Commands { get; } = new ObservableCollection<MicrocodeCommand>();
 
+        public ObservableCollection<MicrocodeCommand> ActiveCommands { get; } = new ObservableCollection<MicrocodeCommand>();
+        public Graph<MicrocodeCommand> ActiveGraph = new Graph<MicrocodeCommand>();
+
         private readonly VMCore Core;
         public MicrocodeController(VMCore core) {
             Core = core;
+
+            ActiveCommands.CollectionChanged += (a, b) => {
+                UpdateGraph();
+            };
         }
 
         public void Add(Component c) {
@@ -25,15 +33,15 @@ namespace VMLib {
                 }
             };
             OnPropertyChanged("Commands");
-            VMCore.Log.Info("Added Command");
+            Log.Info("Added Command");
         }
 
-        public void Run(List<MicrocodeCommand> commands) {
+        private void UpdateGraph() {
             var graph = new Graph<MicrocodeCommand>();
-            foreach(var command in commands) {
+            foreach(var command in ActiveCommands) {
                 graph.Nodes.Add(command);
                 foreach(var changed in command.Changes) {
-                    foreach(var comm in commands) {
+                    foreach(var comm in ActiveCommands) {
                         foreach(var depended in comm.Depends) {
                             if(changed == depended)
                                 graph.AddEdge(command, comm);
@@ -41,8 +49,11 @@ namespace VMLib {
                     }
                 }
             }
-            var sorted = graph.TopologicalSort();
-            foreach(var c in sorted) {
+            ActiveGraph = graph;
+        }
+
+        public void RunActive() {
+            foreach(var c in ActiveGraph.TopologicalSort()) {
                 c.Run();
             }
             foreach(var c in Core.Components) {
