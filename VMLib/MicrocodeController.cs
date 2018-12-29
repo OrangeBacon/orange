@@ -21,6 +21,12 @@ namespace VMLib {
             ActiveCommands.CollectionChanged += (a, b) => {
                 UpdateGraph();
             };
+
+            core.Clock.At(1).Add(() => {
+                foreach(var c in ActiveGraph.TopologicalSort()) {
+                    c.Run();
+                }
+            });
         }
 
         public void Add(Component c) {
@@ -50,15 +56,6 @@ namespace VMLib {
                 }
             }
             ActiveGraph = graph;
-        }
-
-        public void RunActive() {
-            foreach(var c in ActiveGraph.TopologicalSort()) {
-                c.Run();
-            }
-            foreach(var c in Core.Components) {
-                c.OnClockTick();
-            }
         }
     }
 }

@@ -17,23 +17,23 @@ namespace VMLib {
             RightBus = rightBus;
             OutBus = outBus;
             Flags = flags;
-            Commands.Add(new MicrocodeCommand("ALU Output", SetWriteEnable, this) {
+            Commands.Add(new MicrocodeCommand("ALU Output", SetWriteEnable) {
                 Changes = { outBus, flags },
                 Depends = { leftBus, rightBus, this }
             });
-            Commands.Add(new MicrocodeCommand("ALU Mode", SetMode1, this) {
+            Commands.Add(new MicrocodeCommand("ALU Mode", SetMode1) {
                 Changes = { this }
             });
 
             LeftBus.PropertyChanged += Update;
             RightBus.PropertyChanged += Update;
-        }
 
-        public override void OnClockTick() {
-            if(WriteEnable) {
-                Update(null, new PropertyChangedEventArgs("Value"));
-                WriteEnable = false;
-            }
+            core.Clock.AtEnd().Add(() => {
+                if(WriteEnable) {
+                    Update(null, new PropertyChangedEventArgs("Value"));
+                    WriteEnable = false;
+                }
+            });
         }
 
         private void Update(object sender, PropertyChangedEventArgs e) {

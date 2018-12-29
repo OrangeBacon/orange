@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Input;
 using VMLib;
+using static VMLib.StarfishVM;
 
 namespace Interface.ViewModels {
     internal class MicrocodeProcess : ObservableObject {
@@ -15,7 +16,7 @@ namespace Interface.ViewModels {
             UpdateComponents(null, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, VM.Components));
         }
 
-        public VMCore VM { get; } = new StarfishVM(Globals.Log).VM;
+        public VMCore VM { get; } = CreateStarfishVM();
 
         public event EventHandler ShowLogEvent;
 
@@ -46,7 +47,7 @@ namespace Interface.ViewModels {
         }
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
-            VM.Controller.RunActive();
+            VM.Clock.RunCycle();
         }
 
         private ICommand _checkBox;

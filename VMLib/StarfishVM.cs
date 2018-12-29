@@ -6,15 +6,10 @@ using System.Threading.Tasks;
 using VMLib;
 using static VMLib.Util;
 
-namespace Interface {
-    internal class StarfishVM {
-        public readonly VMCore VM;
-
-        public StarfishVM(ILogger logger = null) {
-            VM = new VMCore();
-            if(logger != null) {
-                VMCore.Log = logger;
-            }
+namespace VMLib {
+    public class StarfishVM { 
+        public static VMCore CreateStarfishVM() {
+            var VM = new VMCore();
 
             var dataBus = new Bus(VM, "Data");
             var leftBus = new Bus(VM, "ALU Left");
@@ -27,6 +22,10 @@ namespace Interface {
 
             var regA = new Register(VM, "A", ThreeState(dataBus), OutState(leftBus));
             var regB = new Register(VM, "B", ThreeState(dataBus), OutState(rightBus));
+
+            var phase = new PhaseCounter(VM);
+
+            return VM;
         }
     }
 }

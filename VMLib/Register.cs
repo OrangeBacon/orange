@@ -16,13 +16,13 @@ namespace VMLib {
             foreach(var state in states) {
                 var bus = state.Value;
                 if((state.State & LogicState.In) == LogicState.In)
-                Commands.Add(new MicrocodeCommand($"{bus.Name} -> Register {name}", Bind(Store, bus), this) {
+                Commands.Add(new MicrocodeCommand($"{bus.Name} -> Register {name}", Bind(Store, bus)) {
                     Depends = { bus },
                     Changes = { this }
                 });
 
                 if((state.State & LogicState.Out) == LogicState.Out)
-                Commands.Add(new MicrocodeCommand($"Register {name} -> {bus.Name}", Bind(Load, bus), this) {
+                Commands.Add(new MicrocodeCommand($"Register {name} -> {bus.Name}", Bind(Load, bus)) {
                     Depends = { this },
                     Changes = { bus }
                 });

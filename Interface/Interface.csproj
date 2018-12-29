@@ -108,7 +108,6 @@
     <Compile Include="Framework\RelayCommand.cs" />
     <Compile Include="MicrocodeProcess\MicrocodeProcessViewModel.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="StarfishVM.cs" />
     <Page Include="Log\Log.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

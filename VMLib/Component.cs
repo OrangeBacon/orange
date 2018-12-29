@@ -21,7 +21,5 @@ namespace VMLib {
             core.Add(this);
             ComponentID = ComponentIDCounter++;
         }
-
-        public virtual void OnClockTick() { }
     }
 }

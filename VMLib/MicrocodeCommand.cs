@@ -11,14 +11,11 @@ namespace VMLib {
         public List<Component> Depends { get; set; } = new List<Component>();
         public List<Component> Changes { get; set; } = new List<Component>();
 
-        public Component Owner;
-
         private readonly Action action;
 
-        public MicrocodeCommand(string name, Action action, Component owner) {
+        public MicrocodeCommand(string name, Action action) {
             Name = name;
             this.action = action;
-            Owner = owner;
         }
 
         public void Run() {

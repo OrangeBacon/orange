@@ -6,12 +6,14 @@ namespace VMLib {
         private readonly ObservableCollection<Component> _components = new ObservableCollection<Component>();
         public ReadOnlyObservableCollection<Component> Components { get; }
 
+        public Clock Clock { get; }
         public MicrocodeController Controller { get; }
 
         public static ILogger Log = new NullLogger();
 
         public VMCore() {
             Components = new ReadOnlyObservableCollection<Component>(_components);
+            Clock = new Clock();
             Controller = new MicrocodeController(this);
             Controller.PropertyChanged += (a, b) => { OnPropertyChanged("Controller"); };
         }
