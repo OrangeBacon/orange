@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel;
 
 namespace VMLib {
     public class ALU : Component {
@@ -16,59 +11,72 @@ namespace VMLib {
             LeftBus = leftBus;
             RightBus = rightBus;
             OutBus = outBus;
+
+            // no flags are currently written to this register
+            // not used yet but will be in the future.
             Flags = flags;
+
+            // should the ALU output to the bus?
             Commands.Add(new MicrocodeCommand("ALU Output", SetWriteEnable) {
                 Changes = { outBus, flags },
                 Depends = { leftBus, rightBus, this }
             });
+
+            // which computation should be performed?
             Commands.Add(new MicrocodeCommand("ALU Mode", SetMode1) {
                 Changes = { this }
             });
 
+            // ensure output value is updated if inputs are changed
             LeftBus.PropertyChanged += Update;
             RightBus.PropertyChanged += Update;
 
             core.Clock.AtEnd().Add(() => {
-                if(WriteEnable) {
-                    Update(null, new PropertyChangedEventArgs("Value"));
-                    WriteEnable = false;
-                }
+                // stop updating output to the bus when the clock cycle ends
+                // (microcode nolonger asserting alu output signal)
+                WriteEnable = false;
+
+                // mode change signals no longer asserted
+                Mode = 0;
             });
         }
 
         private void Update(object sender, PropertyChangedEventArgs e) {
+            // irrelevant property changed
+            // or no output required
             if(e.PropertyName != "Value" || WriteEnable == false)
                 return;
+
+            // data
             var left = LeftBus.Read();
             var right = RightBus.Read();
+
             switch(Mode) {
-                case 0: {
+                case 0: { // Add
                     OutBus.Write((short)(left + right));
-                    if(left + right != (short)(left + right)) {
-                        Flags.Store(1);
-                    }
                 }; break;
-                case 1: {
+                case 1: { // Subtract
                     OutBus.Write((short)(left - right));
                 }; break;
                 default: break;
             }
         }
 
+        // which calculation?
         public byte Mode { get; private set; } = 0;
+
+        // should result of calaculation be output to the bus?
         private bool WriteEnable = false;
+
+        // enable output, output initial value
         public void SetWriteEnable() {
             WriteEnable = true;
-            Mode = 0;
+            Update(null, new PropertyChangedEventArgs("Value"));
         }
+
+        // set bit 0 of mode
         public void SetMode1() {
             Mode ^= 1 << 0;
-        }
-        public void SetMode2() {
-            Mode ^= 1 << 1;
-        }
-        public void SetMode3() {
-            Mode ^= 1 << 2;
         }
     }
 }

@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 
 namespace VMLib {
+
+    // main component of the virtual machine, everything else depends on this
+    // being initialised
     public class VMCore : ObservableObject {
+
+        // maintain list of components so it can be read by interface
         private readonly ObservableCollection<Component> _components = new ObservableCollection<Component>();
         public ReadOnlyObservableCollection<Component> Components { get; }
 

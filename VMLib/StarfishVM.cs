@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using VMLib;
 using static VMLib.Util;
 
 namespace VMLib {
     public class StarfishVM { 
         public static VMCore CreateStarfishVM() {
+            // create default virtual machine
             var VM = new VMCore();
 
             var dataBus = new Bus(VM, "Data");
@@ -20,8 +17,8 @@ namespace VMLib {
             leftBus.Write(5);
             rightBus.Write(7);
 
-            var regA = new Register(VM, "A", ThreeState(dataBus), OutState(leftBus));
-            var regB = new Register(VM, "B", ThreeState(dataBus), OutState(rightBus));
+            var regA = new Register(VM, "A", InOutState(dataBus), OutState(leftBus));
+            var regB = new Register(VM, "B", InOutState(dataBus), OutState(rightBus));
 
             var phase = new PhaseCounter(VM);
 

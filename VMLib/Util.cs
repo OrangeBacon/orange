@@ -1,21 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace VMLib {
+    // generic utilities that do not fit in another class
     public static class Util {
-        public delegate TResult TwoArgs<T, TResult>(T arg);
-        public static Func<TResult> Bind<T, TResult>(TwoArgs<T, TResult> func, T arg) {
-            return () => func(arg);
-        }
 
+        // attatch argument to function
         public delegate void TwoArgsNoRet<T>(T arg);
         public static Action Bind<T>(TwoArgsNoRet<T> func, T arg) {
             return () => func(arg);
         }
 
+        // input? output? both?
         [Flags]
         public enum LogicState {
             In = 1, Out = 2
@@ -30,7 +25,7 @@ namespace VMLib {
         public static LogicState<T> OutState<T>(T val) {
             return new LogicState<T> { Value = val, State = LogicState.Out };
         }
-        public static LogicState<T> ThreeState<T>(T val) {
+        public static LogicState<T> InOutState<T>(T val) {
             return new LogicState<T> { Value = val, State = LogicState.In | LogicState.Out };
         }
     }

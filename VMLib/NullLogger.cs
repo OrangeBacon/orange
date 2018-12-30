@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace VMLib {
-    // Logger class that does nothing
+﻿namespace VMLib {
+    // Logger class that does nothing, used to prevent a null pointer when calling log functions
     class NullLogger : ILogger {
         public void Error(string message) {
         }

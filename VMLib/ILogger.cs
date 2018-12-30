@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace VMLib {
+
+    // generic log interface
     public interface ILogger {
-        void Info(String message);
-        void Warn(String message);
-        void Error(String message);
+        void Info(string message);
+        void Warn(string message);
+        void Error(string message);
     }
 }

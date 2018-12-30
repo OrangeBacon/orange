@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace VMLib {
+
+    // wrapper around a action including the components that the
+    // command changes or depends on
     public class MicrocodeCommand : ObservableObject {
         public string Name { get; }
 
@@ -19,7 +19,7 @@ namespace VMLib {
         }
 
         public void Run() {
-            action();
+            action?.Invoke();
         }
     }
 }

@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace VMLib {
+﻿namespace VMLib {
+    // phase counter, will be used as input to microcodecontroller
     public class PhaseCounter : Component {
         public short Phase { get; private set; } = 0;
 
@@ -14,7 +9,10 @@ namespace VMLib {
                 Phase = 0;
                 reset = true;
             }));
+
+            // run at start of clock sequence
             core.Clock.At(0).Add(() => {
+                // if reset, the counter should not be incremented
                 if(!reset) {
                     Phase += 1;
                 }
