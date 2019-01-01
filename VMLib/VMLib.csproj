@@ -48,6 +48,7 @@
     <Compile Include="Component.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="ILogger.cs" />
+    <Compile Include="Memory64k.cs" />
     <Compile Include="MicrocodeCommand.cs" />
     <Compile Include="MicrocodeController.cs" />
     <Compile Include="NullLogger.cs" />
