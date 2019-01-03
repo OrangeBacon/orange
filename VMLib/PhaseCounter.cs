@@ -1,7 +1,7 @@
 ﻿namespace VMLib {
     // phase counter, will be used as input to microcodecontroller
     public class PhaseCounter : Component {
-        public short Phase { get; private set; } = 0;
+        public ushort Phase { get; private set; } = 0;
 
         private bool reset = false;
         public PhaseCounter(VMCore core) : base(core, "Phase Counter") {

@@ -3,7 +3,7 @@
 namespace VMLib {
     // wrapper around storing a value and outputting it to buses
     public class Register : Component {
-        public short Value { get; private set; }
+        public ushort Value { get; private set; }
 
         public Register(VMCore core, string name, params LogicState<Bus>[] states) : base(core, nameof(Register) + " " + name) {
             foreach(var state in states) {

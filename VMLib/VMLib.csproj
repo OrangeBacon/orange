@@ -46,6 +46,7 @@
     <Compile Include="Bus.cs" />
     <Compile Include="Clock.cs" />
     <Compile Include="Component.cs" />
+    <Compile Include="Flags.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="Memory64k.cs" />

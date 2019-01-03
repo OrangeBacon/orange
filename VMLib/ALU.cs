@@ -5,20 +5,20 @@ namespace VMLib {
         private readonly Bus LeftBus;
         private readonly Bus RightBus;
         private readonly Bus OutBus;
-        private readonly Register Flags;
+        private readonly Flags Flags;
 
-        public ALU(VMCore core, Bus leftBus, Bus rightBus, Bus outBus, Register flags) : base(core, nameof(ALU)) {
+        public ALU(VMCore core, Bus leftBus, Bus rightBus, Bus outBus) : base(core, nameof(ALU)) {
             LeftBus = leftBus;
             RightBus = rightBus;
             OutBus = outBus;
 
             // no flags are currently written to this register
             // not used yet but will be in the future.
-            Flags = flags;
+            Flags = core.Flags;
 
             // should the ALU output to the bus?
             Commands.Add(new MicrocodeCommand("ALU Output", SetWriteEnable) {
-                Changes = { outBus, flags },
+                Changes = { outBus, Flags },
                 Depends = { leftBus, rightBus, this }
             });
 
@@ -39,6 +39,8 @@ namespace VMLib {
                 // mode change signals no longer asserted
                 Mode = 0;
             });
+            Flags.Add("overflow/carry", false);
+            Flags.Add("Zero", false);
         }
 
         private void Update(object sender, PropertyChangedEventArgs e) {
@@ -53,10 +55,32 @@ namespace VMLib {
 
             switch(Mode) {
                 case 0: { // Add
-                    OutBus.Write((short)(left + right));
+                    var result = (ushort)(left + right);
+                    OutBus.Write(result);
+                    if(result != left + right) {
+                        Flags.Update("overflow/carry", true);
+                    } else {
+                        Flags.Update("overflow/carry", false);
+                    }
+                    if(result == 0) {
+                        Flags.Update("Zero", true);
+                    } else {
+                        Flags.Update("Zero", false);
+                    }
                 }; break;
                 case 1: { // Subtract
-                    OutBus.Write((short)(left - right));
+                    var result = (ushort)(left - right);
+                    OutBus.Write(result);
+                    if(result != left - right) {
+                        Flags.Update("overflow/carry", true);
+                    } else {
+                        Flags.Update("overflow/carry", false);
+                    }
+                    if(result == 0) {
+                        Flags.Update("Zero", true);
+                    } else {
+                        Flags.Update("Zero", false);
+                    }
                 }; break;
                 default: break;
             }

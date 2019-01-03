@@ -12,6 +12,7 @@ namespace VMLib {
 
         public Clock Clock { get; }
         public MicrocodeController Controller { get; }
+        public Flags Flags { get; }
 
         public static ILogger Log = new NullLogger();
 
@@ -20,6 +21,7 @@ namespace VMLib {
             Clock = new Clock();
             Controller = new MicrocodeController(this);
             Controller.PropertyChanged += (a, b) => { OnPropertyChanged("Controller"); };
+            Flags = new Flags(this);
         }
 
         public void Add(Component c) {

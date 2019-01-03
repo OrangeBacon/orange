@@ -13,11 +13,10 @@ namespace VMLib {
             var leftBus = new Bus(VM, "ALU Left");
             var rightBus = new Bus(VM, "ALU Right");
             var addrBus = new Bus(VM, "Address");
-            dataBus.Write(5);
-            addrBus.Write(7);
+            rightBus.Write(0b1111111111111111);
+            leftBus.Write(7);
 
-            var flags = new Register(VM, "flags");
-            var ALU = new ALU(VM, leftBus, rightBus, dataBus, flags);
+            var ALU = new ALU(VM, leftBus, rightBus, dataBus);
 
             var regA = new Register(VM, "A", InOutState(dataBus), OutState(leftBus));
             var regB = new Register(VM, "B", InOutState(dataBus), OutState(leftBus));

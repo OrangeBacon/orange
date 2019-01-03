@@ -5,7 +5,7 @@ namespace VMLib {
     // linear 64kB memory
     internal class Memory64k : Component {
         // 65536 = 2^16
-        private readonly short[] memory = new short[65536];
+        private readonly ushort[] memory = new ushort[65536];
 
         public Memory64k(VMCore core, string name, LogicState<Bus> address, LogicState<Bus> output)
             : base(core, nameof(Memory64k)) {

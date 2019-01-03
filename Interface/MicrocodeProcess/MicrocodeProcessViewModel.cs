@@ -76,9 +76,9 @@ namespace Interface.ViewModels {
 
                 var properties = new List<Int32Prop>();
                 foreach(var prop in component.GetType().GetProperties()) {
-                    if(!typeof(Component).GetProperties().Contains(prop) && prop.GetValue(component).GetType() == typeof(short)) {
+                    if(!typeof(Component).GetProperties().Contains(prop) && prop.GetValue(component).GetType() == typeof(ushort)) {
                         properties.Add(new Int32Prop() {
-                            Value = (short)prop.GetValue(component),
+                            Value = (ushort)prop.GetValue(component),
                             Name = prop.Name,
                         });
                     }
@@ -96,7 +96,7 @@ namespace Interface.ViewModels {
                         if(prop.Name == propE.PropertyName) {
                             foreach(var p in propSender.GetType().GetProperties()) {
                                 if(p.Name == prop.Name) {
-                                    prop.Value = (short)p.GetValue(propSender);
+                                    prop.Value = (ushort)p.GetValue(propSender);
                                 }
                             }
                         }
@@ -110,8 +110,8 @@ namespace Interface.ViewModels {
     }
 
     internal class Int32Prop : ObservableObject {
-        private short _value;
-        public short Value { get { return _value; } set { _value = value; OnPropertyChanged(); } }
+        private ushort _value;
+        public ushort Value { get { return _value; } set { _value = value; OnPropertyChanged(); } }
         public string Name { get; set; }
     }
 
