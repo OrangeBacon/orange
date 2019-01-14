@@ -13,8 +13,8 @@ namespace VMLib {
             var leftBus = new Bus(VM, "ALU Left");
             var rightBus = new Bus(VM, "ALU Right");
             var addrBus = new Bus(VM, "Address");
-            rightBus.Write(0b1111111111111111);
-            leftBus.Write(7);
+            var instBus = new Bus(VM, "Instruction");
+            addrBus.Write(1);
 
             var ALU = new ALU(VM, leftBus, rightBus, dataBus);
 
@@ -28,7 +28,9 @@ namespace VMLib {
             var regSP = new Register(VM, "SP", InOutState(dataBus), OutState(addrBus));
             var regIP = new Register(VM, "IP", InOutState(dataBus), OutState(addrBus));
 
-            var mem = new Memory64k(VM, "Main Memory", InState(addrBus), InOutState(dataBus));
+            var mem = new Memory64k(VM, "Main Memory", InState(addrBus), InOutState(dataBus), OutState(instBus));
+
+            var IR = new InstructionRegister(VM, instBus);
 
             return VM;
         }
