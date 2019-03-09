@@ -44,10 +44,14 @@ namespace VMLib {
             };
 
             component.PropertyChanged += (a, b) => {
+                // only call OnPropertyChanged when the requested property changes
                 if(b.PropertyName != property) {
                     return;
                 }
+
                 var val = component.GetType().GetProperty(property).GetValue(component, null);
+
+                // ensure that it is ushort
                 if(value.GetType().Name != nameof(UInt16)) {
                     Log.Warn($"Input property, {property} is not a valid type (ushort)");
                     return;
@@ -100,7 +104,11 @@ namespace VMLib {
         }
     }
 
+    // observable class to store 3 values ...
+    // why does this have to be so long?
     public class MicrocodeInput : ObservableObject {
+
+        // value to wrap in this class
         private ushort _value;
         public ushort Value {
             get { return _value; }
@@ -110,6 +118,8 @@ namespace VMLib {
             }
         }
 
+
+        // take the lower {bits} bits of the value
         private int _bits;
         public int Bits {
             get { return _bits; }
@@ -119,6 +129,7 @@ namespace VMLib {
             }
         }
 
+        // name of the input
         private string _name;
         public string Name {
             get { return _name; }

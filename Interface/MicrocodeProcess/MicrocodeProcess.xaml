@@ -78,7 +78,7 @@
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
                     <GroupBox Header="Microcode Inputs" Grid.Row="0">
-                        <ItemsControl ItemsSource="{Binding VM.Controller.Inputs, diag:PresentationTraceSources.TraceLevel=High}">
+                        <ItemsControl ItemsSource="{Binding VM.Controller.Inputs}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">

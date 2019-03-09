@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Interface.Framework {
+    // global variables!  (currently only the log)
     static class Globals {
         public static Logger Log = new Logger();
 
+        // implement the logger
         public class Logger : VMLib.ILogger {
             static public ObservableCollection<string> LogText { get; } = new ObservableCollection<string>();
 

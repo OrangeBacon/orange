@@ -4,11 +4,22 @@ using static VMLib.Util;
 
 namespace VMLib {
     public class StarfishVM { 
-        public static VMCore CreateStarfishVM() {
+        public static VMCore CreateStarfishVM(ILogger Log = null) {
             // create default virtual machine
             VMCore VM = new VMCore();
+
+            // should the global log be set up?
+            if(Log != null) {
+                VMCore.Log = Log;
+            }
+
             var phase = new PhaseCounter(VM);
             VM.Controller.Input(phase, "Phase", 4);
+
+            // NOTE: The order that these objects are constructed
+            // equals the order that the microcode commands are
+            // registered - therefore if rearranged, other components
+            // might break in the furure (microcode assembler)
 
             var dataBus = new Bus(VM, "Data");
             var leftBus = new Bus(VM, "ALU Left");

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace VMLib {
+﻿namespace VMLib {
     internal class InstructionRegister : Component {
         public ushort OpCode { get; private set; }
         public ushort Arg1 { get; private set; }
