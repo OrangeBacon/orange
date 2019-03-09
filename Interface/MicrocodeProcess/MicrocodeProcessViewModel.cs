@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Reflection;
 using System.Windows.Input;
 using VMLib;
 using static VMLib.StarfishVM;
@@ -14,6 +13,8 @@ namespace Interface.ViewModels {
         public MicrocodeProcess() {
             ((INotifyCollectionChanged)VM.Components).CollectionChanged += UpdateComponents;
             UpdateComponents(null, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, VM.Components));
+
+            VMCore.Log = Globals.Log;
         }
 
         public VMCore VM { get; } = CreateStarfishVM();
@@ -73,7 +74,7 @@ namespace Interface.ViewModels {
         private void UpdateComponents(object sender, NotifyCollectionChangedEventArgs e) {
             foreach(var item in e.NewItems) {
                 var component = item as Component;
-
+                
                 var properties = new List<Int32Prop>();
                 foreach(var prop in component.GetType().GetProperties()) {
                     if(!typeof(Component).GetProperties().Contains(prop) && prop.GetValue(component).GetType() == typeof(ushort)) {

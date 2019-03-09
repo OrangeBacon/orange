@@ -71,18 +71,39 @@
             </GroupBox>
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"/>
             <GroupBox Header="Microcode Control" Grid.Column="2">
-                <DataGrid CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderBrush="#00000000" Background="#00000000" ItemsSource="{Binding VM.Controller.Commands, Mode=OneWay}" AutoGenerateColumns="False" GridLinesVisibility="None" HeadersVisibility="Column">
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Active" CanUserResize="False" CanUserReorder="False" CanUserSort="False">
-                            <DataGridTemplateColumn.CellTemplate>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="2*"/>
+                    </Grid.RowDefinitions>
+                    <GroupBox Header="Microcode Inputs" Grid.Row="0">
+                        <ItemsControl ItemsSource="{Binding VM.Controller.Inputs, diag:PresentationTraceSources.TraceLevel=High}">
+                            <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <CheckBox HorizontalAlignment="Center" Command="{Binding DataContext.CheckBox, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}"/>
+                                        <TextBlock Text=": "/>
+                                        <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
+                                    </StackPanel>
                                 </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Description" Binding="{Binding Name}" Width="*" CanUserResize="False" CanUserReorder="False" CanUserSort="False"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </GroupBox>
+                    <GridSplitter Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="1"/>
+                    <DataGrid Grid.Row="2" CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderBrush="#00000000" Background="#00000000" ItemsSource="{Binding VM.Controller.Commands, Mode=OneWay}" AutoGenerateColumns="False" GridLinesVisibility="None" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Active" CanUserResize="False" CanUserReorder="False" CanUserSort="False">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox HorizontalAlignment="Center" Command="{Binding DataContext.CheckBox, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Description" Binding="{Binding Name}" Width="*" CanUserResize="False" CanUserReorder="False" CanUserSort="False"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
             </GroupBox>
             <GroupBox Header ="Run Controls"  Grid.ColumnSpan="3" Grid.Row="1">
                 <Grid Margin="10">

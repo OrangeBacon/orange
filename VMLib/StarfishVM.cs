@@ -6,8 +6,9 @@ namespace VMLib {
     public class StarfishVM { 
         public static VMCore CreateStarfishVM() {
             // create default virtual machine
-            var VM = new VMCore();
+            VMCore VM = new VMCore();
             var phase = new PhaseCounter(VM);
+            VM.Controller.Input(phase, "Phase", 4);
 
             var dataBus = new Bus(VM, "Data");
             var leftBus = new Bus(VM, "ALU Left");
@@ -31,6 +32,7 @@ namespace VMLib {
             var mem = new Memory64k(VM, "Main Memory", InState(addrBus), InOutState(dataBus), OutState(instBus));
 
             var IR = new InstructionRegister(VM, instBus);
+            VM.Controller.Input(IR, "OpCode", 7);
 
             return VM;
         }

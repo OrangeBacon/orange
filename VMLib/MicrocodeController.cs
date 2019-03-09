@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using static VMLib.VMCore;
 
 namespace VMLib {
@@ -10,6 +11,8 @@ namespace VMLib {
         // commands that should be run on the clock tick
         public ObservableCollection<MicrocodeCommand> ActiveCommands { get; } = new ObservableCollection<MicrocodeCommand>();
         public Graph<MicrocodeCommand> ActiveGraph = new Graph<MicrocodeCommand>();
+
+        public ObservableCollection<MicrocodeInput> Inputs { get; } = new ObservableCollection<MicrocodeInput>();
 
         public MicrocodeController(VMCore core) {
             // make sure that the command graph is always correct
@@ -23,6 +26,37 @@ namespace VMLib {
                     c.Run();
                 }
             });
+        }
+
+        // add the lower {bits} bits of {inp} to the input
+        public void Input(Component component, string property, int bits) {
+            var info = component.GetType().GetProperty(property);
+            var value = info.GetValue(component, null);
+            if(info.PropertyType.Name != nameof(UInt16)) {
+                Log.Warn($"Input property, {property} is not a valid type (ushort)");
+                return;
+            }
+
+            var inp = new MicrocodeInput {
+                Value = (ushort)value,
+                Bits = bits,
+                Name = property
+            };
+
+            component.PropertyChanged += (a, b) => {
+                if(b.PropertyName != property) {
+                    return;
+                }
+                var val = component.GetType().GetProperty(property).GetValue(component, null);
+                if(value.GetType().Name != nameof(UInt16)) {
+                    Log.Warn($"Input property, {property} is not a valid type (ushort)");
+                    return;
+                }
+                inp.Value = (ushort)val;
+                OnPropertyChanged("Inputs");
+            };
+
+            Inputs.Add(inp);
         }
 
         // add a new component's commands to the controller
@@ -55,13 +89,43 @@ namespace VMLib {
                 foreach(var changed in command.Changes) {
                     foreach(var comm in ActiveCommands) {
                         foreach(var depended in comm.Depends) {
-                            if(changed == depended)
+                            if(changed == depended) {
                                 graph.AddEdge(command, comm);
+                            }
                         }
                     }
                 }
             }
             ActiveGraph = graph;
+        }
+    }
+
+    public class MicrocodeInput : ObservableObject {
+        private ushort _value;
+        public ushort Value {
+            get { return _value; }
+            set {
+                _value = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private int _bits;
+        public int Bits {
+            get { return _bits; }
+            set {
+                _bits = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string _name;
+        public string Name {
+            get { return _name; }
+            set {
+                _name = value;
+                OnPropertyChanged();
+            }
         }
     }
 }

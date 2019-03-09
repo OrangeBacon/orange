@@ -10,7 +10,6 @@ namespace VMLib {
         public Memory64k(VMCore core, string name, LogicState<Bus> address, params LogicState<Bus>[] outputs)
             : base(core, nameof(Memory64k)) {
             memory[1] = 0b0101010101010101;
-                        memory[1] = 0b0101010101010101;
 
             if(address.State != LogicState.In) {
                 Log.Warn("Can only use in state for memory address");
