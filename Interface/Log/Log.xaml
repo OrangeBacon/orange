@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="Log" Height="450" Width="800">
     <Grid>
-        <ScrollViewer>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <ItemsControl Margin="10"  Name="LogList" ItemsSource="{Binding LogText}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

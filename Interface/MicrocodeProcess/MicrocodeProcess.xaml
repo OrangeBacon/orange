@@ -31,6 +31,7 @@
         </Grid.RowDefinitions>
         <Menu Grid.Row="0">
             <MenuItem Header="Show Log" Command="{Binding ShowLog}"/>
+            <MenuItem Header="Show Memory Viewer" Command="{Binding ShowMemoryViewer}"/>
         </Menu>
         <Grid Grid.Row="1" Background="#FFE5E5E5">
             <Grid.ColumnDefinitions>

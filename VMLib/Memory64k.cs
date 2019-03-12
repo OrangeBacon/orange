@@ -4,8 +4,7 @@ using static VMLib.VMCore;
 namespace VMLib {
     // linear 64kB memory
     public class Memory64k : Component {
-        // 65536 = 2^16
-        private readonly ushort[] memory = new ushort[65536];
+        private readonly ushort[] memory = new ushort[ushort.MaxValue];
 
         private Bus address;
 
@@ -43,14 +42,25 @@ namespace VMLib {
                     });
                 }
             }
+
+            core.Memory = this;
+
         }
 
-        void MemoryRead(Bus output) {
+        internal void MemoryRead(Bus output) {
             output.Write(memory[address.Read()]);
         }
 
-        void MemoryWrite(Bus output) {
+        public ushort MemoryRead(ushort address) {
+            return memory[address];
+        }
+
+        internal void MemoryWrite(Bus output) {
             memory[address.Read()] = output.Read();
+        }
+
+        public void MemoryWrite(ushort address, ushort value) {
+            memory[address] = value;
         }
     }
 }

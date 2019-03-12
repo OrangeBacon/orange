@@ -38,6 +38,22 @@ namespace Interface.ViewModels {
             ShowLogEvent?.Invoke(this, new EventArgs());
         }
 
+        public event EventHandler ShowMemoryViewerEvent;
+
+        // show memory viewer command
+        private ICommand _showMemoryViewer;
+        public ICommand ShowMemoryViewer {
+            get {
+                if(_showMemoryViewer == null) {
+                    _showMemoryViewer = new RelayCommand(ShowMemoryViewerExecute);
+                }
+                return _showMemoryViewer;
+            }
+        }
+        private void ShowMemoryViewerExecute() {
+            ShowMemoryViewerEvent?.Invoke(this, new EventArgs());
+        }
+
         // run one step on the vm command
         private ICommand _singleStep;
         public ICommand SingleStep {

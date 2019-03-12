@@ -73,9 +73,18 @@
     </Page>
     <Compile Include="Framework\Globals.cs" />
     <Compile Include="Framework\RelayCommand.cs" />
+    <Compile Include="Framework\SubWindow.cs" />
+    <Compile Include="MemoryViewer\MemoryViewerViewModel.cs" />
+    <Compile Include="MemoryViewer\MemoryViewer.xaml.cs">
+      <DependentUpon>MemoryViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="MicrocodeProcess\MicrocodeProcessViewModel.cs" />
     <Compile Include="Program.cs" />
     <Page Include="Log\Log.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MemoryViewer\MemoryViewer.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

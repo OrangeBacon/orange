@@ -14,6 +14,7 @@ namespace VMLib {
         public Clock Clock { get; }
         public MicrocodeController Controller { get; }
         public Flags Flags { get; }
+        public Memory64k Memory { get; internal set; }
 
         public static ILogger Log = new NullLogger();
 

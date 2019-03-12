@@ -8,38 +8,23 @@ namespace Interface.Views {
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MicrocodeProcess : Window {
+
+        private SubWindow<Log> Log = new SubWindow<Log>();
+        private SubWindow<MemoryViewer> MemoryViewer = new SubWindow<MemoryViewer>();
+
         public MicrocodeProcess() {
             InitializeComponent();
             ((ViewModels.MicrocodeProcess)DataContext).ShowLogEvent += ShowLog;
+            ((ViewModels.MicrocodeProcess)DataContext).ShowMemoryViewerEvent += ShowMemoryViewer;
+
+            Log.DataContext(Globals.Log);
         }
 
-        // cache of the log window's main object
-        static Window LogWindow;
-
-        // show the log to the user, run on the ShowLog event
         private void ShowLog(object sender, EventArgs e) {
-            //  if the log is closed, open a new window
-            if (LogWindow == null) {
-                LogWindow = new Log {
-                    DataContext = Globals.Log
-                };
-                LogWindow.Show();
-                LogWindow.Closed += LogClose;
-                return;
-            }
-            // else it is possibly minimised and/or not in focus
-            if(LogWindow.WindowState == WindowState.Minimized) {
-                // un minimise it (does not focus the window)
-                LogWindow.WindowState = WindowState.Normal;
-            }
-            // focus the window
-            LogWindow.Activate();
-            
+            Log.Open();
         }
-
-        // remove log from cache as the window is closed
-        private void LogClose(object sender, EventArgs e) {
-            LogWindow = null;
+        private void ShowMemoryViewer(object sender, EventArgs e) {
+            MemoryViewer.Open();
         }
 
         // run when the main window's close button is clicked
