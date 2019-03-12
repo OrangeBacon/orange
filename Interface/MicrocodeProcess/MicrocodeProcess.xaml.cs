@@ -18,6 +18,7 @@ namespace Interface.Views {
             ((ViewModels.MicrocodeProcess)DataContext).ShowMemoryViewerEvent += ShowMemoryViewer;
 
             Log.DataContext(Globals.Log);
+            MemoryViewer.DataContext(new ViewModels.MemoryViewer(((ViewModels.MicrocodeProcess)DataContext).VM));
         }
 
         private void ShowLog(object sender, EventArgs e) {
