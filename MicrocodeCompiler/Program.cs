@@ -12,8 +12,9 @@ namespace MicrocodeCompiler {
             }
 
             var s = new FileStream(args[0]);
-            while(!s.Eof()) {
-                Console.WriteLine($"{s.Line}:{s.Column} -> {s.Next()}");
+            var tokens = new TokenStream(s);
+            while(!tokens.Eof()) {
+                tokens.Next().Print();
             }
         }
     }

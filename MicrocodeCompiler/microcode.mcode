@@ -1,3 +1,8 @@
-header {
-  // hi
+# comment
+opcode ADD(Reg, Reg, Reg) = 78 {
+    *: MI,GE,HE;  # assert the MI, GE, and HE signals when the phase counter is 0, opcode is 78 for all flags
+    *: HI,ME,ME,HM;
+    *: ; # no operation
+    overflow = 1: HR, JQ, LE;
+    overflow = 0: ;
 }
