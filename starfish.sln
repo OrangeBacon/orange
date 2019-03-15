@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Interface", "Interface\Inte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VMLib", "VMLib\VMLib.csproj", "{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MicrocodeCompiler", "MicrocodeCompiler\MicrocodeCompiler.csproj", "{BC1D659F-5197-4C60-8A42-76AEC23CAF47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC1D659F-5197-4C60-8A42-76AEC23CAF47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC1D659F-5197-4C60-8A42-76AEC23CAF47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC1D659F-5197-4C60-8A42-76AEC23CAF47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC1D659F-5197-4C60-8A42-76AEC23CAF47}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
