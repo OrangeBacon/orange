@@ -70,6 +70,8 @@ namespace Interface.ViewModels {
         }
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
+            Globals.Log.Info($"{VM.Memory.MemoryRead(0)}");
+            VM.Memory.MemoryWrite(1, 11);
             VM.Clock.RunCycle();
         }
 
