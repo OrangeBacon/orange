@@ -20,7 +20,7 @@ namespace MicrocodeCompiler {
             }
         }
 
-        public Token Peek(int n) {
+        public Token Peek(int n = 0) {
             while(tokens.Count <= n) {
                 if(file.Eof()) {
                     return null;

@@ -13,9 +13,7 @@ namespace MicrocodeCompiler {
 
             var s = new FileStream(args[0]);
             var tokens = new TokenStream(s);
-            while(!tokens.Eof()) {
-                tokens.Next().Print();
-            }
+            new Parser(tokens).Parse().Print();
         }
     }
 }
