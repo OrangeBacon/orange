@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using VMLib;
 
@@ -13,6 +10,7 @@ namespace Interface.ViewModels {
         public Pair<ushort, MemoryViewModel>[] IndexMemoryPair { get; private set; } = new Pair<ushort, MemoryViewModel>[ushort.MaxValue];
 
         private readonly VMCore core;
+        public VirtualizingStackPanel VSP = null;
 
         public MemoryViewer(VMCore core) {
             this.core = core;
@@ -21,6 +19,14 @@ namespace Interface.ViewModels {
                 IndexList[i] = i;
                 IndexMemoryPair[i] = new Pair<ushort, MemoryViewModel>(i, new MemoryViewModel(Memory, i, core));
             }
+
+            core.Memory.PropertyChanged += (sender, e) => {
+                if(VSP != null) {
+                    foreach(var item in IndexMemoryPair) {
+                        item.Second.Update();
+                    }
+                }
+            };
         }
 
         public class Pair<A, B> {
@@ -82,12 +88,12 @@ namespace Interface.ViewModels {
             for(int i = 0; i < 16; i++) {
                 Items.Add(new BitModel(Memory, index, i));
             }
+        }
 
-            core.Memory.PropertyChanged += (a, b) => {
-                foreach(var item in Items) {
-                    item.Update();
-                }
-            };
+        public void Update() {
+            foreach(var item in Items) {
+                item.Update();
+            }
         }
     }
 }
