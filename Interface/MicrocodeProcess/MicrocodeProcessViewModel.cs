@@ -68,10 +68,11 @@ namespace Interface.ViewModels {
             // only allowed to execute when the graph works or it is a no op
             return VM.Controller.ActiveGraph.TopologicalSort().Count != 0 || VM.Controller.ActiveCommands.Count == 0;
         }
+        private readonly Random r = new Random();
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
             Globals.Log.Info($"{VM.Memory.MemoryRead(0)}");
-            VM.Memory.MemoryWrite(1, 11);
+            VM.Memory.MemoryWrite(0, (ushort)r.Next());
             VM.Clock.RunCycle();
         }
 

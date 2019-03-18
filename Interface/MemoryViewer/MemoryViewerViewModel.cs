@@ -2,20 +2,24 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Controls;
 using VMLib;
 
 namespace Interface.ViewModels {
-    internal class MemoryViewer {
+    internal class MemoryViewer : ObservableObject {
         public ushort[] IndexList { get; } = new ushort[ushort.MaxValue];
-        public ushort[] Memory { get; private set; }
+        public ObservableCollection<ushort> Memory { get; private set; }
 
         public Pair<ushort, MemoryViewModel>[] IndexMemoryPair { get; private set; } = new Pair<ushort, MemoryViewModel>[ushort.MaxValue];
 
+        private readonly VMCore core;
+
         public MemoryViewer(VMCore core) {
+            this.core = core;
             Memory = core.Memory.Memory;
             for(ushort i = 0; i < IndexList.Length; i++) {
                 IndexList[i] = i;
-                IndexMemoryPair[i] = new Pair<ushort, MemoryViewModel>(i, new MemoryViewModel(Memory, i));
+                IndexMemoryPair[i] = new Pair<ushort, MemoryViewModel>(i, new MemoryViewModel(Memory, i, core));
             }
         }
 
@@ -35,25 +39,28 @@ namespace Interface.ViewModels {
         public int BitIndex { get; set; }
 
         // the bit aray containing this bit
-        public ushort[] Memory { get; set; }
+        public ObservableCollection<ushort> Memory { get; set; }
 
-        public BitModel(int index, int bitIndex, bool isChecked, ushort[] Memory) {
+        public BitModel(ObservableCollection<ushort> Memory, int index, int bitIndex) {
             Index = index;
             BitIndex = bitIndex;
-            this.isChecked = isChecked;
             this.Memory = Memory;
         }
 
-        private bool isChecked;
+        internal void Update() {
+            OnPropertyChanged("IsChecked");
+        }
+
         public bool IsChecked {
-            get => isChecked;
+            get {
+                return (Memory[Index] & (1 << BitIndex)) != 0;
+            }
             set {
                 if(value) {
                     Memory[Index] |= (ushort)(1 << BitIndex);
                 } else {
                     Memory[Index] &= (ushort)~(1 << BitIndex);
                 }
-                isChecked = value;
                 OnPropertyChanged();
             }
         }
@@ -70,11 +77,17 @@ namespace Interface.ViewModels {
             }
         }
 
-        public MemoryViewModel(ushort[] Memory, ushort index) {
+        public MemoryViewModel(ObservableCollection<ushort> Memory, ushort index, VMCore core) {
             Items = new ObservableCollection<BitModel>();
             for(int i = 0; i < 16; i++) {
-                Items.Add(new BitModel(index, i, ((Memory[i] >> i)&1) != 0, Memory));
+                Items.Add(new BitModel(Memory, index, i));
             }
+
+            core.Memory.PropertyChanged += (a, b) => {
+                foreach(var item in Items) {
+                    item.Update();
+                }
+            };
         }
     }
 }
