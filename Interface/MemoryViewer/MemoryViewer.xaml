@@ -45,7 +45,7 @@
             </ItemsControl.ItemTemplate>
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <VirtualizingStackPanel x:Name="VSP" VirtualizationMode="Recycling"/>
+                    <VirtualizingStackPanel VirtualizationMode="Recycling"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.Template>
@@ -57,7 +57,7 @@
                         Background="{TemplateBinding Panel.Background}"
                         SnapsToDevicePixels="True">
                         <ScrollViewer Padding="{TemplateBinding Control.Padding}"
-                            Focusable="False">
+                            Focusable="False" x:Name="Scroll" Loaded="Scroll_Loaded">
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>

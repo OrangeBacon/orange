@@ -10,7 +10,7 @@ namespace Interface.ViewModels {
         public Pair<ushort, MemoryViewModel>[] IndexMemoryPair { get; private set; } = new Pair<ushort, MemoryViewModel>[ushort.MaxValue];
 
         private readonly VMCore core;
-        public VirtualizingStackPanel VSP = null;
+        public ScrollViewer Scroll = null;
 
         public MemoryViewer(VMCore core) {
             this.core = core;
@@ -21,9 +21,10 @@ namespace Interface.ViewModels {
             }
 
             core.Memory.PropertyChanged += (sender, e) => {
-                if(VSP != null) {
-                    foreach(var item in IndexMemoryPair) {
-                        item.Second.Update();
+                if(Scroll != null) {
+                    Framework.Globals.Log.Info($"Mem Update: {Scroll.VerticalOffset}, {Scroll.ViewportHeight}");
+                    for(int i = 0; i < Scroll.ViewportHeight; i++) {
+                        IndexMemoryPair[(int)(Scroll.VerticalOffset + i)].Second.Update();
                     }
                 }
             };

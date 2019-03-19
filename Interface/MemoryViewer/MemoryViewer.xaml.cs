@@ -6,16 +6,17 @@ namespace Interface.Views {
     public partial class MemoryViewer : Window {
         public MemoryViewer() {
             InitializeComponent();
-            DataContextChanged += (sender,e) => {
-                if(DataContext.GetType() == typeof(ViewModels.MemoryViewer)){
-                    ((ViewModels.MemoryViewer)DataContext).VSP = (VirtualizingStackPanel)IC.ItemsPanel.LoadContent();
-                }
-            };
             Closed += (sender, e) => {
                 if(DataContext.GetType() == typeof(ViewModels.MemoryViewer)) {
-                    ((ViewModels.MemoryViewer)DataContext).VSP = null;
+                    ((ViewModels.MemoryViewer)DataContext).Scroll = null;
                 }
             };
+        }
+
+        private void Scroll_Loaded(object sender, RoutedEventArgs e) {
+            if(DataContext.GetType() == typeof(ViewModels.MemoryViewer)) {
+                ((ViewModels.MemoryViewer)DataContext).Scroll = (ScrollViewer)sender;
+            }
         }
     }
 }
