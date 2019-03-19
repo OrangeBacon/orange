@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Interface", "Interface\Inte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VMLib", "VMLib\VMLib.csproj", "{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleUI", "ConsoleUI\ConsoleUI.csproj", "{26AF5CA8-700A-44D9-A7CA-F9CC066FBD29}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7512D23F-C8AF-45CE-9DC4-9843B50FB08A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26AF5CA8-700A-44D9-A7CA-F9CC066FBD29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26AF5CA8-700A-44D9-A7CA-F9CC066FBD29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26AF5CA8-700A-44D9-A7CA-F9CC066FBD29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26AF5CA8-700A-44D9-A7CA-F9CC066FBD29}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
