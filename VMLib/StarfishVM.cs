@@ -26,7 +26,6 @@ namespace VMLib {
             var rightBus = new Bus(VM, "ALU Right");
             var addrBus = new Bus(VM, "Address");
             var instBus = new Bus(VM, "Instruction");
-            addrBus.Write(1);
 
             var ALU = new ALU(VM, leftBus, rightBus, dataBus);
 

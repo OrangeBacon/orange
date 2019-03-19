@@ -68,6 +68,7 @@ namespace Interface.ViewModels {
             // only allowed to execute when the graph works or it is a no op
             return VM.Controller.ActiveGraph.TopologicalSort().Count != 0 || VM.Controller.ActiveCommands.Count == 0;
         }
+
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
             VM.Clock.RunCycle();

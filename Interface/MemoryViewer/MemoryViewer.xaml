@@ -22,12 +22,24 @@
                       ScrollViewer.VerticalScrollBarVisibility="Auto"
                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
                       ItemsSource="{Binding IndexMemoryPair}"
-                      Grid.Row="1">
+                      Grid.Row="1"
+                      x:Name="IC">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding First, StringFormat='Index: 0x{0:X4} '}"/>
-                        <TextBlock Text="{Binding Second, StringFormat='Value: 0x{0:X4}'}"/>
+                        <TextBlock Text="{Binding First, StringFormat='Index: 0x{0:X4} '}" Width="100"/>
+                        <ItemsControl ItemsSource="{Binding Items}" DataContext="{Binding Second}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding Path=IsChecked, Mode=TwoWay}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -45,7 +57,7 @@
                         Background="{TemplateBinding Panel.Background}"
                         SnapsToDevicePixels="True">
                         <ScrollViewer Padding="{TemplateBinding Control.Padding}"
-                            Focusable="False">
+                            Focusable="False" x:Name="Scroll" Loaded="Scroll_Loaded">
                             <ItemsPresenter SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}"/>
                         </ScrollViewer>
                     </Border>

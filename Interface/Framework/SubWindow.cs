@@ -5,7 +5,7 @@ namespace Interface.Framework {
     internal class SubWindow<T> where T : Window, new() {
 
         // cache of the log window's main object
-        private Window CurrentWindow;
+        public Window CurrentWindow { get; private set; }
 
         private object Context;
 

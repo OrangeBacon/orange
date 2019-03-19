@@ -1,17 +1,18 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using static VMLib.Util;
 using static VMLib.VMCore;
 
 namespace VMLib {
     // linear 64kB memory
     public class Memory64k : Component {
-        public ushort[] Memory { get; } = new ushort[ushort.MaxValue];
+        public ObservableCollection<ushort> Memory { get; } = new ObservableCollection<ushort>(new ushort[ushort.MaxValue]);
 
         private Bus address;
 
         public Memory64k(VMCore core, string name, LogicState<Bus> address, params LogicState<Bus>[] outputs)
             : base(core, nameof(Memory64k)) {
-            
+            Memory[0] = 42;
             /*var rand = new Random();
             for(ushort i = 0; i < Memory.Length; i++) {
                 Memory[i] = unchecked((ushort)rand.Next(ushort.MaxValue));
@@ -63,10 +64,12 @@ namespace VMLib {
 
         internal void MemoryWrite(Bus output) {
             Memory[address.Read()] = output.Read();
+            OnPropertyChanged("Memory");
         }
 
         public void MemoryWrite(ushort address, ushort value) {
             Memory[address] = value;
+            OnPropertyChanged("Memory");
         }
     }
 }
