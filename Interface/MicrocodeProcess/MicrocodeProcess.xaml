@@ -113,7 +113,7 @@
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0"/>
+                    <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0" Command="{Binding Play}"/>
                     <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0" Command="{Binding SingleStep}" Name="SingleStepButton"/>
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Delay Between Steps While Running (seconds)" HorizontalAlignment="Center"/>
