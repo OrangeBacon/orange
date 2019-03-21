@@ -3,8 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Windows.Input;
+using System.Windows.Threading;
 using VMLib;
 using static VMLib.StarfishVM;
 
@@ -68,9 +71,64 @@ namespace Interface.ViewModels {
             // only allowed to execute when the graph works or it is a no op
             return VM.Controller.ActiveGraph.TopologicalSort().Count != 0 || VM.Controller.ActiveCommands.Count == 0;
         }
+
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
-            VM.Clock.RunCycle();
+            BackgroundWorker b = new BackgroundWorker();
+            b.DoWork += (sender, e) => VM.Clock.RunCycle();
+            b.RunWorkerAsync();
+        }
+
+        // play command
+        // run one step on the vm command
+        private ICommand _play;
+        public ICommand Play {
+            get {
+                if(_play == null) {
+                    _play = new RelayCommand(PlayExecute, CanPlayExecute);
+                }
+                return _play;
+            }
+        }
+        private bool CanPlayExecute(object obj) {
+            // only allowed to execute when the graph works or it is a no op
+            return VM.Controller.ActiveGraph.TopologicalSort().Count != 0 || VM.Controller.ActiveCommands.Count == 0;
+        }
+        private BackgroundWorker b;
+        private bool state = false;
+        private void PlayExecute() {
+            if(!state) {
+                state = true;
+                Globals.Log.Info("PLAY");
+                b = new BackgroundWorker {
+                    WorkerSupportsCancellation = true
+                };
+                b.DoWork += DoPlay;
+                b.RunWorkerAsync();
+
+                DispatcherTimer T = new DispatcherTimer {
+                    Interval = TimeSpan.FromSeconds(1)
+                };
+                T.Tick += delegate {
+                    b.CancelAsync();
+                    state = false;
+                };
+                T.Start();
+            } else {
+                b.CancelAsync();
+                state = false;
+            }
+        }
+        private void DoPlay(object sender, DoWorkEventArgs e) {
+            if(state) {
+                VM.Clock.RunCycle();
+                //Thread.Sleep(0);
+                b = new BackgroundWorker {
+                    WorkerSupportsCancellation = true
+                };
+                b.DoWork += DoPlay;
+                b.RunWorkerAsync();
+            }
         }
 
         // command to enable / disable a specific microcode command
@@ -103,12 +161,12 @@ namespace Interface.ViewModels {
 
             // loop through new components
             foreach(var item in e.NewItems) {
-                var component = item as Component;
+                var component = item as VMLib.Component;
                 
                 // extract all displayable properties of the component - ie all ushort values
                 var properties = new List<UInt16Prop>();
                 foreach(var prop in component.GetType().GetProperties()) {
-                    if(!typeof(Component).GetProperties().Contains(prop) && prop.GetValue(component).GetType() == typeof(ushort)) {
+                    if(!typeof(VMLib.Component).GetProperties().Contains(prop) && prop.GetValue(component).GetType() == typeof(ushort)) {
                         properties.Add(new UInt16Prop() {
                             Value = (ushort)prop.GetValue(component),
                             Name = prop.Name,
