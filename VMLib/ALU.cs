@@ -55,8 +55,9 @@ namespace VMLib {
 
             switch(Mode) {
                 case 0: { // Add
-                    var result = (ushort)(left + right);
+                    var result = unchecked((ushort)(left + right));
                     OutBus.Write(result);
+                    Flags.Update("overflow/carry", true);
                     if(result != left + right) {
                         Flags.Update("overflow/carry", true);
                     } else {

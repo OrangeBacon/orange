@@ -75,7 +75,10 @@ namespace Interface.ViewModels {
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
             BackgroundWorker b = new BackgroundWorker();
-            b.DoWork += (sender, e) => VM.Clock.RunCycle();
+            b.DoWork += (sender, e) => {
+                VM.Clock.RunCycle();
+                OnPropertyChanged("VM");
+            };
             b.RunWorkerAsync();
         }
 

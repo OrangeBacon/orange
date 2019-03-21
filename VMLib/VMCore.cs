@@ -27,6 +27,8 @@ namespace VMLib {
 
             // ensure change propogation so everything updates in front end
             Controller.PropertyChanged += (a, b) => { OnPropertyChanged("Controller"); };
+            Flags.PropertyChanged += (a, b) => {
+                OnPropertyChanged("Flags"); };
         }
 
         // register new component with the core
