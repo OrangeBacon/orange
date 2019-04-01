@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Interface"
         xmlns:ViewModels="clr-namespace:Interface.ViewModels"
         xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
         mc:Ignorable="d"
@@ -52,7 +51,7 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding TypeName, StringFormat='Type: {0}'}"/>
                                         <TextBlock Text="{Binding ID, StringFormat='ID: {0}'}"/>
-                                        <ItemsControl ItemsSource="{Binding Properties, diag:PresentationTraceSources.TraceLevel=High}">
+                                        <ItemsControl ItemsSource="{Binding Properties}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel Orientation="Horizontal">
@@ -79,17 +78,32 @@
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
                     <GroupBox Header="Microcode Inputs" Grid.Row="0">
-                        <ItemsControl ItemsSource="{Binding VM.Controller.Inputs}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Name}"/>
-                                        <TextBlock Text=": "/>
-                                        <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding VM.Controller.Inputs}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}"/>
+                                                <TextBlock Text=": "/>
+                                                <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <ItemsControl ItemsSource="{Binding Flags}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Key}"/>
+                                                <TextBlock Text=": "/>
+                                                <TextBox Text="{Binding Value, Mode=OneWay}" IsEnabled="False"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
                     </GroupBox>
                     <GridSplitter Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="1"/>
                     <DataGrid Grid.Row="2" CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" BorderBrush="#00000000" Background="#00000000" ItemsSource="{Binding VM.Controller.Commands, Mode=OneWay}" AutoGenerateColumns="False" GridLinesVisibility="None" HeadersVisibility="Column">
@@ -113,7 +127,7 @@
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0" Command="{Binding Play}"/>
+                    <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0" Command="{Binding Play}" Click="ToggleButton_Click"/>
                     <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0" Command="{Binding SingleStep}" Name="SingleStepButton"/>
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Delay Between Steps While Running (seconds)" HorizontalAlignment="Center"/>

@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading;
 using System.Windows.Input;
 using System.Windows.Threading;
 using VMLib;
@@ -19,6 +18,24 @@ namespace Interface.ViewModels {
 
             // force initial update with current components
             UpdateComponents(null, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, VM.Components));
+
+            Flags = new ObservableCollection<KeyValuePair<string, bool>>(VM.Flags.FlagsAvaliable);
+            VM.Flags.FlagsAvaliable.CollectionChanged += (sender, e) => {
+                if(e.NewItems != null) {
+                    foreach(var item in e.NewItems) {
+                        App.Current.Dispatcher.Invoke(delegate {
+                            Flags.Add((KeyValuePair<string, bool>)item);
+                        });
+                    }
+                }
+                if(e.OldItems != null) {
+                    foreach(var item in e.OldItems) {
+                        App.Current.Dispatcher.Invoke(delegate {
+                            Flags.Remove((KeyValuePair<string, bool>)item);
+                        });
+                    }
+                }
+            };
         }
 
         // Main VM used in all execution
@@ -74,8 +91,11 @@ namespace Interface.ViewModels {
 
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
-            BackgroundWorker b = new BackgroundWorker();
-            b.DoWork += (sender, e) => VM.Clock.RunCycle();
+            var b = new BackgroundWorker();
+            b.DoWork += (sender, args) => {
+                VM.Clock.RunCycle();
+                OnPropertyChanged("VM");
+            };
             b.RunWorkerAsync();
         }
 
@@ -99,23 +119,15 @@ namespace Interface.ViewModels {
         private void PlayExecute() {
             if(!state) {
                 state = true;
-                Globals.Log.Info("PLAY");
+                Globals.Log.Info("Play");
                 b = new BackgroundWorker {
                     WorkerSupportsCancellation = true
                 };
                 b.DoWork += DoPlay;
                 b.RunWorkerAsync();
-
-                DispatcherTimer T = new DispatcherTimer {
-                    Interval = TimeSpan.FromSeconds(1)
-                };
-                T.Tick += delegate {
-                    b.CancelAsync();
-                    state = false;
-                };
-                T.Start();
             } else {
                 b.CancelAsync();
+                Globals.Log.Info("Pause");
                 state = false;
             }
         }
@@ -153,6 +165,8 @@ namespace Interface.ViewModels {
         // list of all the data required to display each component
         // read by the user interface
         public ObservableCollection<ComponentModel> Components { get; } = new ObservableCollection<ComponentModel>();
+
+        public ObservableCollection<KeyValuePair<string, bool>> Flags { get; private set; }
 
         // updates the user interface with all of the new components
         // TODO: deal with removing components from the emulator,
