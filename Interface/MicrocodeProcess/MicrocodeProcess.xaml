@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Interface"
         xmlns:ViewModels="clr-namespace:Interface.ViewModels"
         xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
         mc:Ignorable="d"
@@ -52,7 +51,7 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding TypeName, StringFormat='Type: {0}'}"/>
                                         <TextBlock Text="{Binding ID, StringFormat='ID: {0}'}"/>
-                                        <ItemsControl ItemsSource="{Binding Properties, diag:PresentationTraceSources.TraceLevel=High}">
+                                        <ItemsControl ItemsSource="{Binding Properties}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <StackPanel Orientation="Horizontal">
@@ -128,7 +127,7 @@
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0" Command="{Binding Play}"/>
+                    <ToggleButton Content="Play" Grid.Column="0" Margin="0,0,10,0" Command="{Binding Play}" Click="ToggleButton_Click"/>
                     <Button Content="Single Step" Grid.Column="1" Margin="0,0,10,0" Command="{Binding SingleStep}" Name="SingleStepButton"/>
                     <StackPanel Grid.Column="2">
                         <TextBlock Text="Delay Between Steps While Running (seconds)" HorizontalAlignment="Center"/>

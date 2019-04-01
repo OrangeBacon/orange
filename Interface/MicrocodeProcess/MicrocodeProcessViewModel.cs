@@ -119,23 +119,15 @@ namespace Interface.ViewModels {
         private void PlayExecute() {
             if(!state) {
                 state = true;
-                Globals.Log.Info("PLAY");
+                Globals.Log.Info("Play");
                 b = new BackgroundWorker {
                     WorkerSupportsCancellation = true
                 };
                 b.DoWork += DoPlay;
                 b.RunWorkerAsync();
-
-                DispatcherTimer T = new DispatcherTimer {
-                    Interval = TimeSpan.FromSeconds(1)
-                };
-                T.Tick += delegate {
-                    b.CancelAsync();
-                    state = false;
-                };
-                T.Start();
             } else {
                 b.CancelAsync();
+                Globals.Log.Info("Pause");
                 state = false;
             }
         }

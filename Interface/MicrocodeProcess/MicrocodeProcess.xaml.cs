@@ -1,7 +1,7 @@
 ﻿using Interface.Framework;
 using System;
 using System.Windows;
-
+using System.Windows.Controls.Primitives;
 
 namespace Interface.Views {
     /// <summary>
@@ -33,6 +33,14 @@ namespace Interface.Views {
             // closes all windows in the application
             // without this, the log would remain open, with the main window closed.
             Application.Current.Shutdown();
+        }
+
+        private void ToggleButton_Click(object sender, RoutedEventArgs e) {
+            if(((ToggleButton)sender).IsChecked == true) {
+                ((ToggleButton)sender).Content = "Pause";
+            } else {
+                ((ToggleButton)sender).Content = "Play";
+            }
         }
     }
 }
