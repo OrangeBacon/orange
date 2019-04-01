@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 namespace VMLib {
     // all control bits that influence the computer
     public class Flags : Component {
-        
         public ObservableCollection<KeyValuePair<string, bool>> FlagsAvaliable { get; } = new ObservableCollection<KeyValuePair<string, bool>>();
 
         public Flags(VMCore core) : base(core, nameof(Flags)) {
