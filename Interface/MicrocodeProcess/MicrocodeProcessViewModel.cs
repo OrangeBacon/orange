@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading;
 using System.Windows.Input;
 using System.Windows.Threading;
 using VMLib;
@@ -74,12 +73,8 @@ namespace Interface.ViewModels {
 
         private void SingleStepExecute() {
             Globals.Log.Info("STEP");
-            BackgroundWorker b = new BackgroundWorker();
-            b.DoWork += (sender, e) => {
-                VM.Clock.RunCycle();
-                OnPropertyChanged("VM");
-            };
-            b.RunWorkerAsync();
+            VM.Clock.RunCycle();
+            OnPropertyChanged("VM");
         }
 
         // play command
