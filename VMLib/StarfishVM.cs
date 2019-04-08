@@ -41,7 +41,7 @@ namespace VMLib {
 
             var mem = new Memory64k(VM, "Main Memory", InState(addrBus), InOutState(dataBus), OutState(instBus));
 
-            var IR = new InstructionRegister(VM, instBus);
+            var IR = new InstructionRegister(VM, instBus, dataBus);
             VM.Controller.Input(IR, "OpCode", 7);
 
             return VM;
