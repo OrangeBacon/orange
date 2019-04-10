@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 
 namespace VMLib {
     public class ALU : Component {
@@ -30,7 +31,16 @@ namespace VMLib {
             });
 
             // which computation should be performed?
-            Commands.Add(new MicrocodeCommand("ALU Mode", SetMode1) {
+            Commands.Add(new MicrocodeCommand("ALU Mode 0", ()=>SetMode(0)) {
+                Changes = { this }
+            });
+            Commands.Add(new MicrocodeCommand("ALU Mode 1", ()=>SetMode(1)) {
+                Changes = { this }
+            });
+            Commands.Add(new MicrocodeCommand("ALU Mode 2", ()=>SetMode(2)) {
+                Changes = { this }
+            });
+            Commands.Add(new MicrocodeCommand("ALU Mode 3", ()=>SetMode(3)) {
                 Changes = { this }
             });
 
@@ -77,7 +87,7 @@ namespace VMLib {
                     }
                 }; break;
                 case 1: { // Subtract
-                    var result = (ushort)(left - right);
+                    var result = unchecked((ushort)(left - right));
                     OutBus.Write(result);
                     if(result != left - right) {
                         Flags.Update(overflowFlag, true);
@@ -90,7 +100,101 @@ namespace VMLib {
                         Flags.Update(zeroFlag, false);
                     }
                 }; break;
-                default: break;
+                case 2: { // negate
+                    var result = unchecked((ushort)-left);
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 3: { // bit and
+                    var result = unchecked((ushort)(left & right));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 4: { // bit or
+                    var result = unchecked((ushort)(left | right));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 5: {  // bit xor
+                    var result = unchecked((ushort)(left ^ right));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 6: {  // bit not (1's comp.)
+                    var result = unchecked((ushort)~left);
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 7: { // left shift
+                    var result = unchecked((ushort)(left << right));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 8: { // cyclic left shift
+                    var result = unchecked((ushort)(left << right | left >> (16 - right)));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 9: { // logical right shift
+                    var result = unchecked((ushort)(left >> right));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 10: { // arithmetic right shift
+                    int l = unchecked((short)left);
+                    int r = unchecked((short)right);
+                    var result = unchecked((ushort)(left >> right));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                case 11: { // cyclic right shift
+                    var result = unchecked((ushort)(left >> right | (left & ((1 << right) - 1) << right )));
+                    OutBus.Write(result);
+                    if(result == 0) {
+                        Flags.Update(zeroFlag, true);
+                    } else {
+                        Flags.Update(zeroFlag, false);
+                    }
+                }; break;
+                default: {
+                    VMCore.Log.Warn("Invalid ALU Operation");
+                }; break;
             }
         }
 
@@ -107,8 +211,8 @@ namespace VMLib {
         }
 
         // set bit 0 of mode
-        public void SetMode1() {
-            Mode ^= 1 << 0;
+        public void SetMode(int bit) {
+            Mode ^= unchecked((byte)(1 << bit));
         }
     }
 }

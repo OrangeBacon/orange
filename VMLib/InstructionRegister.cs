@@ -15,15 +15,15 @@
                 OnPropertyChanged("Arg1");
                 OnPropertyChanged("Arg2");
                 OnPropertyChanged("Arg3");
-            }));
+            }) { Changes = { this }, Depends = { instBus } });
 
             Commands.Add(new MicrocodeCommand("Intermediate", () => {
                 dataBus.Write(Arg3);
-            }));
+            }) { Changes = { dataBus }, Depends = { this } });
 
             Commands.Add(new MicrocodeCommand("Long Intermediate", () => {
                 dataBus.Write((ushort)(Arg2 << 3 | Arg3));
-            }));
+            }) { Changes = { dataBus }, Depends = { this } });
         }
     }
 }

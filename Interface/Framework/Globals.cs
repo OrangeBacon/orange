@@ -11,15 +11,21 @@ namespace Interface.Framework {
             static public ObservableCollection<string> LogText { get; } = new ObservableCollection<string>();
 
             public void Info(string message) {
-                LogText.Add($"[{DateTime.Now.ToString()}] INFO: {message}");
+                App.Current.Dispatcher.Invoke(() => {
+                    LogText.Add($"[{DateTime.Now.ToString()}] INFO: {message}");
+                });
             }
 
             public void Warn(string message) {
-                LogText.Add($"[{DateTime.Now.ToString()}] WARN: {message}");
+                App.Current.Dispatcher.Invoke(() => {
+                    LogText.Add($"[{DateTime.Now.ToString()}] WARN: {message}");
+                });
             }
 
             public void Error(string message) {
-                LogText.Add($"[{DateTime.Now.ToString()}] ERROR: {message}");
+                App.Current.Dispatcher.Invoke(() => {
+                    LogText.Add($"[{DateTime.Now.ToString()}] ERROR: {message}");
+                });
             }
         }
     }
