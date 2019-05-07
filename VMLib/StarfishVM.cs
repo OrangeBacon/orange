@@ -5,13 +5,14 @@ using static VMLib.Util;
 namespace VMLib {
     public class StarfishVM { 
         public static VMCore CreateStarfishVM(ILogger Log = null) {
-            // create default virtual machine
-            VMCore VM = new VMCore();
-
+        
             // should the global log be set up?
-            if(Log != null) {
+            if (Log != null) {
                 VMCore.Log = Log;
             }
+
+            // create default virtual machine
+            VMCore VM = new VMCore();
 
             var phase = new PhaseCounter(VM);
             VM.Controller.Input(phase, "Phase", 4);
@@ -27,22 +28,15 @@ namespace VMLib {
             var addrBus = new Bus(VM, "Address");
             var instBus = new Bus(VM, "Instruction");
 
-            var ALU = new ALU(VM, leftBus, rightBus, dataBus);
-
-            var regA = new Register(VM, "A", InOutState(dataBus), OutState(leftBus));
-            var regB = new Register(VM, "B", InOutState(dataBus), OutState(leftBus));
-            var regC = new Register(VM, "C", InOutState(dataBus), OutState(rightBus));
-            var regD = new Register(VM, "D", InOutState(dataBus), OutState(rightBus));
-            var regE = new Register(VM, "E", InOutState(dataBus), OutState(rightBus));
-
-            var regAR = new Register(VM, "AR", InOutState(dataBus), OutState(addrBus));
-            var regSP = new Register(VM, "SP", InOutState(dataBus), OutState(addrBus));
-            var regIP = new Register(VM, "IP", InOutState(dataBus), OutState(addrBus));
-
-            var mem = new Memory64k(VM, "Main Memory", InState(addrBus), InOutState(dataBus), OutState(instBus));
-
             var IR = new InstructionRegister(VM, instBus, dataBus);
             VM.Controller.Input(IR, "OpCode", 7);
+
+            new ALU(VM, leftBus, rightBus, dataBus);
+            new RegisterController(VM, 8, IR,
+                InOutState(dataBus), OutState(leftBus), OutState(rightBus), OutState(addrBus));
+            new Register(VM, "Temp", InOutState(dataBus), OutState(leftBus), OutState(rightBus), OutState(addrBus));
+
+            new Memory64k(VM, "Main Memory", InState(addrBus), InOutState(dataBus), OutState(instBus));
 
             return VM;
         }
