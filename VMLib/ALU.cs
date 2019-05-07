@@ -10,13 +10,12 @@ namespace VMLib {
 
         private readonly int overflowFlag;
         private readonly int zeroFlag;
-        private readonly VMCore core;
 
         public ALU(VMCore core, Bus leftBus, Bus rightBus, Bus outBus) : base(core, nameof(ALU)) {
             LeftBus = leftBus;
             RightBus = rightBus;
             OutBus = outBus;
-            this.core = core;
+
             Flags = core.Flags;
             core.PropertyChanged += (sender, e) => {
                 if(e.PropertyName == "Flags") {
