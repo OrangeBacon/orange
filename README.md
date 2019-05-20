@@ -12,6 +12,9 @@ The documentation(not much) is currently at this repository's [wiki](https://git
 is to move it to the `./docs/` folder, so it can be hosted in gh-pages.
 
 # Modules
+## Block
+Block diagrams explaining the system.
+
 ## HWVM  (WIP)
 A virtual machine/emulator for the system, written in C#, that tries to be as accurate to what the real hardware will be as possible.
 This makes it not that fast, although useful for testing.  This module is also known as "Starfish VM".
