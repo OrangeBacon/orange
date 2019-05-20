@@ -1,9 +1,17 @@
-StarfishVM
+Orange System
 ========
-An emulator for custom computer architecture.  The architecture is designed as a 16bit computer that could be implemented with logic gates on a circuit board, not just in software.  Inspiration for the hardware design came from https://www.youtube.com/playlist?list=PLowKtXNTBypGqImE405J2565dvjafglHU, http://www.bigmessowires.com/ and http://www.homebrewcpu.com/.
 
-When the virtual machine is done, it will be programmed with an as-of now un-named assembly language(IL?) and a systems programming language (orange-lang) that compliles to the assembly.
+This repository tracks all the documentation and code for my attempt at creating a custom CPU out of logic chips,
+and writing the software tool-chain to use it.  The repository is structured in several modules, documented below.
+It has 16 bit addresses and 16 bit data, with more memory being accessible through the memory management unit (MMU).
 
-The documentation(not much) is currently at this repo's [wiki](https://github.com/ScratchOs/starfish/wiki).
+The final hardware design, an assembly language and a higher level language are still to-do, as well as any code that will
+run on the system.
 
-Currently, the emulator is progressing, and the language is still being designed.
+The documentation(not much) is currently at this repository's [wiki](https://github.com/ScratchOs/starfish/wiki), however the plan
+is to move it to the `./docs/` folder, so it can be hosted in gh-pages.
+
+# Modules
+## HWVM  (WIP)
+A virtual machine/emulator for the system, written in C#, that tries to be as accurate to what the real hardware will be as possible.
+This makes it not that fast, although useful for testing.  This module is also known as "Starfish VM".
