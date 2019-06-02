@@ -1,0 +1,34 @@
+# create opcode for value 0x78, depends on three registers
+opcode 78 ADD(Reg, Reg, Reg) {
+    MI,GE,HE;  # assert the MI, GE, and HE signals when the phase counter is 0, opcode is 78 for all flags
+    HI,ME,ME,HM;
+    *: ; # explicit no operation, `*:` reqired as repeated `;` ignored
+    overflow = 1: HR, JQ, LE;
+    overflow = 0: ;
+}
+
+header {
+  HE, TE, MT # any condition codes here are an error (other than `*:`)
+}
+
+macro TX <- BR {
+  HE,RE,HU
+}
+opcode 11 JMP(Reg) {
+  TX <- BR, RE;
+}
+
+output(8) {
+ 0: RE;
+ 9: TY;
+}
+
+input {
+  opcode: 7;
+  phase: 4;
+  overflow;
+}
+
+header =
+  HE, GT, BA;
+opcode 11 JMP(Reg) = TX <- BR, RE;

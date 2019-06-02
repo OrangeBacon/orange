@@ -9,3 +9,5 @@ Releases/
 *.nupkg
 *.vspx
 *.diagsession
+.vscode/
+build/
