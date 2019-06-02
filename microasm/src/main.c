@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "scanner.h"
+#include "token.h"
+
 static char* readFile(char* fileName);
 
 int main(int argc, char** argv){
@@ -10,8 +13,12 @@ int main(int argc, char** argv){
     }
 
     char* file = readFile(argv[1]);
+
+    Scanner scan;
+    ScannerInit(&scan, file);
 }
 
+// get a buffer containing the string contents of the file provided
 static char* readFile(char* fileName) {
 #ifdef debug
     printf("Reading: %s\n", fileName);
