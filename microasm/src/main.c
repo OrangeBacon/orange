@@ -3,6 +3,7 @@
 
 #include "scanner.h"
 #include "token.h"
+#include "parser.h"
 
 static char* readFile(char* fileName);
 
@@ -17,14 +18,9 @@ int main(int argc, char** argv){
     Scanner scan;
     ScannerInit(&scan, file);
 
-    for (;;) {
-        Token token = ScanToken(&scan);
-        TokenPrint(&token);
-        printf("\n");
-        if (token.type == TOKEN_EOF) {
-            break;
-        }
-    }
+    Parser parse;
+    ParserInit(&parse, &scan);
+    Parse(&parse);
 }
 
 // get a buffer containing the string contents of the file provided

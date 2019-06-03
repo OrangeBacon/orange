@@ -83,7 +83,7 @@ static void skipWhitespace(Scanner* scanner) {
                 break;
             case '\n':
                 scanner->line++;
-                scanner->column = -1;
+                scanner->column = 0;
                 advance(scanner);
                 break;
             case '#':

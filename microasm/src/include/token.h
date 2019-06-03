@@ -2,28 +2,26 @@
 #define TOKEN_H
 
 #define FOREACH_TOKEN(x) \
-    x(TOKEN_LEFT_PAREN) x(TOKEN_RIGHT_PAREN) \
-    x(TOKEN_LEFT_BRACE) x(TOKEN_RIGHT_BRACE) \
-    x(TOKEN_COMMA) x(TOKEN_DOT) x(TOKEN_COLON) \
-    x(TOKEN_SEMICOLON) x(TOKEN_STAR) x(TOKEN_EQUAL) \
-    x(TOKEN_IDENTIFIER) x(TOKEN_OPCODE) x(TOKEN_HEADER) \
-    x(TOKEN_MACRO) x(TOKEN_INPUT) x(TOKEN_OUTPUT) \
-    x(TOKEN_ERROR) x(TOKEN_EOF)
+    x(LEFT_PAREN) x(RIGHT_PAREN) \
+    x(LEFT_BRACE) x(RIGHT_BRACE) \
+    x(COMMA) x(DOT) x(COLON) \
+    x(SEMICOLON) x(STAR) x(EQUAL) \
+    x(IDENTIFIER) x(OPCODE) x(HEADER) \
+    x(MACRO) x(INPUT) x(OUTPUT) \
+    x(ERROR) x(EOF)
 
-#define ENUM_TOKEN(x) x,
+#define ENUM_TOKEN(x) TOKEN_##x,
 #define STRING_TOKEN(x) #x,
 #define ADD_TOKEN(x) +1
-#define X_MACRO_LENGTH(x) 0 x(ADD_TOKEN)
 
 typedef enum TokenType {
     FOREACH_TOKEN(ENUM_TOKEN)
 } TokenType;
 
-const char* TokenNames[X_MACRO_LENGTH(FOREACH_TOKEN)];
+const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 
 #undef ENUM_TOKEN
 #undef ADD_TOKEN
-#undef X_MACRO_LENGTH
 
 // type and source location of a token
 typedef struct Token {
