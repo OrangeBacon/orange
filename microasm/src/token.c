@@ -6,5 +6,6 @@ const char* TokenNames[] = {
 };
 
 void TokenPrint(Token* token) {
-    printf("Token(%s)", TokenNames[token->type]);
+    printf("%.4i:%.4i %.17s: %.*s", token->line, token->column,
+        TokenNames[token->type], token->length, token->start);
 }

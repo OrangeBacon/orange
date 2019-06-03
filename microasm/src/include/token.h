@@ -4,7 +4,7 @@
 #define FOREACH_TOKEN(x) \
     x(TOKEN_LEFT_PAREN) x(TOKEN_RIGHT_PAREN) \
     x(TOKEN_LEFT_BRACE) x(TOKEN_RIGHT_BRACE) \
-    x(TOKEN_COMMA) x(TOKEN_DOT) \
+    x(TOKEN_COMMA) x(TOKEN_DOT) x(TOKEN_COLON) \
     x(TOKEN_SEMICOLON) x(TOKEN_STAR) x(TOKEN_EQUAL) \
     x(TOKEN_IDENTIFIER) x(TOKEN_NUMBER) \
     x(TOKEN_ERROR) x(TOKEN_EOF)
@@ -28,6 +28,7 @@ const char* TokenNames[X_MACRO_LENGTH(FOREACH_TOKEN)];
 typedef struct Token {
     TokenType type;
     const char* start;
+    int length;
     int line;
     int column;
 } Token;

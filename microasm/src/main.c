@@ -16,6 +16,15 @@ int main(int argc, char** argv){
 
     Scanner scan;
     ScannerInit(&scan, file);
+
+    for (;;) {
+        Token token = ScanToken(&scan);
+        TokenPrint(&token);
+        printf("\n");
+        if (token.type == TOKEN_EOF) {
+            break;
+        }
+    }
 }
 
 // get a buffer containing the string contents of the file provided

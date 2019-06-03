@@ -1,6 +1,8 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
+#include "token.h"
+
 // scanner current source infomation
 typedef struct Scanner {
     const char* current;
@@ -11,5 +13,8 @@ typedef struct Scanner {
 
 // initialise (or re-initialise) an already existing scanner
 void ScannerInit(Scanner* scanner, const char* source);
+
+// get the next token from a scanner
+Token ScanToken(Scanner* scanner);
 
 #endif
