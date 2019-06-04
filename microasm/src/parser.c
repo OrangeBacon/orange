@@ -9,7 +9,7 @@ static void consume(Parser* parser, TokenType type, const char* message);
 static void syncronise(Parser* parser);
 static void block(Parser* parser);
 static void header(Parser* parser);
-static void microcodeLine(Parser* parser);
+static Token microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
 static void errorAtCurrent(Parser* parser, const char* message);
@@ -120,15 +120,63 @@ static void block(Parser* parser) {
     if(parser->panicMode) syncronise(parser);
 }
 
+// parses a header statement
 static void header(Parser* parser) {
-    bool x = blockStart(parser);
-    microcodeLine(parser);
-    blockEnd(parser, x);
+    bool brace = blockStart(parser);
+    Token line = microcodeLine(parser);
+    if(line.start != NULL) {
+        errorAt(parser, &line, "Condition values not allowed in header");
+    }
+    blockEnd(parser, brace);
 }
 
-static void microcodeLine(Parser* parser) {
-    // conditions
-    // consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
+// parses a line of microcode commands with conditions
+// returns the token of the first equals if conditions present
+// else returns a token with a null start.
+// return used to display error in correct location if no
+// conditions allowed.
+static Token microcodeLine(Parser* parser) {
+    // are conditions being parsed?
+    bool cond = true;
+
+    // is this the first parse iteration?
+    bool first = true;
+
+    // the token representing the first equals token encountered
+    Token equals = {.start = NULL};
+
+    for(;;) {
+        consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
+        if(first) { // in first loop
+            if(match(parser, TOKEN_EQUAL)) {
+                // now know conditions are being parsed in this loop
+                equals = parser->previous;
+                consume(parser, TOKEN_IDENTIFIER, "Expected condition value");
+            } else {
+                // no conditions present, this loop parses bit names
+                cond = false;
+            }
+        }
+        if(cond && !first) {
+            // condition value
+            consume(parser, TOKEN_EQUAL, "Expected equals symbol");
+            consume(parser, TOKEN_IDENTIFIER, "Expected condition value");
+        }
+
+        // are there more values to parse?
+        if(!match(parser, TOKEN_COMMA)) {
+            break;
+        }
+        first = false;
+    }
+
+    if(cond) {
+        // seperator between conditions and bit names required
+        consume(parser, TOKEN_COLON, "Expected colon");
+    } else {
+        // no conditions so second loop not required
+        return equals;
+    }
 
     // bits
     for(;;) {
@@ -137,8 +185,11 @@ static void microcodeLine(Parser* parser) {
             break;
         }
     }
+    return equals;
 }
 
+// parse a single or multi-line block start and return the type parsed
+// true = multi-line, false = single-line
 static bool blockStart(Parser* parser) {
     if(match(parser, TOKEN_LEFT_BRACE)) {
         return true;  // multiline block
@@ -149,6 +200,7 @@ static bool blockStart(Parser* parser) {
     return false; // value does not matter
 }
 
+// expect the ending of a block based on the start type
 static void blockEnd(Parser* parser, bool start) {
     if(start) {
         // optional semicolon
