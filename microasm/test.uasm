@@ -11,11 +11,11 @@ header {
   HE, TE, MT # any condition codes here are an error (other than `*:`)
 }
 
-macro TX <- BR {
+macro TX {
   HE,RE,HU
 }
 opcode 11 JMP(Reg) {
-  TX <- BR, RE;
+  TX, RE;
 }
 
 output(8) {
@@ -31,4 +31,4 @@ input {
 
 header =
   HE, GT, BA;
-opcode 11 JMP(Reg) = TX <- BR, RE;
+opcode 11 JMP(Reg) = TX, RE;

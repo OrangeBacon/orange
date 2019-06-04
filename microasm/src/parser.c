@@ -5,8 +5,13 @@
 static void advance(Parser* parser);
 static bool match(Parser* parser, TokenType type);
 static bool check(Parser* parser, TokenType type);
+static void consume(Parser* parser, TokenType type, const char* message);
 static void syncronise(Parser* parser);
 static void block(Parser* parser);
+static void header(Parser* parser);
+static void microcodeLine(Parser* parser);
+static bool blockStart(Parser* parser);
+static void blockEnd(Parser* parser, bool start);
 static void errorAtCurrent(Parser* parser, const char* message);
 static void error(Parser* parser, const char* message);
 static void errorAt(Parser* parser, Token* token, const char* message);
@@ -52,6 +57,14 @@ static bool match(Parser* parser, TokenType type) {
     return true;
 }
 
+static void consume(Parser* parser, TokenType type, const char* message) {
+    if(parser->current.type == type) {
+        advance(parser);
+        return;
+    }
+    errorAtCurrent(parser, message);
+}
+
 // is the next token of type type?
 static bool check(Parser* parser, TokenType type) {
     return parser->current.type == type;
@@ -86,7 +99,7 @@ static void block(Parser* parser) {
             error(parser, "Only one header statement allowed per microcode");
         }
         parser->headerStatement = true;
-        //TODO
+        header(parser);
     } else if(match(parser, TOKEN_INPUT)) {
         if(parser->inputStatement){
             error(parser, "Only one input statement allowed per microcode");
@@ -105,6 +118,45 @@ static void block(Parser* parser) {
 
     // if error occured reset parser state to known value
     if(parser->panicMode) syncronise(parser);
+}
+
+static void header(Parser* parser) {
+    bool x = blockStart(parser);
+    microcodeLine(parser);
+    blockEnd(parser, x);
+}
+
+static void microcodeLine(Parser* parser) {
+    // conditions
+    // consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
+
+    // bits
+    for(;;) {
+        consume(parser, TOKEN_IDENTIFIER, "Expected bit name");
+        if(!match(parser, TOKEN_COMMA)) {
+            break;
+        }
+    }
+}
+
+static bool blockStart(Parser* parser) {
+    if(match(parser, TOKEN_LEFT_BRACE)) {
+        return true;  // multiline block
+    } else if(match(parser, TOKEN_EQUAL)) {
+        return false; // single line block
+    }
+    errorAtCurrent(parser, "Expected the start of a block");
+    return false; // value does not matter
+}
+
+static void blockEnd(Parser* parser, bool start) {
+    if(start) {
+        // optional semicolon
+        match(parser, TOKEN_SEMICOLON);
+        consume(parser, TOKEN_RIGHT_BRACE, "Expected a right brace at end of block");
+    } else {
+        consume(parser, TOKEN_SEMICOLON, "Expected a semi-colon at end of block");
+    }
 }
 
 // issue error for token before advance() called
