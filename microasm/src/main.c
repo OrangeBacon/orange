@@ -4,6 +4,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "parser.h"
+#include "ast.h"
 
 static char* readFile(char* fileName);
 
@@ -21,6 +22,11 @@ int main(int argc, char** argv){
     Parser parse;
     ParserInit(&parse, &scan);
     Parse(&parse);
+
+    PrintMicrocode(&parse.ast);
+
+    FreeMicrocode(&parse.ast);
+    free(file);
 }
 
 // get a buffer containing the string contents of the file provided

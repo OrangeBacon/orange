@@ -2,7 +2,9 @@
 #define PARSER_H
 
 #include <stdbool.h>
+#include "token.h"
 #include "scanner.h"
+#include "ast.h"
 
 // state required to create the syntax tree
 typedef struct Parser {
@@ -27,6 +29,9 @@ typedef struct Parser {
     bool headerStatement;
     bool inputStatement;
     bool outputStatement;
+
+    // the ast that is being constructed currently
+    Microcode ast;
 } Parser;
 
 // initialise a new parser

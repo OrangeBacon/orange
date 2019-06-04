@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "token.h"
 #include "parser.h"
+#include "ast.h"
 
 static void advance(Parser* parser);
 static bool match(Parser* parser, TokenType type);
@@ -144,6 +146,18 @@ static Token microcodeLine(Parser* parser) {
 
     // the token representing the first equals token encountered
     Token equals = {.start = NULL};
+
+    Line* line = malloc(sizeof(Line));
+    line->bits = malloc(sizeof(Token*));
+    line->conditions = malloc(sizeof(Condition*));
+    line->conditions[0] = malloc(sizeof(Condition));
+    line->conditions[0]->name = malloc(sizeof(Token));
+    *(line->conditions[0]->name) = (Token){.type = TOKEN_COLON};
+    line->conditions[0]->value = malloc(sizeof(Token));
+    *(line->conditions[0]->value) = (Token){.type = TOKEN_INPUT};
+    line->condition1Equals = &equals;
+    parser->ast.head = malloc(sizeof(Header));
+    parser->ast.head->line = line;
 
     for(;;) {
         consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
