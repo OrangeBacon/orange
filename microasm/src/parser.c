@@ -21,14 +21,18 @@ void ParserInit(Parser* parser, Scanner* scan) {
 }
 
 bool Parse(Parser* parser) {
+    // gets first token, required so not matching garbage(causes segfault)
     advance(parser);
+
     while(!match(parser, TOKEN_EOF)){
+        // all file-level constructs are blocks of some form
         block(parser);
     }
 
     return !parser->hadError;
 }
 
+// reports all error tokens, returning next non error token
 static void advance(Parser* parser) {
     parser->previous = parser->current;
 
@@ -41,67 +45,79 @@ static void advance(Parser* parser) {
     }
 }
 
+// consume a token of type type, else return false
 static bool match(Parser* parser, TokenType type) {
     if(!check(parser, type)) return false;
     advance(parser);
     return true;
 }
 
+// is the next token of type type?
 static bool check(Parser* parser, TokenType type) {
     return parser->current.type == type;
 }
 
+// get to known parser state after error occured
 static void syncronise(Parser* parser) {
     parser->panicMode = false;
     while(parser->current.type != TOKEN_EOF) {
         switch(parser->current.type) {
+            // should mostly be able to continue parsing from these tokens
             case TOKEN_INPUT:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
             case TOKEN_OUTPUT:
             case TOKEN_MACRO:
                 return;
-            default:;  // do nothing
+            default:;  // do nothing - cannot calculate a known parser state
         }
         advance(parser);
     }
 }
 
+// dispatch the parser for a block level statement
 static void block(Parser* parser) {
-    if(parser->panicMode) syncronise(parser);
-
     if(match(parser, TOKEN_OPCODE)) {
-        
+        //TODO
     } else if(match(parser, TOKEN_MACRO)) {
-        
+        //TODO
     } else if(match(parser, TOKEN_HEADER)) {
         if(parser->headerStatement){
             error(parser, "Only one header statement allowed per microcode");
         }
         parser->headerStatement = true;
+        //TODO
     } else if(match(parser, TOKEN_INPUT)) {
         if(parser->inputStatement){
             error(parser, "Only one input statement allowed per microcode");
         }
         parser->inputStatement = true;
+        //TODO
     } else if(match(parser, TOKEN_OUTPUT)) {
         if(parser->outputStatement){
             error(parser, "Only one output statement allowed per microcode");
         }
         parser->outputStatement = true;
+        //TODO
     } else {
-        errorAtCurrent(parser, "Expected a block type");
+        errorAtCurrent(parser, "Expected a block statement");
     }
+
+    // if error occured reset parser state to known value
+    if(parser->panicMode) syncronise(parser);
 }
 
+// issue error for token before advance() called
 static void errorAtCurrent(Parser* parser, const char* message) {
     errorAt(parser, &parser->current, message);
 }
 
+// issue error for already advanced() token
 static void error(Parser* parser, const char* message) {
     errorAt(parser, &parser->previous, message);
 }
 
+// print an error message at a token's position
 static void errorAt(Parser* parser, Token* token, const char* message) {
     if(parser->panicMode) return;
     parser->panicMode = true;

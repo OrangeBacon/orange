@@ -23,12 +23,14 @@ void ScannerInit(Scanner* scanner, const char* source) {
 }
 
 Token ScanToken(Scanner* scanner){
+    // all whitespace is insignificant at the start of a token
     skipWhitespace(scanner);
 
+    // scan current token from the end of the last token + whitespace
     scanner->start = scanner->current;
 
     if(isAtEnd(scanner)){
-        scanner->column++;
+        scanner->column++; // so EOF is in the column after the last token
         return makeToken(scanner, TOKEN_EOF);
     }
 
@@ -51,20 +53,25 @@ Token ScanToken(Scanner* scanner){
     return errorToken(scanner, "Unexpected character");
 }
 
+// get next character without advancing the stream
 static char peek(Scanner* scanner) {
     return *scanner->current;
 }
 
+// get the next character in the stream
 static char advance(Scanner* scanner) {
+    if(isAtEnd(scanner)) return '\0';
     scanner->current++;
     scanner->column++;
     return scanner->current[-1];
 }
 
+// are there more characters to read?
 static bool isAtEnd(Scanner* scanner) {
     return *scanner->current == '\0';
 }
 
+// is the character not whitespace and not part of any other token?
 static bool isIdent(char c) {
     return !(c =='(' || c == ')' || c == '{' ||
         c == '}' || c == ';' || c == ':' || c == '=' ||
@@ -72,6 +79,7 @@ static bool isIdent(char c) {
         c == '\n' || c == '#');
 }
 
+// ignore any ' ', '\t', '\r', '\n' and comments
 static void skipWhitespace(Scanner* scanner) {
     for(;;){
         char c = peek(scanner);
@@ -87,6 +95,7 @@ static void skipWhitespace(Scanner* scanner) {
                 advance(scanner);
                 break;
             case '#':
+                // skip comment until just before end of line
                 while(peek(scanner) != '\n' && !isAtEnd(scanner)) {
                     advance(scanner);
                 }
@@ -97,6 +106,7 @@ static void skipWhitespace(Scanner* scanner) {
     }
 }
 
+// scan an identifier
 static Token identifier(Scanner* scanner) {
     while(isIdent(peek(scanner))) {
         advance(scanner);
@@ -105,7 +115,10 @@ static Token identifier(Scanner* scanner) {
     return makeToken(scanner, identifierType(scanner));
 }
 
+// what is the token type of the last identifier scanned?
 static TokenType identifierType(Scanner* scanner) {
+    // uses a trie - no keywords begin with anything other
+    // than 'h' 'm' 'i' 'o', etc.
     switch(scanner->start[0]) {
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
         case 'm': return checkKeyword(scanner, 1, 4, "acro", TOKEN_MACRO);
@@ -120,6 +133,7 @@ static TokenType identifierType(Scanner* scanner) {
     return TOKEN_IDENTIFIER;
 }
 
+// is the remainder of the last scanned identifier the same as the provided string
 static TokenType checkKeyword(Scanner* scanner, int start, int length, 
       const char* rest, TokenType type) {
     if(scanner->current - scanner->start == start + length && 
@@ -129,6 +143,7 @@ static TokenType checkKeyword(Scanner* scanner, int start, int length,
     return TOKEN_IDENTIFIER;
 }
 
+// create a token based on the currently advanced characters
 static Token makeToken(Scanner* scanner, TokenType type) {
     Token token;
     token.type = type;
@@ -140,6 +155,7 @@ static Token makeToken(Scanner* scanner, TokenType type) {
     return token;
 }
 
+// create error which will be displayed by the parser
 static Token errorToken(Scanner* scanner, const char* message) {
     Token token;
     token.type = TOKEN_ERROR;

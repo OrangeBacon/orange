@@ -11,7 +11,6 @@
     x(ERROR) x(EOF)
 
 #define ENUM_TOKEN(x) TOKEN_##x,
-#define STRING_TOKEN(x) #x,
 #define ADD_TOKEN(x) +1
 
 typedef enum TokenType {
@@ -26,7 +25,7 @@ const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 // type and source location of a token
 typedef struct Token {
     TokenType type;
-    const char* start;
+    const char* start;  // location in source file buffer
     int length;
     int line;
     int column;

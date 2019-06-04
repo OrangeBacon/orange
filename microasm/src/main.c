@@ -35,10 +35,14 @@ static char* readFile(char* fileName) {
         exit(1);
     }
     
+    // get the length of the file
     fseek(file, 0L, SEEK_END);
     size_t fileSize = ftell(file);
     rewind(file);
 
+    // +1 so '\0' can be added
+    // buffer should stay allocated for lifetime 
+    // of compiler as all tokens reference it
     char* buffer = (char*)malloc(fileSize + 1);
     if(buffer == NULL){
         printf("Could not enough allocate memory to read file \"%s\".\n", fileName);

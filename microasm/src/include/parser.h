@@ -4,12 +4,26 @@
 #include <stdbool.h>
 #include "scanner.h"
 
+// state required to create the syntax tree
 typedef struct Parser {
+    // token list
     Scanner* scanner;
+
+    // what is being parsed now
     Token current;
+
+    // what was parsed (only used for errors)
     Token previous;
+
+    // has an error occured at any point so far
     bool hadError;
+
+    // should the compiler be recovering from an error currently
     bool panicMode;
+
+    // has a _ statement been parsed yet?
+    // allows them to only be included once per file
+
     bool headerStatement;
     bool inputStatement;
     bool outputStatement;
