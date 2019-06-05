@@ -11,8 +11,8 @@ static bool check(Parser* parser, TokenType type);
 static void consume(Parser* parser, TokenType type, const char* message);
 static void syncronise(Parser* parser);
 static void block(Parser* parser);
-static void header(Parser* parser);
-static Token microcodeLine(Parser* parser);
+static void header(Parser* parser, bool write);
+static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
 static void errorAtCurrent(Parser* parser, const char* message);
@@ -102,8 +102,8 @@ static void block(Parser* parser) {
         if(parser->headerStatement){
             error(parser, "Only one header statement allowed per microcode");
         }
+        header(parser, !parser->headerStatement);
         parser->headerStatement = true;
-        header(parser);
     } else if(match(parser, TOKEN_INPUT)) {
         if(parser->inputStatement){
             error(parser, "Only one input statement allowed per microcode");
@@ -125,55 +125,68 @@ static void block(Parser* parser) {
 }
 
 // parses a header statement
-static void header(Parser* parser) {
+static void header(Parser* parser, bool write) {
     bool brace = blockStart(parser);
-    Token line = microcodeLine(parser);
-    if(line.start != NULL) {
-        errorAt(parser, &line, "Condition values not allowed in header");
+    Line* line = microcodeLine(parser);
+    if(line->conditionCount != 0) {
+        errorAt(parser, &line->condition1Equals, "Condition values not allowed in header");
+    }
+    if(write) {
+        parser->ast.head.bits = line->bits;
+        parser->ast.head.bitCount = line->bitCount;
+        parser->ast.head.bitCapacity = line->bitCapacity;
     }
     blockEnd(parser, brace);
 }
 
 // parses a line of microcode commands with conditions
-// returns the token of the first equals if conditions present
-// else returns a token with a null start.
-// return used to display error in correct location if no
-// conditions allowed.
-static Token microcodeLine(Parser* parser) {
+// returns the line ast representing what was parsed
+static Line* microcodeLine(Parser* parser) {
     // are conditions being parsed?
     bool cond = true;
 
     // is this the first parse iteration?
     bool first = true;
 
-    // the token representing the first equals token encountered
-    Token equals = {.start = NULL};
-
     // testing code
-    Line line;
-    line.bits = ArenaAlloc(&parser->ast.arena, sizeof(Token*));
-    line.conditions = ArenaAlloc(&parser->ast.arena, sizeof(Condition*));
-    line.conditions[0].name = (Token){.type = TOKEN_COLON};
-    line.conditions[0].value = (Token){.type = TOKEN_INPUT};
-    line.condition1Equals = equals;
-    parser->ast.head.line = line;
+    Line* line = ArenaAlloc(&parser->ast.arena, sizeof(Line));
+    line->bitCount = 0;
+    line->bitCapacity = 8;
+    line->bits = ArenaAlloc(&parser->ast.arena, sizeof(Token)*line->bitCapacity);
+    line->conditionCount = 0;
+    line->conditionCapacity = 8;
+    line->conditions = ArenaAlloc(&parser->ast.arena, sizeof(Condition)*line->conditionCapacity);
+    line->condition1Equals = (Token){.start = NULL};
 
     for(;;) {
         consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
-        if(first) { // in first loop
-            if(match(parser, TOKEN_EQUAL)) {
-                // now know conditions are being parsed in this loop
-                equals = parser->previous;
-                consume(parser, TOKEN_IDENTIFIER, "Expected condition value");
-            } else {
-                // no conditions present, this loop parses bit names
-                cond = false;
-            }
+        Token name = parser->previous;
+        if(first) { // in first loop iteration
+            cond = check(parser, TOKEN_EQUAL);
         }
-        if(cond && !first) {
-            // condition value
+        if(cond) {
             consume(parser, TOKEN_EQUAL, "Expected equals symbol");
+
+            if(first) {
+                line->condition1Equals = parser->previous;
+            }
+
             consume(parser, TOKEN_IDENTIFIER, "Expected condition value");
+
+            Condition condition;
+            condition.name = name;
+            condition.value = parser->previous;
+            if(line->conditionCapacity > 0) {
+                line->conditions[line->conditionCount] = condition;
+                line->conditionCount++;
+                line->conditionCapacity--;
+            }
+        } else {
+            if(line->bitCapacity > 0) {
+                line->bits[line->bitCount] = name;
+                line->bitCount++;
+                line->bitCapacity--;
+            }
         }
 
         // are there more values to parse?
@@ -188,17 +201,31 @@ static Token microcodeLine(Parser* parser) {
         consume(parser, TOKEN_COLON, "Expected colon");
     } else {
         // no conditions so second loop not required
-        return equals;
+        return line;
     }
 
     // bits
     for(;;) {
         consume(parser, TOKEN_IDENTIFIER, "Expected bit name");
+        if(line->bitCapacity > 0) {
+            line->bits[line->bitCount] = parser->previous;
+            line->bitCount++;
+            line->bitCapacity--;
+        }
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }
     }
-    return equals;
+
+    printf("Conditions: %u", line->conditionCount);
+    for(int i = 0; i < line->conditionCount; i++) {
+        printf("\n    ");
+        TokenPrint(&line->conditions[i].name);
+        printf(" = ");
+        TokenPrint(&line->conditions[i].value);
+    }
+    printf("\n");
+    return line;
 }
 
 // parse a single or multi-line block start and return the type parsed

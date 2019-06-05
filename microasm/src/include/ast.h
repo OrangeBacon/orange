@@ -11,12 +11,18 @@ typedef struct Condition {
 
 typedef struct Line {
     Condition* conditions;
+    int conditionCount;
+    int conditionCapacity;
     Token* bits;
+    int bitCount;
+    int bitCapacity;
     Token condition1Equals;
 } Line;
 
 typedef struct Header {
-    Line line;
+    Token* bits;
+    int bitCount;
+    int bitCapacity;
 } Header;
 
 typedef struct Microcode {

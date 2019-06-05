@@ -9,10 +9,12 @@ void InitMicrocode(Microcode* mcode) {
 }
 
 void PrintMicrocode(Microcode* mcode) {
-    printf("Name: ");
-    printf("%s", TokenNames[mcode->head.line.conditions[0].name.type]);
-    printf("\nValue: ");
-    printf("%s", TokenNames[mcode->head.line.conditions[0].value.type]);
+    printf("Microcode:\n");
+    printf("  Header: %u", mcode->head.bitCount);
+    for(int i = 0; i < mcode->head.bitCount; i++) {
+        printf("\n    ");
+        TokenPrint(&mcode->head.bits[i]);
+    }
 }
 
 void FreeMicrocode(Microcode* mcode) {
