@@ -3,6 +3,7 @@
 #include "token.h"
 #include "parser.h"
 #include "ast.h"
+#include "memory.h"
 
 static void advance(Parser* parser);
 static bool match(Parser* parser, TokenType type);
@@ -25,6 +26,7 @@ void ParserInit(Parser* parser, Scanner* scan) {
     parser->headerStatement = false;
     parser->inputStatement = false;
     parser->outputStatement = false;
+    InitMicrocode(&parser->ast);
 }
 
 bool Parse(Parser* parser) {
@@ -147,17 +149,14 @@ static Token microcodeLine(Parser* parser) {
     // the token representing the first equals token encountered
     Token equals = {.start = NULL};
 
-    Line* line = malloc(sizeof(Line));
-    line->bits = malloc(sizeof(Token*));
-    line->conditions = malloc(sizeof(Condition*));
-    line->conditions[0] = malloc(sizeof(Condition));
-    line->conditions[0]->name = malloc(sizeof(Token));
-    *(line->conditions[0]->name) = (Token){.type = TOKEN_COLON};
-    line->conditions[0]->value = malloc(sizeof(Token));
-    *(line->conditions[0]->value) = (Token){.type = TOKEN_INPUT};
-    line->condition1Equals = &equals;
-    parser->ast.head = malloc(sizeof(Header));
-    parser->ast.head->line = line;
+    // testing code
+    Line line;
+    line.bits = ArenaAlloc(&parser->ast.arena, sizeof(Token*));
+    line.conditions = ArenaAlloc(&parser->ast.arena, sizeof(Condition*));
+    line.conditions[0].name = (Token){.type = TOKEN_COLON};
+    line.conditions[0].value = (Token){.type = TOKEN_INPUT};
+    line.condition1Equals = equals;
+    parser->ast.head.line = line;
 
     for(;;) {
         consume(parser, TOKEN_IDENTIFIER, "Expected identifier");

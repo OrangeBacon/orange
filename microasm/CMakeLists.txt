@@ -16,6 +16,7 @@ add_executable(microasm
     src/token.c
     src/parser.c
     src/ast.c
+    src/memory.c
     )
 
 set_property(TARGET microasm PROPERTY C_STANDARD 99)
