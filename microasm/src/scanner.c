@@ -15,11 +15,12 @@ static TokenType checkKeyword(Scanner* scanner, int start, int length,
 static Token makeToken(Scanner* scanner, TokenType type);
 static Token errorToken(Scanner* scanner, const char* message);
 
-void ScannerInit(Scanner* scanner, const char* source) {
+void ScannerInit(Scanner* scanner, const char* source, const char* fileName) {
     scanner->line = 1;
     scanner->column = 1;
     scanner->current = source;
     scanner->start = source;
+    scanner->fileName = fileName;
 }
 
 Token ScanToken(Scanner* scanner){

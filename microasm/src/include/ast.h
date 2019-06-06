@@ -26,11 +26,13 @@ typedef struct Header {
 } Header;
 
 typedef struct Microcode {
+    const char* fileName;
     Header head;
+    bool hasError;
     Arena arena;
 } Microcode;
 
-void InitMicrocode(Microcode* mcode);
+void InitMicrocode(Microcode* mcode, const char* fileName);
 
 void PrintMicrocode(Microcode* mcode);
 

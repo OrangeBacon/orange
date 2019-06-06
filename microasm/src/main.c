@@ -5,6 +5,7 @@
 #include "token.h"
 #include "parser.h"
 #include "ast.h"
+#include "platform.h"
 
 static char* readFile(char* fileName);
 
@@ -16,8 +17,10 @@ int main(int argc, char** argv){
 
     char* file = readFile(argv[1]);
 
+    const char* fileName = resolvePath(argv[1]);
+
     Scanner scan;
-    ScannerInit(&scan, file);
+    ScannerInit(&scan, file, fileName);
 
     Parser parse;
     ParserInit(&parse, &scan);

@@ -26,7 +26,7 @@ void ParserInit(Parser* parser, Scanner* scan) {
     parser->headerStatement = false;
     parser->inputStatement = false;
     parser->outputStatement = false;
-    InitMicrocode(&parser->ast);
+    InitMicrocode(&parser->ast, scan->fileName);
 }
 
 bool Parse(Parser* parser) {
@@ -277,4 +277,5 @@ static void errorAt(Parser* parser, Token* token, const char* message) {
 
     fprintf(stderr, ": %s\n", message);
     parser->hadError = true;
+    parser->ast.hasError = true;
 }
