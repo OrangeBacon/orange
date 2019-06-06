@@ -39,7 +39,7 @@ void cOutPrintf(TextColor color, const char* format, ...) {
     vprintf(format, args);
     if(WinColorSuccess) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
 #else
-    printf("\x1B[%sm", color);
+    printf("\x1B[%um", color);
     vprintf(format, args);
     printf("\xB[0m");
 #endif
@@ -53,8 +53,8 @@ void cErrPrintf(TextColor color, const char* format, ...) {
     vfprintf(stderr, format, args);
     if(WinColorSuccess) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
 #else
-    fprintf(stderr, "\x1B[%sm", color);
+    fprintf(stderr, "\x1B[%um", color);
     vfprintf(stderr, format, args);
-    fprintf(stderr, "\xB[0m");
+    fprintf(stderr, "\x1B[0m");
 #endif
 }
