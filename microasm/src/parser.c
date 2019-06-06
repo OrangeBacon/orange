@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "token.h"
 #include "parser.h"
 #include "ast.h"
@@ -16,17 +17,19 @@ static void header(Parser* parser, bool write);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
+static void printMessage(Parser* parser, Token* token, const char* name, const char* message, TextColor color);
 static void errorAtCurrent(Parser* parser, const char* message);
 static void error(Parser* parser, const char* message);
 static void errorAt(Parser* parser, Token* token, const char* message);
+static void noteAt(Parser* parser, Token* token, const char* message);
 
 void ParserInit(Parser* parser, Scanner* scan) {
     parser->scanner = scan;
     parser->hadError = false;
     parser->panicMode = false;
-    parser->headerStatement = false;
-    parser->inputStatement = false;
-    parser->outputStatement = false;
+    parser->headerStatement.line = -1;
+    parser->inputStatement.line = -1;
+    parser->outputStatement.line = -1;
     InitMicrocode(&parser->ast, scan->fileName);
 }
 
@@ -100,22 +103,28 @@ static void block(Parser* parser) {
     } else if(match(parser, TOKEN_MACRO)) {
         //TODO
     } else if(match(parser, TOKEN_HEADER)) {
-        if(parser->headerStatement){
+        if(parser->headerStatement.line != -1){
             error(parser, "Only one header statement allowed per microcode");
+            noteAt(parser, &parser->headerStatement, "Previously declared here");
+        } else {
+            parser->headerStatement = parser->previous;
         }
-        header(parser, !parser->headerStatement);
-        parser->headerStatement = true;
+        header(parser, parser->headerStatement.line != -1);
     } else if(match(parser, TOKEN_INPUT)) {
-        if(parser->inputStatement){
+        if(parser->inputStatement.line != -1){
             error(parser, "Only one input statement allowed per microcode");
+            noteAt(parser, &parser->inputStatement, "Previously declared here");
+        } else {
+            parser->inputStatement = parser->previous;
         }
-        parser->inputStatement = true;
         //TODO
     } else if(match(parser, TOKEN_OUTPUT)) {
-        if(parser->outputStatement){
+        if(parser->outputStatement.line != -1){
             error(parser, "Only one output statement allowed per microcode");
+            noteAt(parser, &parser->outputStatement, "Previously declared here");
+        } else {
+            parser->outputStatement = parser->previous;
         }
-        parser->outputStatement = true;
         //TODO
     } else {
         errorAtCurrent(parser, "Expected a block statement");
@@ -244,6 +253,93 @@ static void blockEnd(Parser* parser, bool start) {
     }
 }
 
+// print a message about a token to stderr
+// assumes the token is correctly formed
+// and is all on one line
+static void printMessage(Parser* parser, Token* token, const char* name, const char* message, TextColor color) {
+    // error message
+    cErrPrintf(color, "%s: %s\n", name, message);
+
+    // file name/location
+    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->ast.fileName, token->line, token->column);
+
+    // number of charcters required to print the longest line number
+    int lineNumberLength = floor(log10(abs(token->line + 1))) + 1;
+
+    // how many source code characters can be printed
+    int maxLineLength = 80 - (2 + lineNumberLength + 3);
+    // 80 = terminal width
+    // 2 = spacing
+    // 3 = spacing and pipe symbol
+
+    int start;
+    int length;
+
+    // line before the error
+    bool s = getLine(parser->scanner->base, token->line - 1, &start, &length);
+    if(s) {
+        // if the source code does not fit, truncate it and print an elipsis
+        if(length > maxLineLength) {
+            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, token->line - 1, maxLineLength - 5, parser->scanner->base + start);
+            cErrPrintf(TextYellow, " ...\n");
+        } else {
+            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, token->line - 1, length, parser->scanner->base + start);
+        }
+    }
+
+    // line with the error token on
+    s = getLine(parser->scanner->base, token->line, &start, &length);
+    if(s) {
+        if(length > maxLineLength) {
+            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, token->line, maxLineLength - 5, parser->scanner->base + start);
+            cErrPrintf(TextYellow, " ...\n");
+        } else {
+            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, token->line, length, parser->scanner->base + start);
+        }
+    }
+    
+    // how far along the line the error token starts
+    int startPos = token->start - parser->scanner->base - start;
+
+    // min (how long the error token's line is, maximum line length)
+    int lineLen = length > maxLineLength ? maxLineLength : length;
+
+    // buffer to store arrow to errored token
+    char* buf = malloc(length * sizeof(char));
+    if(buf != NULL) {
+        // space fill
+        for(int i = 0; i < length; i++) {
+            buf[i] = ' ';
+        }
+        // underline fill length below errored token
+        for(int i = startPos; i < startPos + token->length; i++) {
+            buf[i] = '^';
+        }
+
+        cErrPrintf(TextWhite, "  %*s | ", lineNumberLength, "");
+
+        // print error arrow or truncation if it does not fit
+        if(startPos <= maxLineLength) {
+            cErrPrintf(color, "%.*s\n", lineLen, buf);
+        } else {
+            cErrPrintf(color, "%*s\n",lineLen , "...>");
+        }
+    }
+
+    // line after error token
+    s = getLine(parser->scanner->base, token->line + 1, &start, &length);
+    if(s) {
+        if(length > maxLineLength) {
+            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, token->line + 1, maxLineLength - 5, parser->scanner->base + start);
+            cErrPrintf(TextYellow, " ...\n");
+        } else {
+            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, token->line + 1, length, parser->scanner->base + start);
+        }
+    }
+
+    printf("\n");
+}
+
 // issue error for token before advance() called
 static void errorAtCurrent(Parser* parser, const char* message) {
     errorAt(parser, &parser->current, message);
@@ -258,18 +354,12 @@ static void error(Parser* parser, const char* message) {
 static void errorAt(Parser* parser, Token* token, const char* message) {
     if(parser->panicMode) return;
     parser->panicMode = true;
-
-    fprintf(stderr, "[%i:%i] ", token->line, token->column);
-    cErrPrintf(TextRed, "Error");
-    if(token->type == TOKEN_EOF) {
-        fprintf(stderr, " at end");
-    } else if(token->type == TOKEN_ERROR) {
-        // nothing
-    } else {
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
-    }
-
-    fprintf(stderr, ": %s\n", message);
+    printMessage(parser, token, "Error", message, TextRed);
     parser->hadError = true;
     parser->ast.hasError = true;
+}
+
+// print a note relating to an error token
+static void noteAt(Parser* parser, Token* token, const char* message) {
+    printMessage(parser, token, "Note", message, TextBlue);
 }

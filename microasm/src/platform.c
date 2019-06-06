@@ -6,6 +6,7 @@
 
 const char* resolvePath(const char* path) {
 #ifdef _WIN32
+    // _fullpath is defined in microsoft's stdlib.h
     return _fullpath(NULL, path, _MAX_PATH);
 #else
     char* buf = malloc(PATH_MAX + 1);
@@ -19,6 +20,8 @@ const char* resolvePath(const char* path) {
 }
 
 void startColor() {
+    // nothing to do on linux, vt100 terminal commands
+    // used instead
 #ifdef _WIN32
     HandleOut = GetStdHandle(STD_OUTPUT_HANDLE);
     HandleErr = GetStdHandle(STD_ERROR_HANDLE);
@@ -37,11 +40,13 @@ void cOutPrintf(TextColor color, const char* format, ...) {
 #ifdef _WIN32
     if(WinColorSuccess) SetConsoleTextAttribute(HandleOut, color);
     vprintf(format, args);
+
+    // reset to previous color options
     if(WinColorSuccess) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
 #else
-    printf("\x1B[%um", color);
+    printf("\x1B[%um", color);  // set forground
     vprintf(format, args);
-    printf("\xB[0m");
+    printf("\xB[0m");  // reset formatting
 #endif
 }
 

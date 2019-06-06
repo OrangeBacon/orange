@@ -25,10 +25,13 @@ typedef struct Parser {
 
     // has a _ statement been parsed yet?
     // allows them to only be included once per file
+    // if no then is a token where the line number is -1
+    // if yes then is the token representing the start of
+    // the relavant block
 
-    bool headerStatement;
-    bool inputStatement;
-    bool outputStatement;
+    Token headerStatement;
+    Token inputStatement;
+    Token outputStatement;
 
     // the ast that is being constructed currently
     Microcode ast;

@@ -20,6 +20,7 @@ void ScannerInit(Scanner* scanner, const char* source, const char* fileName) {
     scanner->column = 1;
     scanner->current = source;
     scanner->start = source;
+    scanner->base = source;
     scanner->fileName = fileName;
 }
 
@@ -52,6 +53,55 @@ Token ScanToken(Scanner* scanner){
     }
 
     return errorToken(scanner, "Unexpected character");
+}
+
+bool getLine(const char* string, int line, int* start, int* length) {
+    // line that is being iterated over
+    int currentLine = 1;
+
+    // should the iteration stop at the next newline character
+    bool willEnd = false;
+    
+    // length of the line that is being iterated over
+    int lineLength = 0;
+
+    for(int i = 0; string[i] != '\0'; i++) {
+        if(string[i] == '\n') {
+
+            // handle the line being requested being the first line
+            // which just ended
+            if(line == currentLine && line == 1) {
+                *start = 0;
+                *length = lineLength;
+                return true;
+            }
+            currentLine++;
+
+            // got to end of requested line
+            if(willEnd) {
+                *length = lineLength-1;
+                return true;
+            }
+
+            // start iterating over requested line
+            if(currentLine == line && !willEnd) {
+                *start = i+1;
+                willEnd = true;
+                lineLength = 1;
+            }
+        } else {
+            lineLength++;
+        }
+    }
+
+    // handle the line requested being the last line of the string
+    if(willEnd) {
+        *length = lineLength;
+        return true;
+    }
+
+    // line requested not found in string given
+    return false;
 }
 
 // get next character without advancing the stream
