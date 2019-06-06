@@ -4,11 +4,12 @@
 #include "parser.h"
 #include "ast.h"
 #include "memory.h"
+#include "platform.h"
 
 static void advance(Parser* parser);
-static bool match(Parser* parser, TokenType type);
-static bool check(Parser* parser, TokenType type);
-static void consume(Parser* parser, TokenType type, const char* message);
+static bool match(Parser* parser, OrangeTokenType type);
+static bool check(Parser* parser, OrangeTokenType type);
+static void consume(Parser* parser, OrangeTokenType type, const char* message);
 static void syncronise(Parser* parser);
 static void block(Parser* parser);
 static void header(Parser* parser, bool write);
@@ -55,13 +56,13 @@ static void advance(Parser* parser) {
 }
 
 // consume a token of type type, else return false
-static bool match(Parser* parser, TokenType type) {
+static bool match(Parser* parser, OrangeTokenType type) {
     if(!check(parser, type)) return false;
     advance(parser);
     return true;
 }
 
-static void consume(Parser* parser, TokenType type, const char* message) {
+static void consume(Parser* parser, OrangeTokenType type, const char* message) {
     if(parser->current.type == type) {
         advance(parser);
         return;
@@ -70,7 +71,7 @@ static void consume(Parser* parser, TokenType type, const char* message) {
 }
 
 // is the next token of type type?
-static bool check(Parser* parser, TokenType type) {
+static bool check(Parser* parser, OrangeTokenType type) {
     return parser->current.type == type;
 }
 
@@ -217,14 +218,6 @@ static Line* microcodeLine(Parser* parser) {
         }
     }
 
-    printf("Conditions: %u", line->conditionCount);
-    for(int i = 0; i < line->conditionCount; i++) {
-        printf("\n    ");
-        TokenPrint(&line->conditions[i].name);
-        printf(" = ");
-        TokenPrint(&line->conditions[i].value);
-    }
-    printf("\n");
     return line;
 }
 
@@ -266,7 +259,8 @@ static void errorAt(Parser* parser, Token* token, const char* message) {
     if(parser->panicMode) return;
     parser->panicMode = true;
 
-    fprintf(stderr, "[%i:%i] Error", token->line, token->column);
+    fprintf(stderr, "[%i:%i] ", token->line, token->column);
+    cErrPrintf(TextRed, "Error");
     if(token->type == TOKEN_EOF) {
         fprintf(stderr, " at end");
     } else if(token->type == TOKEN_ERROR) {

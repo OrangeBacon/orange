@@ -9,10 +9,10 @@ static bool isAtEnd(Scanner* scanner);
 static bool isIdent(char c);
 static void skipWhitespace(Scanner* scanner);
 static Token identifier(Scanner* scanner);
-static TokenType identifierType(Scanner* scanner);
-static TokenType checkKeyword(Scanner* scanner, int start, int length, 
-    const char* rest, TokenType type);
-static Token makeToken(Scanner* scanner, TokenType type);
+static OrangeTokenType identifierType(Scanner* scanner);
+static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length, 
+    const char* rest, OrangeTokenType type);
+static Token makeToken(Scanner* scanner, OrangeTokenType type);
 static Token errorToken(Scanner* scanner, const char* message);
 
 void ScannerInit(Scanner* scanner, const char* source, const char* fileName) {
@@ -117,7 +117,7 @@ static Token identifier(Scanner* scanner) {
 }
 
 // what is the token type of the last identifier scanned?
-static TokenType identifierType(Scanner* scanner) {
+static OrangeTokenType identifierType(Scanner* scanner) {
     // uses a trie - no keywords begin with anything other
     // than 'h' 'm' 'i' 'o', etc.
     switch(scanner->start[0]) {
@@ -135,8 +135,8 @@ static TokenType identifierType(Scanner* scanner) {
 }
 
 // is the remainder of the last scanned identifier the same as the provided string
-static TokenType checkKeyword(Scanner* scanner, int start, int length, 
-      const char* rest, TokenType type) {
+static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length, 
+      const char* rest, OrangeTokenType type) {
     if(scanner->current - scanner->start == start + length && 
           memcmp(scanner->start + start, rest, length) == 0) {
         return type;
@@ -145,7 +145,7 @@ static TokenType checkKeyword(Scanner* scanner, int start, int length,
 }
 
 // create a token based on the currently advanced characters
-static Token makeToken(Scanner* scanner, TokenType type) {
+static Token makeToken(Scanner* scanner, OrangeTokenType type) {
     Token token;
     token.type = type;
     token.start = scanner->start;

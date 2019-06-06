@@ -13,9 +13,9 @@
 #define ENUM_TOKEN(x) TOKEN_##x,
 #define ADD_TOKEN(x) +1
 
-typedef enum TokenType {
+typedef enum OrangeTokenType {
     FOREACH_TOKEN(ENUM_TOKEN)
-} TokenType;
+} OrangeTokenType;
 
 const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 
@@ -24,7 +24,7 @@ const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 
 // type and source location of a token
 typedef struct Token {
-    TokenType type;
+    OrangeTokenType type;
     const char* start;  // location in source file buffer
     int length;
     int line;

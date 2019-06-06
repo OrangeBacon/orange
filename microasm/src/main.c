@@ -10,6 +10,7 @@
 static char* readFile(char* fileName);
 
 int main(int argc, char** argv){
+    startColor();
     if(argc != 2){
         printf("Usage: microasm <filename>\n");
         return 1;
