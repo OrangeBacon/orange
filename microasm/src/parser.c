@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <limits.h>
 #include "token.h"
 #include "parser.h"
 #include "ast.h"
