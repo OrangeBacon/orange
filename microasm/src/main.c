@@ -6,6 +6,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "platform.h"
+#include "memory.h"
 
 static char* readFile(char* fileName);
 
@@ -15,6 +16,8 @@ int main(int argc, char** argv){
         printf("Usage: microasm <filename>\n");
         return 1;
     }
+
+    ArenaInit();
 
     char* file = readFile(argv[1]);
 
@@ -28,8 +31,6 @@ int main(int argc, char** argv){
     Parse(&parse);
 
     PrintMicrocode(&parse.ast);
-
-    FreeMicrocode(&parse.ast);
     free(file);
 }
 
@@ -53,7 +54,7 @@ static char* readFile(char* fileName) {
     // +1 so '\0' can be added
     // buffer should stay allocated for lifetime 
     // of compiler as all tokens reference it
-    char* buffer = (char*)malloc(fileSize + 1);
+    char* buffer = (char*)ArenaAlloc((fileSize + 1) * sizeof(char));
     if(buffer == NULL){
         printf("Could not enough allocate memory to read file \"%s\".\n", fileName);
         exit(1);

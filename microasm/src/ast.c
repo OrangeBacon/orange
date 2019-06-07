@@ -6,7 +6,6 @@
 #include "memory.h"
 
 void InitMicrocode(Microcode* mcode, const char* fileName) {
-    ArenaInit(&mcode->arena);
     mcode->hasError = false;
     mcode->fileName = fileName;
 }
@@ -21,15 +20,11 @@ void PrintMicrocode(Microcode* mcode) {
         TokenPrint(&mcode->head.bits[i]);
     }
     printf("\n");
-    printf("  Input: %u", mcode->inp.count);
-    for(unsigned int i = 0; i < mcode->inp.count; i++) {
+    printf("  Input: %u", mcode->inp.valueCount);
+    for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         printf("\n    ");
-        TokenPrint(&mcode->inp.names[i]);
-        printf(" = %i", mcode->inp.values[i]);
+        TokenPrint(&mcode->inp.values[i].name);
+        printf(" = %i", mcode->inp.values[i].value);
     }
     printf("\n");
-}
-
-void FreeMicrocode(Microcode* mcode) {
-    ArenaFree(&mcode->arena);
 }

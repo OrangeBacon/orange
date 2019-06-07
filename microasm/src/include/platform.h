@@ -34,14 +34,8 @@ typedef enum TextColor {
 } TextColor;
 
 #ifdef _WIN32
-// stdout handle
-HANDLE HandleOut;
-
 // stderr handle
 HANDLE HandleErr;
-
-// initial formatting of stdout
-CONSOLE_SCREEN_BUFFER_INFO OutReset;
 
 // inital formatting of stderr
 CONSOLE_SCREEN_BUFFER_INFO ErrReset;
@@ -52,9 +46,6 @@ bool WinColorSuccess;
 
 // setup color terminal output
 void startColor();
-
-// print a string with a given color to stdout
-void cOutPrintf(TextColor color, const char* format, ...);
 
 // print a string with a given color to stderr
 void cErrPrintf(TextColor color, const char* format, ...);

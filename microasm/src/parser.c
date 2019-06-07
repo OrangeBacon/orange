@@ -10,15 +10,12 @@
 static void advance(Parser* parser);
 static bool match(Parser* parser, OrangeTokenType type);
 static bool check(Parser* parser, OrangeTokenType type);
-static void consume(Parser* parser, OrangeTokenType type, const char* message);
-static void syncronise(Parser* parser);
 static void block(Parser* parser);
 static void header(Parser* parser, bool write);
 static void input(Parser* parser, bool write);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
-static void printMessage(Parser* parser, Token* token, const char* name, const char* message, TextColor color);
 static void errorAtCurrent(Parser* parser, const char* message);
 static void warn(Parser* parser, const char* message);
 static void errorAt(Parser* parser, Token* token, const char* message);
@@ -151,21 +148,32 @@ static void header(Parser* parser, bool write) {
         errorAt(parser, &line->condition1Equals, "Condition values not allowed in header");
     }
     if(write) {
-        parser->ast.head.bits = line->bits;
-        parser->ast.head.bitCount = line->bitCount;
-        parser->ast.head.bitCapacity = line->bitCapacity;
+        COPY_ARRAY(*line, parser->ast.head, bit);
     }
     blockEnd(parser, brace);
 }
 
+// reads, parses and returns an unsigned integer
+static unsigned int readUInt(Parser* parser, int defaultVal) {
+    consume(parser, TOKEN_IDENTIFIER, "Expected input value");
+    char* endPtr;
+    long val = strtol(parser->previous.start, &endPtr, 10);
+    if(endPtr != parser->previous.start + parser->previous.length) {
+        warn(parser, "Could not parse token as number");
+        return defaultVal;
+    } else if (val < 1 || val > INT_MAX) {
+        warn(parser, "Input values must be between 1 and INT_MAX");
+        return defaultVal;
+    }
+    return (unsigned int)val;
+}
+
+// parses an input statement
 static void input(Parser* parser, bool write) {
     bool brace = blockStart(parser);
 
     Input inp;
-    inp.count = 0;
-    inp.capacity = 8;
-    inp.names = ArenaAlloc(&parser->ast.arena, sizeof(Token) * inp.capacity);
-    inp.values = ArenaAlloc(&parser->ast.arena, sizeof(int) * inp.capacity);
+    ARRAY_ALLOC(InputValue, inp, value);
 
     if(brace) {
         while(true) {
@@ -173,23 +181,9 @@ static void input(Parser* parser, bool write) {
                 Token name = parser->previous;
                 unsigned int value = 1;
                 if(match(parser, TOKEN_COLON)) {
-                    consume(parser, TOKEN_IDENTIFIER, "Expected input value");
-                    char* endPtr;
-                    long val = strtol(parser->previous.start, &endPtr, 10);
-                    if(endPtr != parser->previous.start + parser->previous.length) {
-                        warn(parser, "Could not parse token as number");
-                    } else if (val < 1 || val > INT_MAX) {
-                        warn(parser, "Input values must be between 1 and INT_MAX");
-                    } else {
-                        value = (int)val;
-                    }
+                    value = readUInt(parser, value);
                 }
-                if(inp.capacity > 0) {
-                    inp.names[inp.count] = name;
-                    inp.values[inp.count] = value;
-                    inp.count++;
-                    inp.capacity--;
-                }
+                PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
                 if(!match(parser, TOKEN_SEMICOLON)){
                     break;
                 }
@@ -202,23 +196,9 @@ static void input(Parser* parser, bool write) {
         Token name = parser->previous;
         unsigned int value = 1;
         if(match(parser, TOKEN_COLON)) {
-            consume(parser, TOKEN_IDENTIFIER, "Expected input value");
-            char* endPtr;
-            long val = strtol(parser->previous.start, &endPtr, 10);
-            if(endPtr != parser->previous.start + parser->previous.length) {
-                warn(parser, "Could not parse token as number");
-            } else if (val < 1 || val > INT_MAX) {
-                warn(parser, "Input values must be between 1 and INT_MAX");
-            } else {
-                value = (int)val;
-            }
+            value = readUInt(parser, value);
         }
-        if(inp.capacity > 0) {
-            inp.names[inp.count] = name;
-            inp.values[inp.count] = value;
-            inp.count++;
-            inp.capacity--;
-        }
+        PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
     }
     if(write) {
         parser->ast.inp = inp;
@@ -235,13 +215,9 @@ static Line* microcodeLine(Parser* parser) {
     // is this the first parse iteration?
     bool first = true;
 
-    Line* line = ArenaAlloc(&parser->ast.arena, sizeof(Line));
-    line->bitCount = 0;
-    line->bitCapacity = 8;
-    line->bits = ArenaAlloc(&parser->ast.arena, sizeof(Token)*line->bitCapacity);
-    line->conditionCount = 0;
-    line->conditionCapacity = 8;
-    line->conditions = ArenaAlloc(&parser->ast.arena, sizeof(Condition)*line->conditionCapacity);
+    Line* line = ArenaAlloc(sizeof(Line));
+    ARRAY_ALLOC(Token, *line, bit);
+    ARRAY_ALLOC(Condition, *line, condition);
     line->condition1Equals = (Token){.start = NULL};
 
     for(;;) {
@@ -262,17 +238,9 @@ static Line* microcodeLine(Parser* parser) {
             Condition condition;
             condition.name = name;
             condition.value = parser->previous;
-            if(line->conditionCapacity > 0) {
-                line->conditions[line->conditionCount] = condition;
-                line->conditionCount++;
-                line->conditionCapacity--;
-            }
+            PUSH_ARRAY(Condition, *line, condition, condition);
         } else {
-            if(line->bitCapacity > 0) {
-                line->bits[line->bitCount] = name;
-                line->bitCount++;
-                line->bitCapacity--;
-            }
+            PUSH_ARRAY(Token, *line, bit, name);
         }
 
         // are there more values to parse?
@@ -293,11 +261,7 @@ static Line* microcodeLine(Parser* parser) {
     // bits
     for(;;) {
         consume(parser, TOKEN_IDENTIFIER, "Expected bit name");
-        if(line->bitCapacity > 0) {
-            line->bits[line->bitCount] = parser->previous;
-            line->bitCount++;
-            line->bitCapacity--;
-        }
+        PUSH_ARRAY(Token, *line, bit, parser->previous);
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }
@@ -329,6 +293,19 @@ static void blockEnd(Parser* parser, bool start) {
     }
 }
 
+static bool printLine(Parser* parser, int line, int* start, int* length, int maxLineLength, int lineNumberLength) {
+    bool s = getLine(parser->scanner->base, line, start, length);
+    if(s) {
+        if(*length > maxLineLength) {
+            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, line, maxLineLength - 5, parser->scanner->base + *start);
+            cErrPrintf(TextYellow, " ...\n");
+        } else {
+            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, line, *length, parser->scanner->base + *start);
+        }
+    }
+    return s;
+}
+
 // print a message about a token to stderr
 // assumes the token is correctly formed
 // and is all on one line
@@ -352,27 +329,10 @@ static void printMessage(Parser* parser, Token* token, const char* name, const c
     int length;
 
     // line before the error
-    bool s = getLine(parser->scanner->base, token->line - 1, &start, &length);
-    if(s) {
-        // if the source code does not fit, truncate it and print an elipsis
-        if(length > maxLineLength) {
-            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, token->line - 1, maxLineLength - 5, parser->scanner->base + start);
-            cErrPrintf(TextYellow, " ...\n");
-        } else {
-            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, token->line - 1, length, parser->scanner->base + start);
-        }
-    }
+    printLine(parser, token->line - 1, &start, &length, maxLineLength, lineNumberLength);
 
     // line with the error token on
-    s = getLine(parser->scanner->base, token->line, &start, &length);
-    if(s) {
-        if(length > maxLineLength) {
-            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, token->line, maxLineLength - 5, parser->scanner->base + start);
-            cErrPrintf(TextYellow, " ...\n");
-        } else {
-            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, token->line, length, parser->scanner->base + start);
-        }
-    }
+    printLine(parser, token->line, &start, &length, maxLineLength, lineNumberLength);
     
     // how far along the line the error token starts
     int startPos = token->start - parser->scanner->base - start;
@@ -403,15 +363,7 @@ static void printMessage(Parser* parser, Token* token, const char* name, const c
     }
 
     // line after error token
-    s = getLine(parser->scanner->base, token->line + 1, &start, &length);
-    if(s) {
-        if(length > maxLineLength) {
-            cErrPrintf(TextWhite, "  %*i | %.*s", lineNumberLength, token->line + 1, maxLineLength - 5, parser->scanner->base + start);
-            cErrPrintf(TextYellow, " ...\n");
-        } else {
-            cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, token->line + 1, length, parser->scanner->base + start);
-        }
-    }
+    printLine(parser, token->line + 1, &start, &length, maxLineLength, lineNumberLength);
 
     printf("\n");
 }

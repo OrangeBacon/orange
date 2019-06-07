@@ -10,26 +10,22 @@ typedef struct Condition {
 } Condition;
 
 typedef struct Line {
-    Condition* conditions;
-    unsigned int conditionCount;
-    unsigned int conditionCapacity;
-    Token* bits;
-    unsigned int bitCount;
-    unsigned int bitCapacity;
+    DEFINE_ARRAY(Condition, condition)
+    DEFINE_ARRAY(Token, bit)
     Token condition1Equals;
 } Line;
 
 typedef struct Header {
-    Token* bits;
-    unsigned int bitCount;
-    unsigned int bitCapacity;
+    DEFINE_ARRAY(Token, bit)
 } Header;
 
+typedef struct InputValue {
+    Token name;
+    unsigned int value;
+} InputValue;
+
 typedef struct Input {
-    Token* names;
-    unsigned int* values;
-    unsigned int count;
-    unsigned int capacity;
+    DEFINE_ARRAY(InputValue, value)
 } Input;
 
 typedef struct Microcode {
