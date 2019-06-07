@@ -12,6 +12,7 @@ static char* readFile(char* fileName);
 
 int main(int argc, char** argv){
     startColor();
+    
     if(argc != 2){
         printf("Usage: microasm <filename>\n");
         return 1;
@@ -20,7 +21,6 @@ int main(int argc, char** argv){
     ArenaInit();
 
     char* file = readFile(argv[1]);
-
     const char* fileName = resolvePath(argv[1]);
 
     Scanner scan;

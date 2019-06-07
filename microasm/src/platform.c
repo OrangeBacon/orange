@@ -35,6 +35,11 @@ void startColor() {
 void cErrPrintf(TextColor color, const char* format, ...) {
     va_list args;
     va_start(args, format);
+
+    cErrVPrintf(color, format, args);
+}
+
+void cErrVPrintf(TextColor color, const char* format, va_list args) {
 #ifdef _WIN32
     if(WinColorSuccess) SetConsoleTextAttribute(HandleErr, color | FOREGROUND_INTENSITY);
     vfprintf(stderr, format, args);

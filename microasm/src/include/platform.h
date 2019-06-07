@@ -2,6 +2,7 @@
 #define PLATFORM_H
 
 #include <stdbool.h>
+#include <stdarg.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -49,5 +50,7 @@ void startColor();
 
 // print a string with a given color to stderr
 void cErrPrintf(TextColor color, const char* format, ...);
+
+void cErrVPrintf(TextColor color, const char* format, va_list args);
 
 #endif
