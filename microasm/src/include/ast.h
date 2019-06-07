@@ -11,23 +11,31 @@ typedef struct Condition {
 
 typedef struct Line {
     Condition* conditions;
-    int conditionCount;
-    int conditionCapacity;
+    unsigned int conditionCount;
+    unsigned int conditionCapacity;
     Token* bits;
-    int bitCount;
-    int bitCapacity;
+    unsigned int bitCount;
+    unsigned int bitCapacity;
     Token condition1Equals;
 } Line;
 
 typedef struct Header {
     Token* bits;
-    int bitCount;
-    int bitCapacity;
+    unsigned int bitCount;
+    unsigned int bitCapacity;
 } Header;
+
+typedef struct Input {
+    Token* names;
+    unsigned int* values;
+    unsigned int count;
+    unsigned int capacity;
+} Input;
 
 typedef struct Microcode {
     const char* fileName;
     Header head;
+    Input inp;
     bool hasError;
     Arena arena;
 } Microcode;

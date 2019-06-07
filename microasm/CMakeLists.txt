@@ -22,6 +22,8 @@ add_executable(microasm
 
 set_property(TARGET microasm PROPERTY C_STANDARD 99)
 
+target_link_libraries(microasm m)
+
 if(MSVC)
   target_compile_options(microasm PRIVATE /W4 /WX)
 else()

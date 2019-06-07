@@ -16,9 +16,16 @@ void PrintMicrocode(Microcode* mcode) {
     printf("  Has Error: %s\n", mcode->hasError ? "true" : "false");
     printf("  File Name: %s\n", mcode->fileName);
     printf("  Header: %u", mcode->head.bitCount);
-    for(int i = 0; i < mcode->head.bitCount; i++) {
+    for(unsigned int i = 0; i < mcode->head.bitCount; i++) {
         printf("\n    ");
         TokenPrint(&mcode->head.bits[i]);
+    }
+    printf("\n");
+    printf("  Input: %u", mcode->inp.count);
+    for(unsigned int i = 0; i < mcode->inp.count; i++) {
+        printf("\n    ");
+        TokenPrint(&mcode->inp.names[i]);
+        printf(" = %i", mcode->inp.values[i]);
     }
     printf("\n");
 }

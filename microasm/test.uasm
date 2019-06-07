@@ -29,6 +29,4 @@ input {
   overflow;
 }
 
-header =
-  HE, GT, BA;
 opcode 11 JMP(Reg) = TX, RE;

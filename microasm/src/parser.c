@@ -14,14 +14,21 @@ static void consume(Parser* parser, OrangeTokenType type, const char* message);
 static void syncronise(Parser* parser);
 static void block(Parser* parser);
 static void header(Parser* parser, bool write);
+static void input(Parser* parser, bool write);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
 static void printMessage(Parser* parser, Token* token, const char* name, const char* message, TextColor color);
 static void errorAtCurrent(Parser* parser, const char* message);
-static void error(Parser* parser, const char* message);
+static void warn(Parser* parser, const char* message);
 static void errorAt(Parser* parser, Token* token, const char* message);
 static void noteAt(Parser* parser, Token* token, const char* message);
+static void warnAt(Parser* parser, Token* token, const char* message);
+
+// error messages:
+// error = cannot deal with the syntax, skip until knows what is going on, fatal
+// warn = semantic error, does not skip, fatal
+// note = infomation output, non fatal
 
 void ParserInit(Parser* parser, Scanner* scan) {
     parser->scanner = scan;
@@ -104,23 +111,25 @@ static void block(Parser* parser) {
         //TODO
     } else if(match(parser, TOKEN_HEADER)) {
         if(parser->headerStatement.line != -1){
-            error(parser, "Only one header statement allowed per microcode");
+            warn(parser, "Only one header statement allowed per microcode");
             noteAt(parser, &parser->headerStatement, "Previously declared here");
+            header(parser, false);
         } else {
             parser->headerStatement = parser->previous;
+            header(parser, true);
         }
-        header(parser, parser->headerStatement.line != -1);
     } else if(match(parser, TOKEN_INPUT)) {
         if(parser->inputStatement.line != -1){
-            error(parser, "Only one input statement allowed per microcode");
+            warn(parser, "Only one input statement allowed per microcode");
             noteAt(parser, &parser->inputStatement, "Previously declared here");
+            input(parser, false);
         } else {
             parser->inputStatement = parser->previous;
+            input(parser, true);
         }
-        //TODO
     } else if(match(parser, TOKEN_OUTPUT)) {
         if(parser->outputStatement.line != -1){
-            error(parser, "Only one output statement allowed per microcode");
+            warn(parser, "Only one output statement allowed per microcode");
             noteAt(parser, &parser->outputStatement, "Previously declared here");
         } else {
             parser->outputStatement = parser->previous;
@@ -149,6 +158,74 @@ static void header(Parser* parser, bool write) {
     blockEnd(parser, brace);
 }
 
+static void input(Parser* parser, bool write) {
+    bool brace = blockStart(parser);
+
+    Input inp;
+    inp.count = 0;
+    inp.capacity = 8;
+    inp.names = ArenaAlloc(&parser->ast.arena, sizeof(Token) * inp.capacity);
+    inp.values = ArenaAlloc(&parser->ast.arena, sizeof(int) * inp.capacity);
+
+    if(brace) {
+        while(true) {
+            if(match(parser, TOKEN_IDENTIFIER)) {
+                Token name = parser->previous;
+                unsigned int value = 1;
+                if(match(parser, TOKEN_COLON)) {
+                    consume(parser, TOKEN_IDENTIFIER, "Expected input value");
+                    char* endPtr;
+                    long val = strtol(parser->previous.start, &endPtr, 10);
+                    if(endPtr != parser->previous.start + parser->previous.length) {
+                        warn(parser, "Could not parse token as number");
+                    } else if (val < 1 || val > INT_MAX) {
+                        warn(parser, "Input values must be between 1 and INT_MAX");
+                    } else {
+                        value = (int)val;
+                    }
+                }
+                if(inp.capacity > 0) {
+                    inp.names[inp.count] = name;
+                    inp.values[inp.count] = value;
+                    inp.count++;
+                    inp.capacity--;
+                }
+                if(!match(parser, TOKEN_SEMICOLON)){
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    } else {
+        consume(parser, TOKEN_IDENTIFIER, "Expected input name");
+        Token name = parser->previous;
+        unsigned int value = 1;
+        if(match(parser, TOKEN_COLON)) {
+            consume(parser, TOKEN_IDENTIFIER, "Expected input value");
+            char* endPtr;
+            long val = strtol(parser->previous.start, &endPtr, 10);
+            if(endPtr != parser->previous.start + parser->previous.length) {
+                warn(parser, "Could not parse token as number");
+            } else if (val < 1 || val > INT_MAX) {
+                warn(parser, "Input values must be between 1 and INT_MAX");
+            } else {
+                value = (int)val;
+            }
+        }
+        if(inp.capacity > 0) {
+            inp.names[inp.count] = name;
+            inp.values[inp.count] = value;
+            inp.count++;
+            inp.capacity--;
+        }
+    }
+    if(write) {
+        parser->ast.inp = inp;
+    }
+    blockEnd(parser, brace);
+}
+
 // parses a line of microcode commands with conditions
 // returns the line ast representing what was parsed
 static Line* microcodeLine(Parser* parser) {
@@ -158,7 +235,6 @@ static Line* microcodeLine(Parser* parser) {
     // is this the first parse iteration?
     bool first = true;
 
-    // testing code
     Line* line = ArenaAlloc(&parser->ast.arena, sizeof(Line));
     line->bitCount = 0;
     line->bitCapacity = 8;
@@ -345,9 +421,9 @@ static void errorAtCurrent(Parser* parser, const char* message) {
     errorAt(parser, &parser->current, message);
 }
 
-// issue error for already advanced() token
-static void error(Parser* parser, const char* message) {
-    errorAt(parser, &parser->previous, message);
+// issue warning for already advanced() token
+static void warn(Parser* parser, const char* message) {
+    warnAt(parser, &parser->previous, message);
 }
 
 // print an error message at a token's position
@@ -362,4 +438,11 @@ static void errorAt(Parser* parser, Token* token, const char* message) {
 // print a note relating to an error token
 static void noteAt(Parser* parser, Token* token, const char* message) {
     printMessage(parser, token, "Note", message, TextBlue);
+}
+
+// print a warning relating to a token
+static void warnAt(Parser* parser, Token* token, const char* message) {
+    printMessage(parser, token, "Warn", message, TextMagenta);
+    parser->hadError = true;
+    parser->ast.hasError = true;
 }
