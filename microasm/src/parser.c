@@ -16,6 +16,7 @@ static void block(Parser* parser);
 static void header(Parser* parser, bool write);
 static void input(Parser* parser, bool write);
 static void output(Parser* parser, bool write);
+static void opcode(Parser* parser);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
@@ -103,7 +104,7 @@ static void syncronise(Parser* parser) {
 // dispatch the parser for a block level statement
 static void block(Parser* parser) {
     if(match(parser, TOKEN_OPCODE)) {
-        //TODO
+        opcode(parser);
     } else if(match(parser, TOKEN_MACRO)) {
         //TODO
     } else if(match(parser, TOKEN_HEADER)) {
@@ -145,8 +146,8 @@ static void block(Parser* parser) {
 static void header(Parser* parser, bool write) {
     bool brace = blockStart(parser);
     Line* line = microcodeLine(parser);
-    if(line->conditionCount != 0) {
-        errorAt(parser, &line->condition1Equals, "Condition values not allowed in header");
+    if(line->conditionCount != 0 || line->anyCondition) {
+        errorAt(parser, &line->conditionErrorToken, "Condition values not allowed in header");
     }
     if(write) {
         COPY_ARRAY(*line, parser->ast.head, bit);
@@ -251,6 +252,53 @@ static void output(Parser* parser, bool write) {
     blockEnd(parser, brace);
 }
 
+static void opcode(Parser* parser) {
+    OpCode code;
+    ARRAY_ALLOC(Token, code, parameter);
+    ARRAY_ALLOC(Line*, code, line);
+
+    code.id = readUInt(parser, 0, 0);
+    consume(parser, TOKEN_IDENTIFIER, "Expected opcode name, got %s", TokenNames[parser->current.type]);
+    code.name = parser->previous;
+
+    consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s", TokenNames[parser->current.type]);
+
+    while(!check(parser, TOKEN_EOF)) {
+        if(match(parser, TOKEN_IDENTIFIER)) {
+            PUSH_ARRAY(Token, code, parameter, parser->previous);
+            if(!match(parser, TOKEN_COMMA)) {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected right paren, got %s", TokenNames[parser->current.type]);
+    
+    bool brace = blockStart(parser);
+
+    if(brace) {
+        while(!check(parser, TOKEN_EOF)) {
+            if(check(parser, TOKEN_RIGHT_BRACE)) {
+                break;
+            }
+            Line* line = microcodeLine(parser);
+            PUSH_ARRAY(Line, code, line, line);
+            if(!match(parser, TOKEN_SEMICOLON)) {
+                break;
+            }
+        }
+    } else {
+        Line* line = microcodeLine(parser);
+        PUSH_ARRAY(Line, code, line, line);
+    }
+
+    blockEnd(parser, brace);
+
+    PUSH_ARRAY(OpCode, parser->ast, opcode, code);
+}
+
 // parses a line of microcode commands with conditions
 // returns the line ast representing what was parsed
 static Line* microcodeLine(Parser* parser) {
@@ -263,9 +311,20 @@ static Line* microcodeLine(Parser* parser) {
     Line* line = ArenaAlloc(sizeof(Line));
     ARRAY_ALLOC(Token, *line, bit);
     ARRAY_ALLOC(Condition, *line, condition);
-    line->condition1Equals = (Token){.start = NULL};
+    line->conditionErrorToken = (Token){.start = NULL};
+    line->anyCondition = false;
+
+    if(match(parser, TOKEN_STAR)) {
+        line->conditionErrorToken = parser->previous;
+        consume(parser, TOKEN_COLON, "Expected colon after star condition");
+        line->anyCondition = true;
+    }
 
     for(;;) {
+        if(check(parser, TOKEN_SEMICOLON)) {
+            cond = false;
+            break;
+        }
         consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
         Token name = parser->previous;
         if(first) { // in first loop iteration
@@ -275,14 +334,13 @@ static Line* microcodeLine(Parser* parser) {
             consume(parser, TOKEN_EQUAL, "Expected equals symbol");
 
             if(first) {
-                line->condition1Equals = parser->previous;
+                line->conditionErrorToken = parser->previous;
             }
 
-            consume(parser, TOKEN_IDENTIFIER, "Expected condition value");
-
+            unsigned int value = readUInt(parser, 0, 0);
             Condition condition;
             condition.name = name;
-            condition.value = parser->previous;
+            condition.value = value;
             PUSH_ARRAY(Condition, *line, condition, condition);
         } else {
             PUSH_ARRAY(Token, *line, bit, name);
@@ -305,6 +363,10 @@ static Line* microcodeLine(Parser* parser) {
 
     // bits
     for(;;) {
+        if(check(parser, TOKEN_SEMICOLON)) {
+            cond = false;
+            break;
+        }
         consume(parser, TOKEN_IDENTIFIER, "Expected bit name");
         PUSH_ARRAY(Token, *line, bit, parser->previous);
         if(!match(parser, TOKEN_COMMA)) {

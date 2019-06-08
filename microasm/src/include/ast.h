@@ -6,13 +6,14 @@
 
 typedef struct Condition {
     Token name;
-    Token value;
+    unsigned int value;
 } Condition;
 
 typedef struct Line {
     DEFINE_ARRAY(Condition, condition);
+    bool anyCondition;
     DEFINE_ARRAY(Token, bit);
-    Token condition1Equals;
+    Token conditionErrorToken;
 } Line;
 
 typedef struct Header {
@@ -38,13 +39,21 @@ typedef struct Output {
     unsigned int width;
 } Output;
 
+typedef struct OpCode {
+    unsigned int id;
+    Token name;
+    DEFINE_ARRAY(Token, parameter);
+    DEFINE_ARRAY(Line*, line);
+} OpCode;
+
 typedef struct Microcode {
     const char* fileName;
     bool hasError;
-    
+
     Header head;
     Input inp;
     Output out;
+    DEFINE_ARRAY(OpCode, opcode);
 } Microcode;
 
 void InitMicrocode(Microcode* mcode, const char* fileName);

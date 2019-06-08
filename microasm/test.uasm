@@ -26,4 +26,4 @@ input {
   overflow;
 }
 
-opcode 0x11 JMP(Reg) = TX, RE;
+opcode 0x11 JMP(Reg) = overflow = 1: TX, RE;
