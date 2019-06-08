@@ -15,6 +15,7 @@ static bool check(Parser* parser, OrangeTokenType type);
 static void block(Parser* parser);
 static void header(Parser* parser, bool write);
 static void input(Parser* parser, bool write);
+static void output(Parser* parser, bool write);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
@@ -127,10 +128,11 @@ static void block(Parser* parser) {
         if(parser->outputStatement.line != -1){
             bool e = warn(parser, "Only one output statement allowed per microcode");
             if(e) noteAt(parser, &parser->outputStatement, "Previously declared here");
+            output(parser, false);
         } else {
             parser->outputStatement = parser->previous;
+            output(parser, true);
         }
-        //TODO
     } else {
         errorAtCurrent(parser, "Expected a block statement, got %s", TokenNames[parser->current.type]);
     }
@@ -153,15 +155,15 @@ static void header(Parser* parser, bool write) {
 }
 
 // reads, parses and returns an unsigned integer
-static unsigned int readUInt(Parser* parser, int defaultVal) {
+static unsigned int readUInt(Parser* parser, int defaultVal, int minVal) {
     consume(parser, TOKEN_IDENTIFIER, "Expected input value, got %s", TokenNames[parser->current.type]);
     char* endPtr;
     long val = strtol(parser->previous.start, &endPtr, 10);
     if(endPtr != parser->previous.start + parser->previous.length) {
         warn(parser, "Could not parse token as number");
         return defaultVal;
-    } else if (val < 1 || val > INT_MAX) {
-        warn(parser, "Input values must be between 1 and INT_MAX");
+    } else if (val < minVal || val > INT_MAX) {
+        warn(parser, "Input values must be between %u and INT_MAX", minVal);
         return defaultVal;
     }
     return (unsigned int)val;
@@ -175,12 +177,12 @@ static void input(Parser* parser, bool write) {
     ARRAY_ALLOC(InputValue, inp, value);
 
     if(brace) {
-        while(true) {
+        while(!check(parser, TOKEN_EOF)) {
             if(match(parser, TOKEN_IDENTIFIER)) {
                 Token name = parser->previous;
                 unsigned int value = 1;
                 if(match(parser, TOKEN_COLON)) {
-                    value = readUInt(parser, value);
+                    value = readUInt(parser, value, 1);
                 }
                 PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
                 if(!match(parser, TOKEN_SEMICOLON)){
@@ -195,13 +197,52 @@ static void input(Parser* parser, bool write) {
         Token name = parser->previous;
         unsigned int value = 1;
         if(match(parser, TOKEN_COLON)) {
-            value = readUInt(parser, value);
+            value = readUInt(parser, value, 1);
         }
         PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
     }
     if(write) {
         parser->ast.inp = inp;
     }
+    blockEnd(parser, brace);
+}
+static void output(Parser* parser, bool write) {
+    consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s", TokenNames[parser->current.type]);
+    unsigned int width = readUInt(parser, 0, 0);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected right paren, got %s", TokenNames[parser->current.type]);
+
+    Output output;
+    ARRAY_ALLOC(OutputValue, output, value);
+    output.width = width;
+
+    bool brace = blockStart(parser);
+
+    if(brace) {
+        while(!check(parser, TOKEN_EOF)) {
+            if(check(parser, TOKEN_IDENTIFIER)) {
+                unsigned int id = readUInt(parser, 0, 0);
+                consume(parser, TOKEN_COLON, "Expected colon, got %s", TokenNames[parser->current.type]);
+                consume(parser, TOKEN_IDENTIFIER, "Expected identifier, got %s", TokenNames[parser->current.type]);
+                Token name = parser->previous;
+                PUSH_ARRAY(OutputValue, output, value, ((OutputValue){.id = id, .name = name}));
+                if(!match(parser, TOKEN_SEMICOLON)) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    } else {
+        unsigned int id = readUInt(parser, 0, 0);
+        consume(parser, TOKEN_COLON, "Expected colon, got %s", TokenNames[parser->current.type]);
+        consume(parser, TOKEN_IDENTIFIER, "Expected identifier, got %s", TokenNames[parser->current.type]);
+        Token name = parser->previous;
+        PUSH_ARRAY(OutputValue, output, value, ((OutputValue){.id = id, .name = name}));
+    }
+    if(write) {
+        parser->ast.out = output;
+    }
+
     blockEnd(parser, brace);
 }
 

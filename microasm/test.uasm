@@ -11,9 +11,6 @@ header {
   HE, TE, MT # any condition codes here are an error (other than `*:`)
 }
 
-macro TX {
-  HE,RE,HU
-}
 opcode 11 JMP(Reg) {
   TX, RE;
 }

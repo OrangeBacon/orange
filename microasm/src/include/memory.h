@@ -34,7 +34,14 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
 #define DEFINE_ARRAY(type, name) \
     type* name##s; \
     unsigned int name##Count; \
-    unsigned int name##Capacity;
+    unsigned int name##Capacity
+
+// initialise an array with 0 capacity
+#define ARRAY_ZERO(container, name) \
+    do { \
+        (container).name##Count = 0;\
+        (container).name##Capacity = 0; \
+    } while(0)
 
 // initialise the array
 #define ARRAY_ALLOC(type, container, name) \

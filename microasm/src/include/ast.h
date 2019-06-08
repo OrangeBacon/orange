@@ -10,13 +10,13 @@ typedef struct Condition {
 } Condition;
 
 typedef struct Line {
-    DEFINE_ARRAY(Condition, condition)
-    DEFINE_ARRAY(Token, bit)
+    DEFINE_ARRAY(Condition, condition);
+    DEFINE_ARRAY(Token, bit);
     Token condition1Equals;
 } Line;
 
 typedef struct Header {
-    DEFINE_ARRAY(Token, bit)
+    DEFINE_ARRAY(Token, bit);
 } Header;
 
 typedef struct InputValue {
@@ -25,15 +25,26 @@ typedef struct InputValue {
 } InputValue;
 
 typedef struct Input {
-    DEFINE_ARRAY(InputValue, value)
+    DEFINE_ARRAY(InputValue, value);
 } Input;
+
+typedef struct OutputValue {
+    unsigned int id;
+    Token name;
+} OutputValue;
+
+typedef struct Output {
+    DEFINE_ARRAY(OutputValue, value);
+    unsigned int width;
+} Output;
 
 typedef struct Microcode {
     const char* fileName;
+    bool hasError;
+    
     Header head;
     Input inp;
-    bool hasError;
-    Arena arena;
+    Output out;
 } Microcode;
 
 void InitMicrocode(Microcode* mcode, const char* fileName);
