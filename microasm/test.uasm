@@ -1,5 +1,5 @@
 # create opcode for value 0x78, depends on three registers
-opcode 78 ADD(Reg, Reg, Reg) {
+opcode 0xa3F ADD(Reg, Reg, Reg) {
     MI,GE,HE;  # assert the MI, GE, and HE signals when the phase counter is 0, opcode is 78 for all flags
     HI,ME,ME,HM;
     *: ; # explicit no operation, `*:` reqired as repeated `;` ignored
@@ -11,13 +11,13 @@ header {
   HE, TE, MT # any condition codes here are an error (other than `*:`)
 }
 
-opcode 11 JMP(Reg) {
+opcode 0x11 JMP(Reg) {
   TX, RE;
 }
 
-output(8) {
+output(878) {
  0: RE;
- 9: TY;
+ 0xfaC: TY;
 }
 
 input {
@@ -26,4 +26,4 @@ input {
   overflow;
 }
 
-opcode 11 JMP(Reg) = TX, RE;
+opcode 0x11 JMP(Reg) = TX, RE;

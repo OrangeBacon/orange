@@ -6,8 +6,10 @@
 static char peek(Scanner* scanner);
 static char advance(Scanner* scanner);
 static bool isAtEnd(Scanner* scanner);
+static bool isDigit(char c);
 static bool isIdent(char c);
 static void skipWhitespace(Scanner* scanner);
+static Token number(Scanner* scanner);
 static Token identifier(Scanner* scanner);
 static OrangeTokenType identifierType(Scanner* scanner);
 static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length, 
@@ -38,6 +40,7 @@ Token ScanToken(Scanner* scanner){
 
     char c = advance(scanner);
 
+    if(isDigit(c)) return number(scanner);
     if(isIdent(c)) return identifier(scanner);
 
     switch(c) {
@@ -122,6 +125,16 @@ static bool isAtEnd(Scanner* scanner) {
     return *scanner->current == '\0';
 }
 
+// is the character numerical?
+static bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+// is the character a hexadecimal character
+static bool isHexDigit(char c) {
+    return (c >='0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
 // is the character not whitespace and not part of any other token?
 static bool isIdent(char c) {
     return !(c =='(' || c == ')' || c == '{' ||
@@ -155,6 +168,26 @@ static void skipWhitespace(Scanner* scanner) {
                 return;
         }
     }
+}
+
+// scan a number
+static Token number(Scanner* scanner) {
+    while(!isAtEnd(scanner)) {
+        if(!isDigit(peek(scanner))) {
+            break;
+        }
+        advance(scanner);
+    }
+    if(scanner->current == scanner->start + 1 && scanner->current[-1] == '0' && peek(scanner) =='x') {
+        advance(scanner);
+        while(!isAtEnd(scanner)) {
+            if(!isHexDigit(peek(scanner))) {
+                break;
+            }
+            advance(scanner);
+        }
+    }
+    return makeToken(scanner, TOKEN_NUMBER);
 }
 
 // scan an identifier

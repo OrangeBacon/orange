@@ -156,9 +156,14 @@ static void header(Parser* parser, bool write) {
 
 // reads, parses and returns an unsigned integer
 static unsigned int readUInt(Parser* parser, int defaultVal, int minVal) {
-    consume(parser, TOKEN_IDENTIFIER, "Expected input value, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_NUMBER, "Expected number, got %s", TokenNames[parser->current.type]);
     char* endPtr;
-    long val = strtol(parser->previous.start, &endPtr, 10);
+    long val;
+    if(parser->previous.length > 2 && parser->previous.start[0] == '0' && parser->previous.start[1] == 'x') {
+        val = strtol(parser->previous.start + 2, &endPtr, 16);
+    } else {
+        val = strtol(parser->previous.start, &endPtr, 10);
+    }
     if(endPtr != parser->previous.start + parser->previous.length) {
         warn(parser, "Could not parse token as number");
         return defaultVal;
@@ -219,7 +224,7 @@ static void output(Parser* parser, bool write) {
 
     if(brace) {
         while(!check(parser, TOKEN_EOF)) {
-            if(check(parser, TOKEN_IDENTIFIER)) {
+            if(check(parser, TOKEN_NUMBER)) {
                 unsigned int id = readUInt(parser, 0, 0);
                 consume(parser, TOKEN_COLON, "Expected colon, got %s", TokenNames[parser->current.type]);
                 consume(parser, TOKEN_IDENTIFIER, "Expected identifier, got %s", TokenNames[parser->current.type]);

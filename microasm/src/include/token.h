@@ -4,7 +4,7 @@
 #define FOREACH_TOKEN(x) \
     x(LEFT_PAREN) x(RIGHT_PAREN) \
     x(LEFT_BRACE) x(RIGHT_BRACE) \
-    x(COMMA) x(DOT) x(COLON) \
+    x(COMMA) x(DOT) x(COLON) x(NUMBER) \
     x(SEMICOLON) x(STAR) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
     x(MACRO) x(INPUT) x(OUTPUT) \
