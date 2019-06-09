@@ -1,9 +1,19 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <math.h>
+#include "memory.h"
 #include "parser.h"
 #include "platform.h"
 #include "error.h"
+
+static bool printErrors = true;
+void enableErrorPrint() {
+    printErrors = true;
+}
+
+void disableErrorPrint() {
+    printErrors = false;
+}
 
 bool printLine(Parser* parser, int line, int* start, int* length, int maxLineLength, int lineNumberLength) {
     bool s = getLine(parser->scanner->base, line, start, length);
@@ -22,6 +32,7 @@ bool printLine(Parser* parser, int line, int* start, int* length, int maxLineLen
 // assumes the token is correctly formed
 // and is all on one line
 void printMessage(Parser* parser, Token* token, const char* name, TextColor color, const char* message, va_list args) {
+    if(!printErrors) return;
     // error message
     cErrPrintf(color, "%s: ", name);
     cErrVPrintf(color, message, args);
@@ -89,6 +100,7 @@ bool vErrorAt(Parser* parser, Token* token, const char* message, va_list args) {
     printMessage(parser, token, "Error", TextRed, message, args);
     parser->hadError = true;
     parser->ast.hasError = true;
+    PUSH_ARRAY(Error, parser->ast, error, (Error){.token = *token});
     return true;
 }
 
@@ -104,6 +116,7 @@ bool vWarnAt(Parser* parser, Token* token, const char* message, va_list args) {
     printMessage(parser, token, "Warn", TextMagenta, message, args);
     parser->hadError = true;
     parser->ast.hasError = true;
+    PUSH_ARRAY(Error, parser->ast, error, (Error){.token = *token});
     return true;
 }
 

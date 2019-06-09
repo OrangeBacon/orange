@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "token.h"
 #include "ast.h"
+#include "error.h"
 #include "token.h"
 #include "memory.h"
 
@@ -13,6 +14,7 @@ void InitMicrocode(Microcode* mcode, const char* fileName) {
     ARRAY_ZERO(mcode->inp, value);
     ARRAY_ZERO(mcode->out, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);
+    ARRAY_ALLOC(Error, *mcode, error);
     mcode->out.width = 0;
 }
 

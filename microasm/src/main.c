@@ -35,14 +35,16 @@ int main(int argc, char** argv){
 #ifdef debug
     if(strcmp("test", argv[1]) == 0) {
         cOutPrintf(TextGreen, "Running Tests\n");
+        disableErrorPrint();
         runFile("../test.uasm", &parser, &scan);
         if(parser.ast.errorCount > 0) {
-            printf("Errors: ");
+            cErrPrintf(TextRed, "Errors: ");
         }
         for(unsigned int i = 0; i < parser.ast.errorCount; i++) {
-            printf("  Error %u: code = %u", i, parser.ast.errors[i].id);
-            TokenPrint(parser.ast.errors[i].token);
+            printf("\n  Error %u: code = %u at ", i, parser.ast.errors[i].id);
+            TokenPrint(&parser.ast.errors[i].token);
         }
+        printf("\nDone");
         exit(0);
     }
 #endif

@@ -6,8 +6,11 @@ struct Token;
 
 typedef struct Error {
     unsigned int id;
-    struct Token* token;
+    struct Token token;
 } Error;
+
+void enableErrorPrint();
+void disableErrorPrint();
 
 bool vErrorAt(struct Parser* parser, struct Token* token, const char* , va_list args);
 bool errorAt(struct Parser* parser, struct Token* token, const char* , ...);

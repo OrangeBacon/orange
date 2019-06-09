@@ -74,10 +74,6 @@ void cOutVPrintf(TextColor color, const char* format, va_list args) {
 
 // get a buffer containing the string contents of the file provided
 const char* readFile(const char* fileName) {
-#ifdef debug
-    printf("Reading: %s\n", fileName);
-#endif
-
     FILE* file = fopen(fileName, "r");
     if(file == NULL){
         printf("Could not read file \"%s\"\n", fileName);
