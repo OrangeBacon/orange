@@ -231,7 +231,8 @@ static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length,
 static Token makeToken(Scanner* scanner, OrangeTokenType type) {
     Token token;
     token.type = type;
-    token.start = scanner->start;
+    token.base = scanner->base;
+    token.offset = (int)(scanner->start - scanner->base);
     token.length = (int)(scanner->current - scanner->start);
     token.line = scanner->line;
     token.column = scanner->column;
@@ -243,7 +244,8 @@ static Token makeToken(Scanner* scanner, OrangeTokenType type) {
 static Token errorToken(Scanner* scanner, const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
-    token.start = message;
+    token.base = scanner->base;
+    token.offset = (int)(scanner->start - scanner->base);
     token.length = (int)strlen(message);
     token.line = scanner->line;
     token.column = scanner->column;

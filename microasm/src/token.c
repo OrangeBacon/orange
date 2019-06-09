@@ -13,5 +13,5 @@ const char* TokenNames[] = {
 // simple debug print 
 void TokenPrint(Token* token) {
     printf("%.4i:%.4i %.17s: %.*s", token->line, token->column,
-        TokenNames[token->type], token->length, token->start);
+        TokenNames[token->type], token->length, TOKEN_GET(*token));
 }

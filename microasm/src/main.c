@@ -32,6 +32,8 @@ int main(int argc, char** argv){
     Scanner scan;
     Parser parser;
 
+    printf("%u, %u\n", sizeof(Token), sizeof(Parser));
+
 #ifdef debug
     if(strcmp("test", argv[1]) == 0) {
         cOutPrintf(TextGreen, "Running Tests\n");

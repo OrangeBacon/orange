@@ -57,7 +57,7 @@ static void advance(Parser* parser) {
         if(parser->current.type != TOKEN_ERROR){
             break;
         }
-        errorAtCurrent(parser, parser->current.start);
+        errorAtCurrent(parser, parser->current.data.string);
     }
 }
 
@@ -160,12 +160,12 @@ static unsigned int readUInt(Parser* parser, int defaultVal, int minVal) {
     consume(parser, TOKEN_NUMBER, "Expected number, got %s", TokenNames[parser->current.type]);
     char* endPtr;
     long val;
-    if(parser->previous.length > 2 && parser->previous.start[0] == '0' && parser->previous.start[1] == 'x') {
-        val = strtol(parser->previous.start + 2, &endPtr, 16);
+    if(parser->previous.length > 2 && TOKEN_GET(parser->previous)[0] == '0' && TOKEN_GET(parser->previous)[1] == 'x') {
+        val = strtol(TOKEN_GET(parser->previous) + 2, &endPtr, 16);
     } else {
-        val = strtol(parser->previous.start, &endPtr, 10);
+        val = strtol(TOKEN_GET(parser->previous), &endPtr, 10);
     }
-    if(endPtr != parser->previous.start + parser->previous.length) {
+    if(endPtr != TOKEN_GET(parser->previous) + parser->previous.length) {
         warn(parser, "Could not parse token as number");
         return defaultVal;
     } else if (val < minVal || val > INT_MAX) {
@@ -311,7 +311,7 @@ static Line* microcodeLine(Parser* parser) {
     Line* line = ArenaAlloc(sizeof(Line));
     ARRAY_ALLOC(Token, *line, bit);
     ARRAY_ALLOC(Condition, *line, condition);
-    line->conditionErrorToken = (Token){.start = NULL};
+    line->conditionErrorToken = (Token){.type = TOKEN_NULL};
     line->anyCondition = false;
 
     if(match(parser, TOKEN_STAR)) {
