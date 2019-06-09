@@ -1,18 +1,23 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "parser.h"
-#include "platform.h"
+struct Parser;
+struct Token;
 
-bool vErrorAt(Parser* parser, Token* token, const char* , va_list args);
-bool errorAt(Parser* parser, Token* token, const char* , ...);
-bool vNoteAt(Parser* parser, Token* token, const char* message, va_list args);
-bool noteAt(Parser* parser, Token* token, const char* message, ...);
-bool vWarnAt(Parser* parser, Token* token, const char* message, va_list args);
-bool warnAt(Parser* parser, Token* token, const char* message, ...);
+typedef struct Error {
+    unsigned int id;
+    struct Token* token;
+} Error;
 
-bool vErrorAtCurrent(Parser* parser, const char* message, va_list args);
-bool errorAtCurrent(Parser* parser, const char* message, ...);
-bool warn(Parser* parser, const char* message, ...);
+bool vErrorAt(struct Parser* parser, struct Token* token, const char* , va_list args);
+bool errorAt(struct Parser* parser, struct Token* token, const char* , ...);
+bool vNoteAt(struct Parser* parser, struct Token* token, const char* message, va_list args);
+bool noteAt(struct Parser* parser, struct Token* token, const char* message, ...);
+bool vWarnAt(struct Parser* parser, struct Token* token, const char* message, va_list args);
+bool warnAt(struct Parser* parser, struct Token* token, const char* message, ...);
+
+bool vErrorAtCurrent(struct Parser* parser, const char* message, va_list args);
+bool errorAtCurrent(struct Parser* parser, const char* message, ...);
+bool warn(struct Parser* parser, const char* message, ...);
 
 #endif

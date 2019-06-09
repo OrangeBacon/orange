@@ -34,6 +34,8 @@ typedef enum TextColor {
 #endif
 } TextColor;
 
+extern bool EnableColor;
+
 #ifdef _WIN32
 // stderr handle
 HANDLE HandleErr;
@@ -41,16 +43,29 @@ HANDLE HandleErr;
 // inital formatting of stderr
 CONSOLE_SCREEN_BUFFER_INFO ErrReset;
 
-// have the handles been aquired successfuly?
-bool WinColorSuccess;
+// stdout handle
+HANDLE HandleOut;
+
+// inital formatting of stdout
+CONSOLE_SCREEN_BUFFER_INFO OutReset;
 #endif
 
 // setup color terminal output
 void startColor();
 
-// print a string with a given color to stderr
+// printf a string with a given color to stderr
 void cErrPrintf(TextColor color, const char* format, ...);
 
+// printf a forat string and arguments with a given color to stderr
 void cErrVPrintf(TextColor color, const char* format, va_list args);
+
+// printf a string with a given color to stdout
+void cOutPrintf(TextColor color, const char* format, ...);
+
+// printf a forat string and arguments with a given color to stdout
+void cOutVPrintf(TextColor color, const char* format, va_list args);
+
+// get a buffer containing the string contents of the file provided
+const char* readFile(const char* fileName);
 
 #endif

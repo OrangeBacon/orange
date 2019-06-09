@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "token.h"
 #include "ast.h"
 #include "token.h"
 #include "memory.h"

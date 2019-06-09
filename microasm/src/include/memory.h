@@ -1,8 +1,6 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include <stdlib.h>
-
 // section of memory
 typedef struct Area {
     size_t bytesLeft;
