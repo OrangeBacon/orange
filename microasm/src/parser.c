@@ -57,7 +57,7 @@ static void advance(Parser* parser) {
         if(parser->current.type != TOKEN_ERROR){
             break;
         }
-        errorAtCurrent(parser, parser->current.data.string);
+        errorAtCurrent(parser, 1, parser->current.data.string);
     }
 }
 
@@ -68,14 +68,14 @@ static bool match(Parser* parser, OrangeTokenType type) {
     return true;
 }
 
-static void consume(Parser* parser, OrangeTokenType type, const char* message, ...) {
+static void consume(Parser* parser, OrangeTokenType type, unsigned int code, const char* message, ...) {
     va_list args;
     va_start(args, message);
     if(parser->current.type == type) {
         advance(parser);
         return;
     }
-    vErrorAtCurrent(parser, message, args);
+    vErrorAtCurrent(parser, code, message, args);
 }
 
 // is the next token of type type?
@@ -109,7 +109,7 @@ static void block(Parser* parser) {
         //TODO
     } else if(match(parser, TOKEN_HEADER)) {
         if(parser->headerStatement.line != -1){
-            bool e = warn(parser, "Only one header statement allowed per microcode");
+            bool e = warn(parser, 3, "Only one header statement allowed per microcode");
             if(e) noteAt(parser, &parser->headerStatement, "Previously declared here");
             header(parser, false);
         } else {
@@ -118,7 +118,7 @@ static void block(Parser* parser) {
         }
     } else if(match(parser, TOKEN_INPUT)) {
         if(parser->inputStatement.line != -1){
-            bool e = warn(parser, "Only one input statement allowed per microcode");
+            bool e = warn(parser, 4, "Only one input statement allowed per microcode");
             if(e) noteAt(parser, &parser->inputStatement, "Previously declared here");
             input(parser, false);
         } else {
@@ -127,7 +127,7 @@ static void block(Parser* parser) {
         }
     } else if(match(parser, TOKEN_OUTPUT)) {
         if(parser->outputStatement.line != -1){
-            bool e = warn(parser, "Only one output statement allowed per microcode");
+            bool e = warn(parser, 5, "Only one output statement allowed per microcode");
             if(e) noteAt(parser, &parser->outputStatement, "Previously declared here");
             output(parser, false);
         } else {
@@ -135,7 +135,7 @@ static void block(Parser* parser) {
             output(parser, true);
         }
     } else {
-        errorAtCurrent(parser, "Expected a block statement, got %s", TokenNames[parser->current.type]);
+        errorAtCurrent(parser, 6, "Expected a block statement, got %s", TokenNames[parser->current.type]);
     }
 
     // if error occured reset parser state to known value
@@ -147,7 +147,7 @@ static void header(Parser* parser, bool write) {
     bool brace = blockStart(parser);
     Line* line = microcodeLine(parser);
     if(line->conditionCount != 0 || line->anyCondition) {
-        errorAt(parser, &line->conditionErrorToken, "Condition values not allowed in header");
+        errorAt(parser, 7, &line->conditionErrorToken, "Condition values not allowed in header");
     }
     if(write) {
         COPY_ARRAY(*line, parser->ast.head, bit);
@@ -157,7 +157,7 @@ static void header(Parser* parser, bool write) {
 
 // reads, parses and returns an unsigned integer
 static unsigned int readUInt(Parser* parser, int defaultVal, int minVal) {
-    consume(parser, TOKEN_NUMBER, "Expected number, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_NUMBER, 19, "Expected number, got %s", TokenNames[parser->current.type]);
     char* endPtr;
     long val;
     if(parser->previous.length > 2 && TOKEN_GET(parser->previous)[0] == '0' && TOKEN_GET(parser->previous)[1] == 'x') {
@@ -166,10 +166,10 @@ static unsigned int readUInt(Parser* parser, int defaultVal, int minVal) {
         val = strtol(TOKEN_GET(parser->previous), &endPtr, 10);
     }
     if(endPtr != TOKEN_GET(parser->previous) + parser->previous.length) {
-        warn(parser, "Could not parse token as number");
+        warn(parser, 8, "Could not parse token as number");
         return defaultVal;
     } else if (val < minVal || val > INT_MAX) {
-        warn(parser, "Input values must be between %u and INT_MAX", minVal);
+        warn(parser, 9, "Input values must be between %u and INT_MAX", minVal);
         return defaultVal;
     }
     return (unsigned int)val;
@@ -199,7 +199,7 @@ static void input(Parser* parser, bool write) {
             }
         }
     } else {
-        consume(parser, TOKEN_IDENTIFIER, "Expected input name");
+        consume(parser, TOKEN_IDENTIFIER, 11, "Expected input name");
         Token name = parser->previous;
         unsigned int value = 1;
         if(match(parser, TOKEN_COLON)) {
@@ -213,9 +213,9 @@ static void input(Parser* parser, bool write) {
     blockEnd(parser, brace);
 }
 static void output(Parser* parser, bool write) {
-    consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_LEFT_PAREN, 20, "Expected left paren, got %s", TokenNames[parser->current.type]);
     unsigned int width = readUInt(parser, 0, 0);
-    consume(parser, TOKEN_RIGHT_PAREN, "Expected right paren, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_RIGHT_PAREN, 21, "Expected right paren, got %s", TokenNames[parser->current.type]);
 
     Output output;
     ARRAY_ALLOC(OutputValue, output, value);
@@ -227,8 +227,8 @@ static void output(Parser* parser, bool write) {
         while(!check(parser, TOKEN_EOF)) {
             if(check(parser, TOKEN_NUMBER)) {
                 unsigned int id = readUInt(parser, 0, 0);
-                consume(parser, TOKEN_COLON, "Expected colon, got %s", TokenNames[parser->current.type]);
-                consume(parser, TOKEN_IDENTIFIER, "Expected identifier, got %s", TokenNames[parser->current.type]);
+                consume(parser, TOKEN_COLON, 22, "Expected colon, got %s", TokenNames[parser->current.type]);
+                consume(parser, TOKEN_IDENTIFIER, 23, "Expected identifier, got %s", TokenNames[parser->current.type]);
                 Token name = parser->previous;
                 PUSH_ARRAY(OutputValue, output, value, ((OutputValue){.id = id, .name = name}));
                 if(!match(parser, TOKEN_SEMICOLON)) {
@@ -240,8 +240,8 @@ static void output(Parser* parser, bool write) {
         }
     } else {
         unsigned int id = readUInt(parser, 0, 0);
-        consume(parser, TOKEN_COLON, "Expected colon, got %s", TokenNames[parser->current.type]);
-        consume(parser, TOKEN_IDENTIFIER, "Expected identifier, got %s", TokenNames[parser->current.type]);
+        consume(parser, TOKEN_COLON, 24, "Expected colon, got %s", TokenNames[parser->current.type]);
+        consume(parser, TOKEN_IDENTIFIER, 25, "Expected identifier, got %s", TokenNames[parser->current.type]);
         Token name = parser->previous;
         PUSH_ARRAY(OutputValue, output, value, ((OutputValue){.id = id, .name = name}));
     }
@@ -258,10 +258,10 @@ static void opcode(Parser* parser) {
     ARRAY_ALLOC(Line*, code, line);
 
     code.id = readUInt(parser, 0, 0);
-    consume(parser, TOKEN_IDENTIFIER, "Expected opcode name, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_IDENTIFIER, 26, "Expected opcode name, got %s", TokenNames[parser->current.type]);
     code.name = parser->previous;
 
-    consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_LEFT_PAREN, 27, "Expected left paren, got %s", TokenNames[parser->current.type]);
 
     while(!check(parser, TOKEN_EOF)) {
         if(match(parser, TOKEN_IDENTIFIER)) {
@@ -274,7 +274,7 @@ static void opcode(Parser* parser) {
         }
     }
 
-    consume(parser, TOKEN_RIGHT_PAREN, "Expected right paren, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_RIGHT_PAREN, 28, "Expected right paren, got %s", TokenNames[parser->current.type]);
     
     bool brace = blockStart(parser);
 
@@ -316,7 +316,7 @@ static Line* microcodeLine(Parser* parser) {
 
     if(match(parser, TOKEN_STAR)) {
         line->conditionErrorToken = parser->previous;
-        consume(parser, TOKEN_COLON, "Expected colon after star condition");
+        consume(parser, TOKEN_COLON, 12, "Expected colon after star condition");
         line->anyCondition = true;
     }
 
@@ -325,13 +325,13 @@ static Line* microcodeLine(Parser* parser) {
             cond = false;
             break;
         }
-        consume(parser, TOKEN_IDENTIFIER, "Expected identifier");
+        consume(parser, TOKEN_IDENTIFIER, 13, "Expected identifier");
         Token name = parser->previous;
         if(first) { // in first loop iteration
             cond = check(parser, TOKEN_EQUAL);
         }
         if(cond) {
-            consume(parser, TOKEN_EQUAL, "Expected equals symbol");
+            consume(parser, TOKEN_EQUAL, 14, "Expected equals symbol");
 
             if(first) {
                 line->conditionErrorToken = parser->previous;
@@ -355,7 +355,7 @@ static Line* microcodeLine(Parser* parser) {
 
     if(cond) {
         // seperator between conditions and bit names required
-        consume(parser, TOKEN_COLON, "Expected colon");
+        consume(parser, TOKEN_COLON, 15, "Expected colon");
     } else {
         // no conditions so second loop not required
         return line;
@@ -367,7 +367,7 @@ static Line* microcodeLine(Parser* parser) {
             cond = false;
             break;
         }
-        consume(parser, TOKEN_IDENTIFIER, "Expected bit name");
+        consume(parser, TOKEN_IDENTIFIER, 16, "Expected bit name");
         PUSH_ARRAY(Token, *line, bit, parser->previous);
         if(!match(parser, TOKEN_COMMA)) {
             break;
@@ -385,7 +385,7 @@ static bool blockStart(Parser* parser) {
     } else if(match(parser, TOKEN_EQUAL)) {
         return false; // single line block
     }
-    errorAtCurrent(parser, "Expected the start of a block");
+    errorAtCurrent(parser, 10, "Expected the start of a block");
     return false; // value does not matter
 }
 
@@ -394,8 +394,8 @@ static void blockEnd(Parser* parser, bool start) {
     if(start) {
         // optional semicolon
         match(parser, TOKEN_SEMICOLON);
-        consume(parser, TOKEN_RIGHT_BRACE, "Expected a right brace at end of block");
+        consume(parser, TOKEN_RIGHT_BRACE, 17, "Expected a right brace at end of block");
     } else {
-        consume(parser, TOKEN_SEMICOLON, "Expected a semi-colon at end of block");
+        consume(parser, TOKEN_SEMICOLON, 18, "Expected a semi-colon at end of block");
     }
 }

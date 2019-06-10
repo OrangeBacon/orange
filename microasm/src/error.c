@@ -31,10 +31,14 @@ bool printLine(Parser* parser, int line, int* start, int* length, int maxLineLen
 // print a message about a token to stderr
 // assumes the token is correctly formed
 // and is all on one line
-void printMessage(Parser* parser, Token* token, const char* name, TextColor color, const char* message, va_list args) {
+void printMessage(Parser* parser, Token* token, const char* name, unsigned int code, TextColor color, const char* message, va_list args) {
     if(!printErrors) return;
     // error message
-    cErrPrintf(color, "%s: ", name);
+    if(code == 0) {
+        cErrPrintf(color, "%s: ", name);
+    } else {
+        cErrPrintf(color, "%s[E%04u]:", name, code);
+    }
     cErrVPrintf(color, message, args);
     printf("\n");
 
@@ -94,37 +98,37 @@ void printMessage(Parser* parser, Token* token, const char* name, TextColor colo
 }
 
 // print an error message at a token's position
-bool vErrorAt(Parser* parser, Token* token, const char* message, va_list args) {
+bool vErrorAt(Parser* parser, unsigned int code, Token* token, const char* message, va_list args) {
     if(parser->panicMode) return false;
     parser->panicMode = true;
-    printMessage(parser, token, "Error", TextRed, message, args);
+    printMessage(parser, token, "Error", code, TextRed, message, args);
     parser->hadError = true;
     parser->ast.hasError = true;
-    PUSH_ARRAY(Error, parser->ast, error, (Error){.token = *token});
+    PUSH_ARRAY(Error, parser->ast, error, ((Error){.token = *token, .id = code}));
     return true;
 }
 
 // print a note relating to an error token
 bool vNoteAt(Parser* parser, Token* token, const char* message, va_list args) {
-    printMessage(parser, token, "Note", TextBlue, message, args);
+    printMessage(parser, token, "Note", 0, TextBlue, message, args);
     return true;
 }
 
 // print a warning relating to a token
-bool vWarnAt(Parser* parser, Token* token, const char* message, va_list args) {
+bool vWarnAt(Parser* parser, unsigned int code, Token* token, const char* message, va_list args) {
     if(parser->panicMode) return false;
-    printMessage(parser, token, "Warn", TextMagenta, message, args);
+    printMessage(parser, token, "Warn", code, TextMagenta, message, args);
     parser->hadError = true;
     parser->ast.hasError = true;
-    PUSH_ARRAY(Error, parser->ast, error, (Error){.token = *token});
+    PUSH_ARRAY(Error, parser->ast, error, ((Error){.token = *token, .id = code}));
     return true;
 }
 
 // print an error message at a token's position
-bool errorAt(Parser* parser, Token* token, const char* message, ...) {
+bool errorAt(Parser* parser, unsigned int code, Token* token, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vErrorAt(parser, token, message, args);
+    return vErrorAt(parser, code, token, message, args);
 }
 
 // print a note relating to an error token
@@ -135,27 +139,27 @@ bool noteAt(Parser* parser, Token* token, const char* message, ...) {
 }
 
 // print a warning relating to a token
-bool warnAt(Parser* parser, Token* token, const char* message, ...) {
+bool warnAt(Parser* parser, unsigned int code, Token* token, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vWarnAt(parser, token, message, args);
+    return vWarnAt(parser, code, token, message, args);
 }
 
 // issue error for token before advance() called
-bool vErrorAtCurrent(Parser* parser, const char* message, va_list args) {
-    return vErrorAt(parser, &parser->current, message, args);
+bool vErrorAtCurrent(Parser* parser, unsigned int code, const char* message, va_list args) {
+    return vErrorAt(parser, code, &parser->current, message, args);
 }
 
 // issue error for token before advance() called
-bool errorAtCurrent(Parser* parser, const char* message, ...) {
+bool errorAtCurrent(Parser* parser, unsigned int code, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vErrorAtCurrent(parser, message, args);
+    return vErrorAtCurrent(parser, code, message, args);
 }
 
 // issue warning for already advanced() token
-bool warn(Parser* parser, const char* message, ...) {
+bool warn(Parser* parser, unsigned int code, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vWarnAt(parser, &parser->previous, message, args);
+    return vWarnAt(parser, code, &parser->previous, message, args);
 }

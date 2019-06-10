@@ -17,10 +17,17 @@ int main(int argc, char** argv){
 
     if(argc <= 1) {
         cErrPrintf(TextRed, "Not enough arguments provided, "
-            "expected microcode file name or \"test\".");
+            "expected microcode file name"
+#ifdef debug
+            " or \"test\"."
+#else
+            "."
+#endif
+            );
+        exit(0);
     }
 
-
+#ifdef debug
     if(strcmp("test", argv[1]) == 0) {
         if(argc < 3) {
             cErrPrintf(TextRed, "Not enough arguments provided, "
@@ -36,6 +43,7 @@ int main(int argc, char** argv){
         // to get here an argument input error will have occured
         exit(1);
     }
+#endif
 
     if(argc != 2) {
         cErrPrintf(TextRed, "Too many arguments provided, "

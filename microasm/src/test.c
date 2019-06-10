@@ -25,12 +25,13 @@ void runTests(const char* directory) {
     disableErrorPrint();
     runFile(directory, &parser, &scanner);
     if(parser.ast.errorCount > 0) {
-        cErrPrintf(TextRed, "Errors: ");
+        cErrPrintf(TextRed, "Errors: \n");
     }
     for(unsigned int i = 0; i < parser.ast.errorCount; i++) {
-        printf("\n  Error %u: code = %u at ", i, parser.ast.errors[i].id);
+        printf("  Error[E%04u] at ", parser.ast.errors[i].id);
         TokenPrint(&parser.ast.errors[i].token);
+        printf("\n");
     }
-    printf("\nDone");
+    printf("Done");
     exit(0);
 }
