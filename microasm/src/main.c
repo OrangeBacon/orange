@@ -9,48 +9,42 @@
 #include "error.h"
 #include "platform.h"
 #include "memory.h"
-
-static void runFile(const char* fileName, Parser* parse, Scanner* scan) {
-    const char* file = readFile(fileName);
-    const char* fullFileName = resolvePath(fileName);
-
-    ScannerInit(scan, file, fullFileName);
-    ParserInit(parse, scan);
-
-    Parse(parse);
-}
+#include "test.h"
 
 int main(int argc, char** argv){
-    if(argc != 2){
-        printf("Usage: microasm <filename>\n");
-        return 1;
+    startColor();
+    ArenaInit();
+
+    if(argc <= 1) {
+        cErrPrintf(TextRed, "Not enough arguments provided, "
+            "expected microcode file name or \"test\".");
     }
 
-    startColor();
 
-    ArenaInit();
+    if(strcmp("test", argv[1]) == 0) {
+        if(argc < 3) {
+            cErrPrintf(TextRed, "Not enough arguments provided, "
+                "expected name of directory containing compiler tests.");
+        } else if(argc > 3) {
+            cErrPrintf(TextRed, "Too many arguments provided, "
+                "expected: microasm test <directory>");
+        } else {
+            runTests(argv[2]);
+        }
+
+        // runTests will exit on its own depending on test success,
+        // to get here an argument input error will have occured
+        exit(1);
+    }
+
+    if(argc != 2) {
+        cErrPrintf(TextRed, "Too many arguments provided, "
+            "expected: microasm <filename>");
+        exit(1);
+    }
+
     Scanner scan;
     Parser parser;
-
-    printf("%u, %u\n", sizeof(Token), sizeof(Parser));
-
-#ifdef debug
-    if(strcmp("test", argv[1]) == 0) {
-        cOutPrintf(TextGreen, "Running Tests\n");
-        disableErrorPrint();
-        runFile("../test.uasm", &parser, &scan);
-        if(parser.ast.errorCount > 0) {
-            cErrPrintf(TextRed, "Errors: ");
-        }
-        for(unsigned int i = 0; i < parser.ast.errorCount; i++) {
-            printf("\n  Error %u: code = %u at ", i, parser.ast.errors[i].id);
-            TokenPrint(&parser.ast.errors[i].token);
-        }
-        printf("\nDone");
-        exit(0);
-    }
-#endif
-
     runFile(argv[1], &parser, &scan);
     PrintMicrocode(&parser.ast);
 }

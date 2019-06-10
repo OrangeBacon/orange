@@ -13,6 +13,7 @@ add_executable(microasm
     src/memory.c
     src/platform.c
     src/error.c
+    src/test.c
     )
 
 set_property(TARGET microasm PROPERTY C_STANDARD 99)
