@@ -1,17 +1,44 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "test.h"
 #include "platform.h"
 #include "error.h"
 
-void runFile(const char* fileName, const char* file, Parser* parse, Scanner* scan) {
+bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* scan, bool testing) {
     const char* fullFileName = resolvePath(fileName);
 
     ScannerInit(scan, file, fullFileName);
     ParserInit(parse, scan);
 
-    Parse(parse);
+    const char* ext = strrchr(fullFileName, '.');
+    if(!ext) {
+        cErrPrintf(TextRed, "\nCould not detect file type for \"%s\"", fullFileName);
+        return false;
+    } else {
+        ext = ext + 1;
+    }
+
+#ifdef debug
+    int isTestFile = !strcmp(ext, "uasmt");
+    if(isTestFile && testing) {
+        Parse(parse);
+        return true;
+    } else if(isTestFile && !testing) {
+        cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"", ext, fullFileName);
+        return false;
+    } else
+#else
+    (void)testing;
+#endif
+    if(!strcmp(ext, "uasm")) {
+        Parse(parse);
+        return true;
+    }
+
+    cErrPrintf(TextRed, "\nUnknown file type \"%s\" when reading file \"%s\"", ext, fullFileName);
+    return false;
 }
 
 static int testCount;
@@ -22,9 +49,9 @@ static void runTest(const char* path, const char* file) {
     Parser parser;
 
     printf("Testing: %s", path);
-    runFile(path, file, &parser, &scanner);
+    bool runSuccess = runFile(path, file, &parser, &scanner, true);
     printf("  ->  ");
-    if(parser.ast.errorCount > 0) {
+    if(parser.ast.errorCount > 0 || !runSuccess) {
         cErrPrintf(TextRed, "Failed: \n");
     } else {
         cOutPrintf(TextGreen, "Passed\n");
@@ -40,6 +67,7 @@ static void runTest(const char* path, const char* file) {
 void runTests(const char* directory) {
     printf("Running Tests\n");
     disableErrorPrint();
+
     iterateDirectory(directory, runTest);
 
     if(testCount == passedCount) {
