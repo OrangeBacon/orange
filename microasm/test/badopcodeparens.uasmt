@@ -1,0 +1,7 @@
+E 28 5:16;
+E 27 6:14;
+E 10 7:17;
+
+opcode 0x0 a( {}
+opcode 0x0 b) {}
+opcode 0x0 c() }

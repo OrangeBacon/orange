@@ -1,0 +1,12 @@
+opcode 0xa3F ADD(Reg, Reg, Reg) {
+    A;;
+    *:;;
+}
+
+output(1) {
+    5: A;;
+}
+
+input {
+    A: 5;;
+}
