@@ -1,7 +1,9 @@
 #include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <limits.h>
+#include <dirent.h>
 #include "platform.h"
 #include "memory.h"
 
@@ -99,4 +101,40 @@ const char* readFile(const char* fileName) {
     fclose(file);
 
     return buffer;
+}
+
+static const char* pathSeperator =
+#ifdef _WIN32
+    "\\";
+#else
+    "/";
+#endif
+
+bool iterateDirectory(const char* basePath, directoryCallback callback) {
+    char path[1000];
+    DIR* directory = opendir(basePath);
+    struct dirent *entry;
+
+    bool success = true;
+
+    if(!directory) {
+        return true;
+    }
+
+    while((entry = readdir(directory)) != NULL) {
+        if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            strcpy(path, basePath);
+            strcat(path, pathSeperator);
+            strcat(path, entry->d_name);
+
+            if(!callback(path)) {
+                success = false;
+            }
+            if(!iterateDirectory(path, callback)) {
+                success = false;
+            }
+        }
+    }
+
+    return success;
 }

@@ -15,23 +15,35 @@ void runFile(const char* fileName, Parser* parse, Scanner* scan) {
     Parse(parse);
 }
 
-void runTests(const char* directory) {
+static bool runTest(const char* path) {
     Scanner scanner;
     Parser parser;
 
-    (void)directory;
-
-    cOutPrintf(TextGreen, "Running Tests\n");
-    disableErrorPrint();
-    runFile(directory, &parser, &scanner);
+    printf("%s  ->  ", path);
+    runFile(path, &parser, &scanner);
     if(parser.ast.errorCount > 0) {
-        cErrPrintf(TextRed, "Errors: \n");
+        cErrPrintf(TextRed, "Failed: \n");
+    } else {
+        cOutPrintf(TextGreen, "Passed\n");
     }
     for(unsigned int i = 0; i < parser.ast.errorCount; i++) {
         printf("  Error[E%04u] at ", parser.ast.errors[i].id);
         TokenPrint(&parser.ast.errors[i].token);
         printf("\n");
     }
-    printf("Done");
+
+    return parser.ast.errorCount == 0;
+}
+
+void runTests(const char* directory) {
+    printf("Running Tests\n");
+    disableErrorPrint();
+
+    if(iterateDirectory(directory, runTest)) {
+        cOutPrintf(TextGreen, "All Tests Passed\n");
+    } else {
+        cErrPrintf(TextRed, "Test Failed\n");
+    }
+
     exit(0);
 }
