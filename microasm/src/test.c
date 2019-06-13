@@ -49,38 +49,56 @@ static void runTest(const char* path, const char* file) {
     Scanner scanner;
     Parser parser;
 
-    printf("Testing: %s", path);
+    printf("Testing: %s  ->\n", resolvePath(path));
     bool runSuccess = runFile(path, file, &parser, &scanner, true);
-    printf("  ->  ");
-    if(parser.ast.errorCount > 0 || !runSuccess) {
-        cErrPrintf(TextRed, "Failed: \n");
-    } else {
-        cOutPrintf(TextGreen, "Passed\n");
+    if(!runSuccess) {
+
+    }
+
+    unsigned int currentAstError = 0;
+    while(currentAstError < parser.ast.errorCount) {
+        if(parser.ast.expectedErrorCount >= currentAstError + 1) {
+            Error expected = parser.ast.expectedErrors[currentAstError];
+            Error actual = parser.ast.errors[currentAstError];
+            if(expected.id != actual.id || expected.token.line != actual.token.line || expected.token.column != actual.token.column) {
+                runSuccess = false;
+                cErrPrintf(TextRed, "  Expected Error[E%04u] at ", parser.ast.expectedErrors[currentAstError].id);
+                cErrPrintf(TextRed, "%u:%u\n", parser.ast.expectedErrors[currentAstError].token.line, parser.ast.expectedErrors[currentAstError].token.column);
+                cErrPrintf(TextRed, "  Got Error[E%04u] at ", parser.ast.errors[currentAstError].id);
+                cErrPrintf(TextRed, "%u:%u\n", parser.ast.errors[currentAstError].token.line, parser.ast.errors[currentAstError].token.column);
+            }
+        } else {
+            runSuccess = false;
+            cErrPrintf(TextRed, "  Error[E%04u] at ", parser.ast.errors[currentAstError].id);
+            cErrPrintf(TextRed, "%u:%u\n", parser.ast.errors[currentAstError].token.line, parser.ast.errors[currentAstError].token.column);
+        }
+        currentAstError++;
+    }
+
+    if(parser.ast.expectedErrorCount != currentAstError) {
+        runSuccess = false;
+        for(; currentAstError < parser.ast.expectedErrorCount; currentAstError++) {
+            cErrPrintf(TextRed, "  Expected Error[E%04u] at ", parser.ast.expectedErrors[currentAstError].id);
+            cErrPrintf(TextRed, "%u:%u\n", parser.ast.expectedErrors[currentAstError].token.line, parser.ast.expectedErrors[currentAstError].token.column);
+        }
+    }
+
+    if(runSuccess) {
+        cOutPrintf(TextGreen, "  Passed\n");
         passedCount++;
-    }
-    for(unsigned int i = 0; i < parser.ast.errorCount; i++) {
-        printf("  Error[E%04u] at ", parser.ast.errors[i].id);
-        TokenPrint(&parser.ast.errors[i].token);
-        printf("\n");
-    }
-    for(unsigned int i = 0; i < parser.ast.expectedErrorCount; i++) {
-        printf("  ExpectedError[E%04u] at ", parser.ast.expectedErrors[i].id);
-        printf("%u:%u", parser.ast.expectedErrors[i].token.line, parser.ast.expectedErrors[i].token.column);
-        printf("\n");
     }
 }
 
 void runTests(const char* directory) {
-    printf("Running Tests\n");
     disableErrorPrint();
 
     iterateDirectory(directory, runTest);
 
     if(testCount == passedCount) {
-        cOutPrintf(TextGreen, "All Tests Passed\n");
+        cOutPrintf(TextGreen, "\nAll Tests Passed\n");
         cOutPrintf(TextGreen, "(%i tests executed)\n", passedCount);
     } else {
-        cErrPrintf(TextRed, "Testing Failed\n");
+        cErrPrintf(TextRed, "\nTesting Failed\n");
         cErrPrintf(TextRed, "(%i of %i passed)\n", passedCount, testCount);
     }
 
