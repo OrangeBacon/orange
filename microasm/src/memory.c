@@ -28,7 +28,7 @@ static int AlignForward(void* real_ptr, size_t align) {
 }
 
 void ArenaInit() {
-    arena.pageSize = 4096 * 2;
+    arena.pageSize = 4096 * 16;
     
     // add an initial page
     arena.align = 2 * sizeof(void*);

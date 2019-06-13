@@ -67,9 +67,10 @@ void cOutVPrintf(TextColor color, const char* format, va_list args);
 
 // get a buffer containing the string contents of the file provided
 const char* readFile(const char* fileName);
+const char* readFilePtr(FILE* file, const char* fileName);
 
-typedef bool(*directoryCallback)(const char *);
+typedef void(*directoryCallback)(const char* path, const char* file);
 
-bool iterateDirectory(const char* basePath, directoryCallback callback);
+void iterateDirectory(const char* basePath, directoryCallback callback);
 
 #endif

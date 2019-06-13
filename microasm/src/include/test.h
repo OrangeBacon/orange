@@ -4,7 +4,7 @@
 #include "scanner.h"
 #include "parser.h"
 
-void runFile(const char* fileName, Parser* parse, Scanner* scan);
+void runFile(const char* fileName, const char* file, Parser* parse, Scanner* scan);
 
 void runTests(const char* directory);
 

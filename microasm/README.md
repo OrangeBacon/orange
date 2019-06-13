@@ -1,12 +1,19 @@
-MicroASM
-=====
+# MicroASM
+A microcode assembler
 
-running:
+## running
 ```
 microasm <filename>
 ```
 
-building:
+## testing
+Using a debug build:
+```
+cd microasm
+microasm test ./test
+```
+
+## building
 ```
 cd microasm
 mkdir build

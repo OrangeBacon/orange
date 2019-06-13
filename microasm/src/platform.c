@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -81,7 +82,10 @@ const char* readFile(const char* fileName) {
         printf("Could not read file \"%s\"\n", fileName);
         exit(1);
     }
-    
+    return readFilePtr(file, fileName);
+}
+
+const char* readFilePtr(FILE* file, const char* fileName) {
     // get the length of the file
     fseek(file, 0L, SEEK_END);
     size_t fileSize = ftell(file);
@@ -110,15 +114,13 @@ static const char* pathSeperator =
     "/";
 #endif
 
-bool iterateDirectory(const char* basePath, directoryCallback callback) {
+void iterateDirectory(const char* basePath, directoryCallback callback) {
     char path[1000];
     DIR* directory = opendir(basePath);
     struct dirent *entry;
 
-    bool success = true;
-
     if(!directory) {
-        return true;
+        return;
     }
 
     while((entry = readdir(directory)) != NULL) {
@@ -126,15 +128,15 @@ bool iterateDirectory(const char* basePath, directoryCallback callback) {
             strcpy(path, basePath);
             strcat(path, pathSeperator);
             strcat(path, entry->d_name);
-
-            if(!callback(path)) {
-                success = false;
-            }
-            if(!iterateDirectory(path, callback)) {
-                success = false;
+            
+            FILE* file = fopen(path, "r");
+            if(file == NULL) {
+                fclose(file);
+                iterateDirectory(path, callback);
+            } else {
+                callback(path, readFilePtr(file, path));
+                fclose(file);
             }
         }
     }
-
-    return success;
 }
