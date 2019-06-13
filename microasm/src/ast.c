@@ -15,6 +15,9 @@ void InitMicrocode(Microcode* mcode, const char* fileName) {
     ARRAY_ZERO(mcode->out, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);
     ARRAY_ALLOC(Error, *mcode, error);
+#ifdef debug
+    ARRAY_ALLOC(Error, *mcode, expectedError);
+#endif
     mcode->out.width = 0;
 }
 

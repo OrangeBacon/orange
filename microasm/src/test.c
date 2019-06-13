@@ -63,6 +63,11 @@ static void runTest(const char* path, const char* file) {
         TokenPrint(&parser.ast.errors[i].token);
         printf("\n");
     }
+    for(unsigned int i = 0; i < parser.ast.expectedErrorCount; i++) {
+        printf("  ExpectedError[E%04u] at ", parser.ast.expectedErrors[i].id);
+        printf("%u:%u", parser.ast.expectedErrors[i].token.line, parser.ast.expectedErrors[i].token.column);
+        printf("\n");
+    }
 }
 
 void runTests(const char* directory) {

@@ -315,11 +315,14 @@ static void opcode(Parser* parser) {
 
 #ifdef debug
 static void errorStatement(Parser* parser) {
-    consume(parser, TOKEN_NUMBER, 29, "Expected error id");
-    consume(parser, TOKEN_NUMBER, 30, "Expected line number");
+    Error error;
+    error.id = readUInt(parser, 0, 0);
+    error.token.line = readUInt(parser, 0, 0);
     consume(parser, TOKEN_COLON, 31, "Expected colon");
-    consume(parser, TOKEN_NUMBER, 32, "Expected column number");
+    error.token.column = readUInt(parser, 0, 0);
     consume(parser, TOKEN_SEMICOLON, 32, "Expected semicolon");
+
+    PUSH_ARRAY(Error, parser->ast, expectedError, error);
 }
 
 void expectTestStatements(Parser* parser) {

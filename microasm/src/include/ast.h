@@ -57,6 +57,9 @@ typedef struct Microcode {
     Input inp;
     Output out;
     DEFINE_ARRAY(OpCode, opcode);
+#ifdef debug
+    DEFINE_ARRAY(struct Error, expectedError);
+#endif
 } Microcode;
 
 void InitMicrocode(Microcode* mcode, const char* fileName);
