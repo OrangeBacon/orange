@@ -35,6 +35,10 @@ typedef struct Parser {
 
     // the ast that is being constructed currently
     Microcode ast;
+
+#ifdef debug
+    bool readTests;
+#endif
 } Parser;
 
 // initialise a new parser
@@ -42,5 +46,10 @@ void ParserInit(Parser* parser, Scanner* scan);
 
 // run the parser
 bool Parse(Parser* parse);
+
+#ifdef debug
+void expectTestStatements(Parser* parser);
+void noTestStatements(Parser* parser);
+#endif
 
 #endif

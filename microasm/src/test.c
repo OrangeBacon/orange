@@ -14,7 +14,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
 
     const char* ext = strrchr(fullFileName, '.');
     if(!ext) {
-        cErrPrintf(TextRed, "\nCould not detect file type for \"%s\"", fullFileName);
+        cErrPrintf(TextRed, "\nCould not detect file type for \"%s\"\n", fullFileName);
         return false;
     } else {
         ext = ext + 1;
@@ -23,10 +23,11 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
 #ifdef debug
     int isTestFile = !strcmp(ext, "uasmt");
     if(isTestFile && testing) {
+        expectTestStatements(parse);
         Parse(parse);
         return true;
     } else if(isTestFile && !testing) {
-        cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"", ext, fullFileName);
+        cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"\n", ext, fullFileName);
         return false;
     } else
 #else
@@ -37,7 +38,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
         return true;
     }
 
-    cErrPrintf(TextRed, "\nUnknown file type \"%s\" when reading file \"%s\"", ext, fullFileName);
+    cErrPrintf(TextRed, "\nUnknown file type \"%s\" when reading file \"%s\"\n", ext, fullFileName);
     return false;
 }
 

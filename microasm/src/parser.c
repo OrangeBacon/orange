@@ -21,6 +21,10 @@ static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
 
+#ifdef debug
+static void errorStatement(Parser* parser);
+#endif
+
 // error messages:
 // error = cannot deal with the syntax, skip until knows what is going on, fatal
 // warn = semantic error, does not skip, fatal
@@ -33,6 +37,9 @@ void ParserInit(Parser* parser, Scanner* scan) {
     parser->headerStatement.line = -1;
     parser->inputStatement.line = -1;
     parser->outputStatement.line = -1;
+#ifdef debug
+    parser->readTests = false;
+#endif
     InitMicrocode(&parser->ast, scan->fileName);
 }
 
@@ -134,7 +141,14 @@ static void block(Parser* parser) {
             parser->outputStatement = parser->previous;
             output(parser, true);
         }
-    } else {
+    }
+#ifdef debug
+    else if(parser->readTests && match(parser, TOKEN_IDENTIFIER)
+        && parser->previous.length == 1 && TOKEN_GET(parser->previous)[0] == 'E') {
+        errorStatement(parser);
+    }
+#endif
+    else {
         errorAtCurrent(parser, 6, "Expected a block statement, got %s", TokenNames[parser->current.type]);
     }
 
@@ -298,6 +312,23 @@ static void opcode(Parser* parser) {
 
     PUSH_ARRAY(OpCode, parser->ast, opcode, code);
 }
+
+#ifdef debug
+static void errorStatement(Parser* parser) {
+    consume(parser, TOKEN_NUMBER, 29, "Expected error id");
+    consume(parser, TOKEN_NUMBER, 30, "Expected line number");
+    consume(parser, TOKEN_COLON, 31, "Expected colon");
+    consume(parser, TOKEN_NUMBER, 32, "Expected column number");
+    consume(parser, TOKEN_SEMICOLON, 32, "Expected semicolon");
+}
+
+void expectTestStatements(Parser* parser) {
+    parser->readTests = true;
+}
+void noTestStatements(Parser* parser) {
+    parser->readTests = false;
+}
+#endif
 
 // parses a line of microcode commands with conditions
 // returns the line ast representing what was parsed
