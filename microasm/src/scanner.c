@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "scanner.h"
 
 static char peek(Scanner* scanner);

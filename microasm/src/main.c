@@ -19,9 +19,9 @@ int main(int argc, char** argv){
         cErrPrintf(TextRed, "Not enough arguments provided, "
             "expected microcode file name"
 #ifdef debug
-            " or \"test\"."
+            " or \"test\".\n"
 #else
-            "."
+            ".\n"
 #endif
             );
         exit(0);
@@ -31,10 +31,10 @@ int main(int argc, char** argv){
     if(strcmp("test", argv[1]) == 0) {
         if(argc < 3) {
             cErrPrintf(TextRed, "Not enough arguments provided, "
-                "expected name of directory containing compiler tests.");
+                "expected name of directory containing compiler tests.\n");
         } else if(argc > 3) {
             cErrPrintf(TextRed, "Too many arguments provided, "
-                "expected: microasm test <directory>");
+                "expected: microasm test <directory>\n");
         } else {
             runTests(argv[2]);
         }
@@ -47,7 +47,7 @@ int main(int argc, char** argv){
 
     if(argc != 2) {
         cErrPrintf(TextRed, "Too many arguments provided, "
-            "expected: microasm <filename>");
+            "expected: microasm <filename>\n");
         exit(1);
     }
 
