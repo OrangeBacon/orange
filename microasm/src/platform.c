@@ -8,6 +8,10 @@
 #include "platform.h"
 #include "memory.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 const char* resolvePath(const char* path) {
 #ifdef _WIN32
     // _fullpath is defined in microsoft's stdlib.h
@@ -22,6 +26,20 @@ const char* resolvePath(const char* path) {
     }
 #endif
 }
+
+#ifdef _WIN32
+// stderr handle
+HANDLE HandleErr;
+
+// inital formatting of stderr
+CONSOLE_SCREEN_BUFFER_INFO ErrReset;
+
+// stdout handle
+HANDLE HandleOut;
+
+// inital formatting of stdout
+CONSOLE_SCREEN_BUFFER_INFO OutReset;
+#endif
 
 bool EnableColor = false;
 
