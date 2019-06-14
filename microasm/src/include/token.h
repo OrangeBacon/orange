@@ -24,7 +24,7 @@ const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 
 typedef union TokenData {
     const char* string;
-    int value;
+    unsigned int value;
 } TokenData;
 
 // type and source location of a token

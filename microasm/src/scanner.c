@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "scanner.h"
 
 static char peek(Scanner* scanner);
@@ -172,6 +173,7 @@ static void skipWhitespace(Scanner* scanner) {
 
 // scan a number
 static Token number(Scanner* scanner) {
+    bool hex = false;
     while(!isAtEnd(scanner)) {
         if(!isDigit(peek(scanner))) {
             break;
@@ -179,6 +181,7 @@ static Token number(Scanner* scanner) {
         advance(scanner);
     }
     if(scanner->current == scanner->start + 1 && scanner->current[-1] == '0' && peek(scanner) =='x') {
+        hex = true;
         advance(scanner);
         while(!isAtEnd(scanner)) {
             if(!isHexDigit(peek(scanner))) {
@@ -187,7 +190,21 @@ static Token number(Scanner* scanner) {
             advance(scanner);
         }
     }
-    return makeToken(scanner, TOKEN_NUMBER);
+
+    Token out = makeToken(scanner, TOKEN_NUMBER);
+
+    char* endPtr;
+    long val;
+    if(hex) {
+        val = strtol(scanner->start + 2, &endPtr, 16);
+    } else {
+        val = strtol(scanner->start, &endPtr, 10);
+    }
+    if(val > INT_MAX) {
+        return errorToken(scanner, "Number too large for integer type");
+    }
+    out.data.value = val;
+    return out;
 }
 
 // scan an identifier
