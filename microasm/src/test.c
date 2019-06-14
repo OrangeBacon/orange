@@ -42,6 +42,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
     return false;
 }
 
+#ifdef debug
 static int testCount;
 static int passedCount;
 static void runTest(const char* path, const char* file) {
@@ -104,3 +105,4 @@ void runTests(const char* directory) {
 
     exit(0);
 }
+#endif
