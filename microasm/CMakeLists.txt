@@ -14,6 +14,7 @@ add_executable(microasm
     src/platform.c
     src/error.c
     src/test.c
+    src/analyse.c
     )
 
 set_property(TARGET microasm PROPERTY C_STANDARD 99)

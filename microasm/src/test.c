@@ -5,6 +5,7 @@
 #include "test.h"
 #include "platform.h"
 #include "error.h"
+#include "analyse.h"
 
 bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* scan, bool testing) {
     const char* fullFileName = resolvePath(fileName);
@@ -25,6 +26,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
     if(isTestFile && testing) {
         expectTestStatements(parse);
         Parse(parse);
+        Analyse(parse);
         return true;
     } else if(isTestFile && !testing) {
         cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"\n", ext, fullFileName);
@@ -35,6 +37,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
 #endif
     if(!strcmp(ext, "uasm")) {
         Parse(parse);
+        Analyse(parse);
         return true;
     }
 
