@@ -8,7 +8,7 @@ struct Error;
 
 typedef struct Condition {
     struct Token name;
-    unsigned int value;
+    struct Token value;
 } Condition;
 
 typedef struct Line {
@@ -24,7 +24,7 @@ typedef struct Header {
 
 typedef struct InputValue {
     struct Token name;
-    unsigned int value;
+    struct Token value;
 } InputValue;
 
 typedef struct Input {
@@ -32,17 +32,17 @@ typedef struct Input {
 } Input;
 
 typedef struct OutputValue {
-    unsigned int id;
+    struct Token id;
     struct Token name;
 } OutputValue;
 
 typedef struct Output {
     DEFINE_ARRAY(OutputValue, value);
-    unsigned int width;
+    struct Token width;
 } Output;
 
 typedef struct OpCode {
-    unsigned int id;
+    struct Token id;
     struct Token name;
     DEFINE_ARRAY(struct Token, parameter);
     DEFINE_ARRAY(Line*, line);

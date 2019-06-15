@@ -169,17 +169,6 @@ static void header(Parser* parser, bool write) {
     blockEnd(parser, brace);
 }
 
-// reads, parses and returns an unsigned integer
-static unsigned int readUInt(Parser* parser, unsigned int minVal) {
-    consume(parser, TOKEN_NUMBER, 19, "Expected number, got %s", TokenNames[parser->current.type]);
-    unsigned int val = parser->previous.data.value;
-    if(val < minVal) {
-        errorAt(parser, 9, &parser->previous, "Number read is too small");
-        val = minVal;
-    }
-    return val;
-}
-
 // parses an input statement
 static void input(Parser* parser, bool write) {
     bool brace = blockStart(parser);
@@ -191,9 +180,14 @@ static void input(Parser* parser, bool write) {
         while(!check(parser, TOKEN_EOF)) {
             if(match(parser, TOKEN_IDENTIFIER)) {
                 Token name = parser->previous;
-                unsigned int value = 1;
+
+                Token value = name;
+                value.type = TOKEN_NUMBER;
+                value.data.value = 1;
+
                 if(match(parser, TOKEN_COLON)) {
-                    value = readUInt(parser, value);
+                    consume(parser, TOKEN_NUMBER, 8, "Expected input flag width, got %s", TokenNames[parser->current.type]);
+                    value = parser->previous;
                 }
                 PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
                 if(!match(parser, TOKEN_SEMICOLON)){
@@ -206,9 +200,14 @@ static void input(Parser* parser, bool write) {
     } else {
         consume(parser, TOKEN_IDENTIFIER, 11, "Expected input name");
         Token name = parser->previous;
-        unsigned int value = 1;
+
+        Token value = name;
+        value.type = TOKEN_NUMBER;
+        value.data.value = 1;
+
         if(match(parser, TOKEN_COLON)) {
-            value = readUInt(parser, value);
+            consume(parser, TOKEN_NUMBER, 9, "Expected input flag width, got %s", TokenNames[parser->current.type]);
+            value = parser->previous;
         }
         PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
     }
@@ -218,20 +217,22 @@ static void input(Parser* parser, bool write) {
     blockEnd(parser, brace);
 }
 static void output(Parser* parser, bool write) {
-    consume(parser, TOKEN_LEFT_PAREN, 20, "Expected left paren, got %s", TokenNames[parser->current.type]);
-    unsigned int width = readUInt(parser, 0);
-    consume(parser, TOKEN_RIGHT_PAREN, 21, "Expected right paren, got %s", TokenNames[parser->current.type]);
-
     Output output;
     ARRAY_ALLOC(OutputValue, output, value);
-    output.width = width;
+
+    consume(parser, TOKEN_LEFT_PAREN, 20, "Expected left paren, got %s", TokenNames[parser->current.type]);
+    consume(parser, TOKEN_NUMBER, 2, "Expected output width, got %s", TokenNames[parser->current.type]);
+    output.width = parser->previous;
+
+    consume(parser, TOKEN_RIGHT_PAREN, 21, "Expected right paren, got %s", TokenNames[parser->current.type]);
 
     bool brace = blockStart(parser);
 
     if(brace) {
         while(!check(parser, TOKEN_EOF)) {
             if(check(parser, TOKEN_NUMBER)) {
-                unsigned int id = readUInt(parser, 0);
+                consume(parser, TOKEN_NUMBER, 19, "Expected output bit number, got %s", TokenNames[parser->current.type]);
+                Token id = parser->previous;
                 consume(parser, TOKEN_COLON, 22, "Expected colon, got %s", TokenNames[parser->current.type]);
                 consume(parser, TOKEN_IDENTIFIER, 23, "Expected identifier, got %s", TokenNames[parser->current.type]);
                 Token name = parser->previous;
@@ -244,7 +245,8 @@ static void output(Parser* parser, bool write) {
             }
         }
     } else {
-        unsigned int id = readUInt(parser, 0);
+        consume(parser, TOKEN_NUMBER, 29, "Expected output bit number, got %s", TokenNames[parser->current.type]);
+        Token id = parser->previous;
         consume(parser, TOKEN_COLON, 24, "Expected colon, got %s", TokenNames[parser->current.type]);
         consume(parser, TOKEN_IDENTIFIER, 25, "Expected identifier, got %s", TokenNames[parser->current.type]);
         Token name = parser->previous;
@@ -262,7 +264,8 @@ static void opcode(Parser* parser) {
     ARRAY_ALLOC(Token, code, parameter);
     ARRAY_ALLOC(Line*, code, line);
 
-    code.id = readUInt(parser, 0);
+    consume(parser, TOKEN_NUMBER, 30, "Expected opcode number, got %s", TokenNames[parser->current.type]);
+    code.id = parser->previous;
     consume(parser, TOKEN_IDENTIFIER, 26, "Expected opcode name, got %s", TokenNames[parser->current.type]);
     code.name = parser->previous;
 
@@ -307,10 +310,13 @@ static void opcode(Parser* parser) {
 #ifdef debug
 static void errorStatement(Parser* parser) {
     Error error;
-    error.id = readUInt(parser, 0);
-    error.token.line = readUInt(parser, 0);
+    consume(parser, TOKEN_NUMBER, 33, "Expected error id, got %s", TokenNames[parser->current.type]);
+    error.id = parser->previous.data.value;
+    consume(parser, TOKEN_NUMBER, 34, "Expected error line, got %s", TokenNames[parser->current.type]);
+    error.token.line = parser->previous.data.value;
     consume(parser, TOKEN_COLON, 31, "Expected colon");
-    error.token.column = readUInt(parser, 0);
+    consume(parser, TOKEN_NUMBER, 35, "Expected error column, got %s", TokenNames[parser->current.type]);
+    error.token.column = parser->previous.data.value;
     consume(parser, TOKEN_SEMICOLON, 32, "Expected semicolon");
 
     PUSH_ARRAY(Error, parser->ast, expectedError, error);
@@ -362,7 +368,8 @@ static Line* microcodeLine(Parser* parser) {
                 line->conditionErrorToken = parser->previous;
             }
 
-            unsigned int value = readUInt(parser, 0);
+            consume(parser, TOKEN_NUMBER, 36, "Expected error column, got %s", TokenNames[parser->current.type]);
+            Token value = parser->previous;
             Condition condition;
             condition.name = name;
             condition.value = value;

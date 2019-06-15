@@ -18,7 +18,6 @@ void InitMicrocode(Microcode* mcode, const char* fileName) {
 #ifdef debug
     ARRAY_ALLOC(Error, *mcode, expectedError);
 #endif
-    mcode->out.width = 0;
 }
 
 void PrintMicrocode(Microcode* mcode) {
@@ -35,13 +34,13 @@ void PrintMicrocode(Microcode* mcode) {
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         printf("\n    ");
         TokenPrint(&mcode->inp.values[i].name);
-        printf(" = %i", mcode->inp.values[i].value);
+        printf(" = %i", mcode->inp.values[i].value.data.value);
     }
     printf("\n");
-    printf("  Output(%u): %u", mcode->out.width, mcode->out.valueCount);
+    printf("  Output(%u): %u", mcode->out.width.data.value, mcode->out.valueCount);
     for(unsigned int i = 0; i < mcode->out.valueCount; i++) {
         printf("\n    ");
-        printf("%i = ", mcode->out.values[i].id);
+        printf("%i = ", mcode->out.values[i].id.data.value);
         TokenPrint(&mcode->out.values[i].name);
     }
     printf("\n");
@@ -50,7 +49,7 @@ void PrintMicrocode(Microcode* mcode) {
         OpCode* code = &mcode->opcodes[i];
         printf("\n    OpCode: ");
         TokenPrint(&code->name);
-        printf(" = %u", code->id);
+        printf(" = %u", code->id.data.value);
         printf("\n      Parameters: %u", code->parameterCount);
         for(unsigned int j = 0; j < code->parameterCount; j++) {
             printf("\n        ");
@@ -67,7 +66,7 @@ void PrintMicrocode(Microcode* mcode) {
                 for(unsigned int k = 0; k < line->conditionCount; k++) {
                     printf("\n            ");
                     TokenPrint(&line->conditions[k].name);
-                    printf(" = %u", line->conditions[k].value);
+                    printf(" = %u", line->conditions[k].value.data.value);
                 }
             }
             printf("\n          Bits: %u", line->bitCount);
