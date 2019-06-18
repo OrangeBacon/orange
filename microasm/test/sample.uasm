@@ -8,22 +8,27 @@ opcode 0xa3F ADD(Reg, Reg, Reg) {
 }
 
 header {
-  HE, TE, MT # any condition codes here are an error (other than `*:`)
+    HE, TE, MT # any condition codes here are an error (other than `*:`)
 }
 
 opcode 0x11 JMP(Reg) {
-  TX, RE;
+    TX, RE;
 }
 
 output(878) {
- 0: RE;
- 0xfaC: TY;
+    0: RE;
+    0xfaC: TY;
 }
 
 input {
-  opsize: 7;
-  phase: 4;
-  overflow;
+    opsize: 7;
+    phase: 4;
+
+    overflow;
+    phase: 4;
+
+
+    overflow;
 }
 
 opcode 0x11 JMP(Reg) = overflow = 1: TX, RE;

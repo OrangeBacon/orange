@@ -18,18 +18,21 @@ typedef struct Entry {
 } Entry;
 
 typedef uint32_t(*HashFn)(void*);
+typedef bool(*KeyCompare)(void*, void*);
 
 typedef struct Table {
     int count;
     int capacity;
     HashFn hash;
-    size_t dataSize;
+    KeyCompare cmp;
     Entry* entries;
 } Table;
 
 uint32_t tokenHash(void* value);
-void initTable(Table* table, HashFn hash);
+bool tokenCmp(void* a, void* b);
+void initTable(Table* table, HashFn hash, KeyCompare cmp);
 bool tableSet(Table* table, void* key, void* value);
 bool tableGet(Table* table, void* key, void** value);
+bool tableGetKey(Table* table, void* voidKey, void** realkey);
 
 #endif

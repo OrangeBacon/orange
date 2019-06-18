@@ -3,6 +3,7 @@
 #include "analyse.h"
 #include "parser.h"
 #include "error.h"
+#include "table.h"
 
 typedef void(*Analysis)(Parser* parser);
 
@@ -17,10 +18,22 @@ static void AnalyseOutput(Parser* parser) {
 static void AnalyseInput(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
+    Table inputs;
+    initTable(&inputs, tokenHash, tokenCmp);
+
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
-        InputValue val = mcode->inp.values[i];
-        if(val.value.data.value < 1) {
-            errorAt(parser, 101, &val.value, "Input width has to be one or greater");
+        InputValue* val = &mcode->inp.values[i];
+        if(val->value.data.value < 1) {
+            errorAt(parser, 101, &val->value, "Input width has to be one or greater");
+        }
+
+        void* v;
+        if(tableGetKey(&inputs, &val->name, &v)) {
+            // existing key
+            warnAt(parser, 102, &val->name, "Cannot re-declare input value");
+            noteAt(parser, v, "Previously declared here");
+        } else {
+            tableSet(&inputs, &val->name, &val->value);
         }
     }
 }

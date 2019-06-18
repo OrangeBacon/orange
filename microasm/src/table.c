@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 #include "table.h"
 #include "memory.h"
 
@@ -15,20 +16,31 @@ uint32_t tokenHash(void* value) {
     return hash;
 }
 
-void initTable(Table* table, HashFn hashfn) {
+bool tokenCmp(void* a, void* b) {
+    Token* tokA = a;
+    Token* tokB = b;
+
+    if(tokA->length != tokB->length) {
+        return false;
+    }
+    return strncmp(TOKEN_GET(*tokA), TOKEN_GET(*tokB), tokA->length) == 0;
+}
+
+void initTable(Table* table, HashFn hashfn, KeyCompare cmp) {
     table->count = 0;
     table->capacity = 0;
     table->entries = NULL;
     table->hash = hashfn;
+    table->cmp = cmp;
 }
 
-static Entry* findEntry(Entry* entries, int capacity, Key* key) {
+static Entry* findEntry(Entry* entries, int capacity, Key* key, KeyCompare cmp) {
     uint32_t index = key->hash % capacity;
 
     for(;;) {
         Entry* entry = &entries[index];
 
-        if(entry->key.value == key->value || entry->key.value == NULL) {
+        if(entry->key.value == NULL || cmp(entry->key.value, key->value)) {
             return entry;
         }
 
@@ -49,7 +61,7 @@ static void adjustCapacity(Table* table, int capacity) {
             continue;
         }
 
-        Entry* dest = findEntry(entries, capacity, &entry->key);
+        Entry* dest = findEntry(entries, capacity, &entry->key, table->cmp);
         dest->key = entry->key;
         dest->value = entry->value;
     }
@@ -59,36 +71,58 @@ static void adjustCapacity(Table* table, int capacity) {
 }
 
 
-bool tableSet(Table* table, void* key, void* value) {
+bool tableSet(Table* table, void* voidKey, void* value) {
+    Key key;
+    key.value = voidKey;
+    key.hash = table->hash(voidKey);
+
     if(table->count + 1 > table->capacity * TABLE_MAX_LOAD) {
         int capacity = table->capacity;
         capacity = capacity < 8 ? 8 : capacity * 2;
         adjustCapacity(table, capacity);
     }
 
-    Entry* entry = findEntry(table->entries, table->capacity, key);
+    Entry* entry = findEntry(table->entries, table->capacity, &key, table->cmp);
 
     bool isNewKey = entry->key.value == NULL;
     if(isNewKey) {
         table->count++;
     }
 
-    entry->key.value = key;
-    entry->key.hash = table->hash(key);
+    entry->key = key;
     entry->value = value;
     return isNewKey;
 }
 
-bool tableGet(Table* table, void* key, void** value) {
+bool tableGet(Table* table, void* voidKey, void** value) {
     if(table->entries == NULL) {
         return false;
     }
+    
+    Key key;
+    key.value = voidKey;
+    key.hash = table->hash(voidKey);
 
-    Entry* entry = findEntry(table->entries, table->capacity, key);
+    Entry* entry = findEntry(table->entries, table->capacity, &key, table->cmp);
     if(entry->key.value == NULL) {
         return false;
     }
 
     *value = entry->value;
     return true;
+}
+
+bool tableGetKey(Table* table, void* voidKey, void** realkey) {
+    if(table->entries == NULL) {
+        return false;
+    }
+
+    Key key;
+    key.value = voidKey;
+    key.hash = table->hash(voidKey);
+
+    Entry* entry = findEntry(table->entries, table->capacity, &key, table->cmp);
+    *realkey = entry->key.value;
+
+    return entry->key.value != NULL;
 }
