@@ -1,0 +1,35 @@
+#ifndef TABLE_H
+#define TABLE_H
+
+#include <stddef.h>
+#include <stdint.h>
+#include "token.h"
+
+#define TABLE_MAX_LOAD 0.75
+
+typedef struct Key {
+    void* value;
+    uint32_t hash;
+} Key;
+
+typedef struct Entry {
+    Key key;
+    void* value;
+} Entry;
+
+typedef uint32_t(*HashFn)(void*);
+
+typedef struct Table {
+    int count;
+    int capacity;
+    HashFn hash;
+    size_t dataSize;
+    Entry* entries;
+} Table;
+
+uint32_t tokenHash(void* value);
+void initTable(Table* table, HashFn hash);
+bool tableSet(Table* table, void* key, void* value);
+bool tableGet(Table* table, void* key, void** value);
+
+#endif
