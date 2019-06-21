@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "error.h"
 #include "table.h"
+#include "memory.h"
 
 typedef void(*Analysis)(Parser* parser);
 
@@ -44,13 +45,16 @@ static void AnalyseOutput(Parser* parser) {
             warnAt(parser, 104, &val->name, "Cannot identifier as output");
             noteAt(parser, v, "Previously declared here");
         }
-        tableSet(&identifiers, &val->name, &(Identifier){.type = TYPE_OUTPUT, .data = &val->id});
+        
+        Identifier* id = ArenaAlloc(sizeof(Identifier));
+        id->type = TYPE_OUTPUT;
+        id->data = &val->id;
+        tableSet(&identifiers, &val->name, id);
     }
 }
 
 static void AnalyseInput(Parser* parser) {
     Microcode* mcode = &parser->ast;
-
 
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         InputValue* val = &mcode->inp.values[i];
@@ -64,14 +68,38 @@ static void AnalyseInput(Parser* parser) {
             warnAt(parser, 102, &val->name, "Cannot re-declare identifier as input value");
             noteAt(parser, v, "Previously declared here");
         } else {
-            tableSet(&identifiers, &val->name, &(Identifier){.type = TYPE_INPUT, .data = &val->value});
+            Identifier* id = ArenaAlloc(sizeof(Identifier));
+            id->type = TYPE_INPUT;
+            id->data = &val->value;
+            tableSet(&identifiers, &val->name, id);
+        }
+    }
+}
+
+static void AnalyseHeader(Parser* parser) {
+    Microcode* mcode = &parser->ast;
+
+    for(unsigned int i = 0; i < mcode->head.bitCount; i++) {
+        Token* bit = &mcode->head.bits[i];
+
+        Identifier* val;
+        if(tableGet(&identifiers, bit, (void**)&val)) {
+            if(val->type != TYPE_OUTPUT) {
+                void* v;
+                tableGetKey(&identifiers, bit, &v);
+                warnAt(parser, 106, bit, "Cannot use non output bit in header statement");
+                noteAt(parser, v, "Previously declared here");
+            }
+        } else {
+            warnAt(parser, 105, bit, "Identifier was not defined");
         }
     }
 }
 
 static Analysis Analyses[] = {
     AnalyseInput,
-    AnalyseOutput
+    AnalyseOutput,
+    AnalyseHeader
 };
 
 void Analyse(Parser* parser) {

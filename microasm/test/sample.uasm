@@ -16,13 +16,14 @@ opcode 0x11 JMP(Reg) {
 }
 
 output(878) {
-    0: RE;
-    0xfaC: phase;
+    0: MT;
+    0xfaC: TE;
 }
 
 input {
     opsize: 7;
     phase: 4;
+    HE;
 }
 
 opcode 0x11 JMP(Reg) = overflow = 1: TX, RE;
