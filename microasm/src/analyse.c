@@ -7,6 +7,18 @@
 
 typedef void(*Analysis)(Parser* parser);
 
+typedef enum IdentifierType {
+    TYPE_INPUT,
+    TYPE_OUTPUT
+} IdentifierType;
+
+typedef struct Identifier {
+    IdentifierType type;
+    Token* data;
+} Identifier;
+
+Table identifiers;
+
 static void AnalyseOutput(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
@@ -24,17 +36,21 @@ static void AnalyseOutput(Parser* parser) {
             // existing key
             warnAt(parser, 103, &val->id, "Cannot re-declare output id");
             noteAt(parser, v, "Previously declared here");
-        } else {
-            tableSet(&outputs, &val->id, &val->name);
+            continue;
         }
+        tableSet(&outputs, &val->id, &val->name);
+
+        if(tableGetKey(&identifiers, &val->name, &v)) {
+            warnAt(parser, 104, &val->name, "Cannot identifier as output");
+            noteAt(parser, v, "Previously declared here");
+        }
+        tableSet(&identifiers, &val->name, &(Identifier){.type = TYPE_OUTPUT, .data = &val->id});
     }
 }
 
 static void AnalyseInput(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
-    Table inputs;
-    initTable(&inputs, tokenHash, tokenCmp);
 
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         InputValue* val = &mcode->inp.values[i];
@@ -43,12 +59,12 @@ static void AnalyseInput(Parser* parser) {
         }
 
         void* v;
-        if(tableGetKey(&inputs, &val->name, &v)) {
+        if(tableGetKey(&identifiers, &val->name, &v)) {
             // existing key
-            warnAt(parser, 102, &val->name, "Cannot re-declare input value");
+            warnAt(parser, 102, &val->name, "Cannot re-declare identifier as input value");
             noteAt(parser, v, "Previously declared here");
         } else {
-            tableSet(&inputs, &val->name, &val->value);
+            tableSet(&identifiers, &val->name, &(Identifier){.type = TYPE_INPUT, .data = &val->value});
         }
     }
 }
@@ -59,6 +75,7 @@ static Analysis Analyses[] = {
 };
 
 void Analyse(Parser* parser) {
+    initTable(&identifiers, tokenHash, tokenCmp);
     for(unsigned int i = 0; i < sizeof(Analyses)/sizeof(Analysis); i++) {
         Analyses[i](parser);
     }

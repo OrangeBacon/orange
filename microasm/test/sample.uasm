@@ -17,8 +17,7 @@ opcode 0x11 JMP(Reg) {
 
 output(878) {
     0: RE;
-    0xfaC: TY;
-    0: AC;
+    0xfaC: phase;
 }
 
 input {
