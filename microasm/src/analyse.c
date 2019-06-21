@@ -74,6 +74,35 @@ static void AnalyseInput(Parser* parser) {
             tableSet(&identifiers, &val->name, id);
         }
     }
+
+    Identifier* val;
+    Token opsize;
+    opsize.base = "opsize";
+    opsize.length = 6;
+    opsize.offset = 0;
+    if(tableGet(&identifiers, &opsize, (void**)&val)) {
+        if(val->type != TYPE_INPUT) {
+            void* v;
+            tableGetKey(&identifiers, &opsize, &v);
+            warnAt(parser, 107, v, "The 'opsize' identifier must be an input");
+        }
+    } else {
+        warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
+    }
+
+    Token phase;
+    phase.base = "phase";
+    phase.length = 5;
+    phase.offset = 0;
+    if(tableGet(&identifiers, &phase, (void**)&val)) {
+        if(val->type != TYPE_INPUT) {
+            void* v;
+            tableGetKey(&identifiers, &phase, &v);
+            warnAt(parser, 107, v, "The 'phase' identifier must be an input");
+        }
+    } else {
+        warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require a 'phase' parameter");
+    }
 }
 
 static void AnalyseHeader(Parser* parser) {

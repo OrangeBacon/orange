@@ -171,9 +171,11 @@ static void header(Parser* parser, bool write) {
 
 // parses an input statement
 static void input(Parser* parser, bool write) {
+    Token inputHeadToken = parser->previous;
     bool brace = blockStart(parser);
 
     Input inp;
+    inp.inputHeadToken = inputHeadToken;
     ARRAY_ALLOC(InputValue, inp, value);
 
     if(brace) {

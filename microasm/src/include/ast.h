@@ -30,6 +30,7 @@ typedef struct InputValue {
 
 typedef struct Input {
     DEFINE_ARRAY(InputValue, value);
+    struct Token inputHeadToken;
 } Input;
 
 typedef struct OutputValue {
