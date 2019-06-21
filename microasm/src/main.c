@@ -54,5 +54,5 @@ int main(int argc, char** argv){
     Scanner scan;
     Parser parser;
     runFile(argv[1], readFile(argv[1]), &parser, &scan, false);
-    PrintMicrocode(&parser.ast);
+    //PrintMicrocode(&parser.ast);
 }

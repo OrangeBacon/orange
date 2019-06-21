@@ -13,6 +13,21 @@ static void AnalyseOutput(Parser* parser) {
     if(mcode->out.width.data.value < 1) {
         errorAt(parser, 100, &mcode->out.width, "Output width has to be one or greater");
     }
+
+    Table outputs;
+    initTable(&outputs, tokenHash, tokenCmp);
+
+    for(unsigned int i = 0; i < mcode->out.valueCount; i++) {
+        OutputValue* val = &mcode->out.values[i];
+        void* v;
+        if(tableGetKey(&outputs, &val->id, &v)) {
+            // existing key
+            warnAt(parser, 103, &val->id, "Cannot re-declare output id");
+            noteAt(parser, v, "Previously declared here");
+        } else {
+            tableSet(&outputs, &val->id, &val->name);
+        }
+    }
 }
 
 static void AnalyseInput(Parser* parser) {
