@@ -125,10 +125,55 @@ static void AnalyseHeader(Parser* parser) {
     }
 }
 
+static void AnalyseOpcode(Parser* parser) {
+    Microcode* mcode = &parser->ast;
+
+    Identifier* opsize;
+    Token opsizeTok;
+    opsizeTok.base = "opsize";
+    opsizeTok.length = 6;
+    opsizeTok.offset = 0;
+    tableGet(&identifiers, &opsizeTok, (void**)&opsize);
+    for(unsigned int i = 0; i < mcode->opcodeCount; i++) {
+        OpCode* code = &mcode->opcodes[i];
+        
+        if(code->id.data.value >= (unsigned int)(2 << (opsize->data->data.value - 1))) {
+            warnAt(parser, 109, &code->id, "Opcode id is too large");
+        }
+
+        for(unsigned int j = 0; j < code->lineCount; j++) {
+            Line* line = code->lines[j];
+
+            for(unsigned int k = 0; k < line->bitCount; k++) {
+                Token* bit = &line->bits[k];
+                Identifier* bitIdentifier;
+                if(tableGet(&identifiers, bit, (void**)&bitIdentifier)) {
+                    if(bitIdentifier->type != TYPE_OUTPUT) {
+                        void* v;
+                        tableGetKey(&identifiers, bit, &v);
+                        warnAt(parser, 111, bit, "Opcode bits must be outputs");
+                        noteAt(parser, v, "Previously declared here");
+                    }
+                } else {
+                    warnAt(parser, 110, bit, "Identifier is undefined");
+                }
+            }
+
+            for(unsigned int k = 0; k < line->conditionCount; k++) {
+                Condition* cond = &line->conditions[k];
+                if(!(cond->value.data.value == 0 || cond->value.data.value == 1)) {
+                    warnAt(parser, 112, &cond->value, "Condition values must be 0 or 1");
+                }
+            }
+        }
+    }
+}
+
 static Analysis Analyses[] = {
     AnalyseInput,
     AnalyseOutput,
-    AnalyseHeader
+    AnalyseHeader,
+    AnalyseOpcode
 };
 
 void Analyse(Parser* parser) {
