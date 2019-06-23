@@ -11,3 +11,5 @@ Releases/
 *.diagsession
 .vscode/
 build/
+*.bak
+*-cache.lib
