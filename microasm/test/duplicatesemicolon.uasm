@@ -1,4 +1,4 @@
-opcode 0xa3F ADD(Reg, Reg, Reg) {
+opcode 0 ADD(Reg, Reg, Reg) {
     A;;
     *:;;
 }
@@ -9,4 +9,10 @@ output(1) {
 
 input {
     A: 5;;
+    opsize;
+    phase;
+}
+
+header {
+    A
 }
