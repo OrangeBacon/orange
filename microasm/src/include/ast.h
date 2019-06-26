@@ -55,10 +55,17 @@ typedef struct Microcode {
     bool hasError;
     DEFINE_ARRAY(struct Error, error);
 
+    bool headValid;
     Header head;
+
+    bool inpValid;
     Input inp;
+
+    bool outValid;
     Output out;
+
     DEFINE_ARRAY(OpCode, opcode);
+    
 #ifdef debug
     DEFINE_ARRAY(struct Error, expectedError);
 #endif

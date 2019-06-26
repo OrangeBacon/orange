@@ -10,6 +10,9 @@
 void InitMicrocode(Microcode* mcode, const char* fileName) {
     mcode->hasError = false;
     mcode->fileName = fileName;
+    mcode->headValid = false;
+    mcode->inpValid = false;
+    mcode->outValid = false;
     ARRAY_ZERO(mcode->head, bit);
     ARRAY_ZERO(mcode->inp, value);
     ARRAY_ZERO(mcode->out, value);

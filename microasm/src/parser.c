@@ -52,6 +52,16 @@ bool Parse(Parser* parser) {
         block(parser);
     }
 
+    if(parser->inputStatement.line == -1) {
+        warnAt(parser, 37, &parser->previous, "No input statement found");
+    }
+    if(parser->headerStatement.line == -1) {
+        warnAt(parser, 38, &parser->previous, "No header statement found");
+    }
+    if(parser->outputStatement.line == -1) {
+        warnAt(parser, 39, &parser->previous, "No output statement found");
+    }
+
     return !parser->hadError;
 }
 
@@ -167,6 +177,7 @@ static void header(Parser* parser, bool write) {
         COPY_ARRAY(*line, parser->ast.head, bit);
     }
     blockEnd(parser, brace);
+    parser->ast.headValid = true;
 }
 
 // parses an input statement
@@ -217,6 +228,7 @@ static void input(Parser* parser, bool write) {
         parser->ast.inp = inp;
     }
     blockEnd(parser, brace);
+    parser->ast.inpValid = true;
 }
 static void output(Parser* parser, bool write) {
     Output output;
@@ -259,6 +271,7 @@ static void output(Parser* parser, bool write) {
     }
 
     blockEnd(parser, brace);
+    parser->ast.outValid = true;
 }
 
 static void opcode(Parser* parser) {

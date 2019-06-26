@@ -23,6 +23,10 @@ Table identifiers;
 static void AnalyseOutput(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
+    if(!mcode->outValid) {
+        return;
+    }
+
     if(mcode->out.width.data.value < 1) {
         errorAt(parser, 100, &mcode->out.width, "Output width has to be one or greater");
     }
@@ -55,6 +59,10 @@ static void AnalyseOutput(Parser* parser) {
 
 static void AnalyseInput(Parser* parser) {
     Microcode* mcode = &parser->ast;
+
+    if(!mcode->inpValid) {
+        return;
+    }
 
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         InputValue* val = &mcode->inp.values[i];
@@ -98,15 +106,19 @@ static void AnalyseInput(Parser* parser) {
         if(val->type != TYPE_INPUT) {
             void* v;
             tableGetKey(&identifiers, &phase, &v);
-            warnAt(parser, 107, v, "The 'phase' identifier must be an input");
+            warnAt(parser, 113, v, "The 'phase' identifier must be an input");
         }
     } else {
-        warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require a 'phase' parameter");
+        warnAt(parser, 114, &mcode->inp.inputHeadToken, "Input statements require a 'phase' parameter");
     }
 }
 
 static void AnalyseHeader(Parser* parser) {
     Microcode* mcode = &parser->ast;
+
+    if(!mcode->headValid) {
+        return;
+    }
 
     for(unsigned int i = 0; i < mcode->head.bitCount; i++) {
         Token* bit = &mcode->head.bits[i];
@@ -137,7 +149,7 @@ static void AnalyseOpcode(Parser* parser) {
     for(unsigned int i = 0; i < mcode->opcodeCount; i++) {
         OpCode* code = &mcode->opcodes[i];
         
-        if(code->id.data.value >= (unsigned int)(2 << (opsize->data->data.value - 1))) {
+        if(opsize != NULL && code->id.data.value >= (unsigned int)(2 << (opsize->data->data.value - 1))) {
             warnAt(parser, 109, &code->id, "Opcode id is too large");
         }
 
