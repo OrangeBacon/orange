@@ -5,6 +5,7 @@
 #include "token.h"
 #include "scanner.h"
 #include "ast.h"
+#include "memory.h"
 
 // state required to create the syntax tree
 typedef struct Parser {
@@ -39,6 +40,8 @@ typedef struct Parser {
 #ifdef debug
     bool readTests;
 #endif
+
+    DEFINE_ARRAY(bool, errorStack);
 } Parser;
 
 // initialise a new parser
@@ -51,5 +54,7 @@ bool Parse(Parser* parse);
 void expectTestStatements(Parser* parser);
 void noTestStatements(Parser* parser);
 #endif
+
+void setErrorState(Parser* parser);
 
 #endif

@@ -40,7 +40,22 @@ void ParserInit(Parser* parser, Scanner* scan) {
 #ifdef debug
     parser->readTests = false;
 #endif
+    ARRAY_ALLOC(bool, *parser, errorStack);
     InitMicrocode(&parser->ast, scan->fileName);
+}
+
+static void newErrorState(Parser* parser) {
+    PUSH_ARRAY(bool, *parser, errorStack, false);
+}
+
+static bool endErrorState(Parser* parser) {
+    return POP_ARRAY(*parser, errorStack);
+}
+
+void setErrorState(Parser* parser) {
+    for(unsigned int i = 0; i < parser->errorStackCount; i++) {
+        parser->errorStacks[i] = true;
+    }
 }
 
 bool Parse(Parser* parser) {
@@ -168,6 +183,8 @@ static void block(Parser* parser) {
 
 // parses a header statement
 static void header(Parser* parser, bool write) {
+    newErrorState(parser);
+
     bool brace = blockStart(parser);
     Line* line = microcodeLine(parser);
     if(line->conditionCount != 0 || line->anyCondition) {
@@ -177,11 +194,13 @@ static void header(Parser* parser, bool write) {
         COPY_ARRAY(*line, parser->ast.head, bit);
     }
     blockEnd(parser, brace);
-    parser->ast.headValid = true;
+    parser->ast.headValid = !endErrorState(parser);
 }
 
 // parses an input statement
 static void input(Parser* parser, bool write) {
+    newErrorState(parser);
+
     Token inputHeadToken = parser->previous;
     bool brace = blockStart(parser);
 
@@ -228,9 +247,11 @@ static void input(Parser* parser, bool write) {
         parser->ast.inp = inp;
     }
     blockEnd(parser, brace);
-    parser->ast.inpValid = true;
+    parser->ast.inpValid = !endErrorState(parser);
 }
 static void output(Parser* parser, bool write) {
+    newErrorState(parser);
+
     Output output;
     ARRAY_ALLOC(OutputValue, output, value);
 
@@ -271,10 +292,12 @@ static void output(Parser* parser, bool write) {
     }
 
     blockEnd(parser, brace);
-    parser->ast.outValid = true;
+    parser->ast.outValid = !endErrorState(parser);
 }
 
 static void opcode(Parser* parser) {
+    newErrorState(parser);
+    
     OpCode code;
     ARRAY_ALLOC(Token, code, parameter);
     ARRAY_ALLOC(Line*, code, line);
@@ -319,6 +342,7 @@ static void opcode(Parser* parser) {
 
     blockEnd(parser, brace);
 
+    code.isValid = !endErrorState(parser);
     PUSH_ARRAY(OpCode, parser->ast, opcode, code);
 }
 

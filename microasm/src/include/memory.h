@@ -64,6 +64,9 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
         (container).name##Count++; \
     } while(0)
 
+#define POP_ARRAY(container, name) \
+    ((container).name##Count--,(container).name##s[(container).name##Count])
+
 // re-assign the array to a different container
 #define COPY_ARRAY(src, dest, name) \
     do { \

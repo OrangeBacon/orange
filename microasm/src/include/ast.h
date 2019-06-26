@@ -46,6 +46,7 @@ typedef struct Output {
 typedef struct OpCode {
     struct Token id;
     struct Token name;
+    bool isValid;
     DEFINE_ARRAY(struct Token, parameter);
     DEFINE_ARRAY(Line*, line);
 } OpCode;

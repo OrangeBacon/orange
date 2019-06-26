@@ -33,6 +33,7 @@ bool printLine(Parser* parser, int line, int* start, int* length, int maxLineLen
 // assumes the token is correctly formed
 // and is all on one line
 void printMessage(Parser* parser, Token* token, const char* name, unsigned int code, TextColor color, const char* message, va_list args) {
+    setErrorState(parser);
     if(!printErrors) return;
     // error message
     if(code == 0) {

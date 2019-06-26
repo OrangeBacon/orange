@@ -148,6 +148,10 @@ static void AnalyseOpcode(Parser* parser) {
     tableGet(&identifiers, &opsizeTok, (void**)&opsize);
     for(unsigned int i = 0; i < mcode->opcodeCount; i++) {
         OpCode* code = &mcode->opcodes[i];
+
+        if(!code->isValid) {
+            continue;
+        }
         
         if(opsize != NULL && code->id.data.value >= (unsigned int)(2 << (opsize->data->data.value - 1))) {
             warnAt(parser, 109, &code->id, "Opcode id is too large");
