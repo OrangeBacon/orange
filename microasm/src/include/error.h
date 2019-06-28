@@ -1,6 +1,8 @@
 #ifndef ERROR_H
 #define ERROR_H
 
+#include <stdarg.h>
+
 struct Parser;
 struct Token;
 
