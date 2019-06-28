@@ -225,6 +225,7 @@ static void input(Parser* parser, bool write) {
                 if(!match(parser, TOKEN_SEMICOLON)){
                     break;
                 }
+                while(match(parser, TOKEN_SEMICOLON)){}
             } else {
                 break;
             }
@@ -249,6 +250,7 @@ static void input(Parser* parser, bool write) {
     blockEnd(parser, brace);
     parser->ast.inpValid = !endErrorState(parser);
 }
+
 static void output(Parser* parser, bool write) {
     newErrorState(parser);
 
@@ -275,6 +277,7 @@ static void output(Parser* parser, bool write) {
                 if(!match(parser, TOKEN_SEMICOLON)) {
                     break;
                 }
+                while(match(parser, TOKEN_SEMICOLON)){}
             } else {
                 break;
             }

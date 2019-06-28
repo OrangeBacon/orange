@@ -1,14 +1,17 @@
 opcode 0 ADD(Reg, Reg, Reg) {
     A;;
     *:;;
+    A;;
 }
 
 output(1) {
     5: A;;
+    7: B;;
 }
 
 input {
-    A: 5;;
+    D: 5;;
+    C: 3;;
     opsize;
     phase;
 }
