@@ -10,10 +10,10 @@
 void InitMicrocode(Microcode* mcode, const char* fileName) {
     mcode->hasError = false;
     mcode->fileName = fileName;
-    mcode->headValid = false;
-    mcode->inpValid = false;
-    mcode->outValid = false;
-    ARRAY_ZERO(mcode->head, bit);
+    mcode->head.isValid = false;
+    mcode->inp.isValid = false;
+    mcode->out.isValid = false;
+    ARRAY_ZERO(mcode->head, line);
     ARRAY_ZERO(mcode->inp, value);
     ARRAY_ZERO(mcode->out, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);
@@ -27,10 +27,10 @@ void PrintMicrocode(Microcode* mcode) {
     printf("Microcode:\n");
     printf("  Has Error: %s\n", mcode->hasError ? "true" : "false");
     printf("  File Name: %s\n", mcode->fileName);
-    printf("  Header: %u", mcode->head.bitCount);
-    for(unsigned int i = 0; i < mcode->head.bitCount; i++) {
+    printf("  Header: %u", mcode->head.lines->dataCount);
+    for(unsigned int i = 0; i < mcode->head.lines->dataCount; i++) {
         printf("\n    ");
-        TokenPrint(&mcode->head.bits[i]);
+        TokenPrint(&mcode->head.lines->datas[i]);
     }
     printf("\n");
     printf("  Input: %u", mcode->inp.valueCount);
@@ -72,10 +72,10 @@ void PrintMicrocode(Microcode* mcode) {
                     printf(" = %u", line->conditions[k].value.data.value);
                 }
             }
-            printf("\n          Bits: %u", line->bitCount);
-            for(unsigned int k = 0; k < line->bitCount; k++) {
+            printf("\n          Bits: %u", line->bits.dataCount);
+            for(unsigned int k = 0; k < line->bits.dataCount; k++) {
                 printf("\n            ");
-                TokenPrint(&line->bits[k]);
+                TokenPrint(&line->bits.datas[k]);
             }
         }
     }

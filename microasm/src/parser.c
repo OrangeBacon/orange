@@ -185,16 +185,43 @@ static void block(Parser* parser) {
 static void header(Parser* parser, bool write) {
     newErrorState(parser);
 
+    Header head;
+    ARRAY_ALLOC(BitArray, head, line);
+
     bool brace = blockStart(parser);
-    Line* line = microcodeLine(parser);
-    if(line->conditionCount != 0 || line->anyCondition) {
-        errorAt(parser, 7, &line->conditionErrorToken, "Condition values not allowed in header");
+
+    if(brace) {
+        while(!check(parser, TOKEN_EOF)) {
+            if(check(parser, TOKEN_RIGHT_BRACE)) {
+                break;
+            }
+            Line* line = microcodeLine(parser);
+
+            if(line->conditionCount != 0 || line->anyCondition) {
+                errorAt(parser, 7, &line->conditionErrorToken, "Condition values not allowed in header");
+            }
+
+            PUSH_ARRAY(BitArray, head, line, line->bits);
+            if(!match(parser, TOKEN_SEMICOLON)) {
+                break;
+            }
+        }
+    } else {
+        Line* line = microcodeLine(parser);
+
+        if(line->conditionCount != 0 || line->anyCondition) {
+            errorAt(parser, 7, &line->conditionErrorToken, "Condition values not allowed in header");
+        }
+
+        PUSH_ARRAY(BitArray, head, line, line->bits);
     }
-    if(write) {
-        COPY_ARRAY(*line, parser->ast.head, bit);
-    }
+
     blockEnd(parser, brace);
-    parser->ast.headValid = !endErrorState(parser);
+    head.isValid = !endErrorState(parser);
+
+    if(write) {
+        parser->ast.head = head;
+    }
 }
 
 // parses an input statement
@@ -248,7 +275,7 @@ static void input(Parser* parser, bool write) {
         parser->ast.inp = inp;
     }
     blockEnd(parser, brace);
-    parser->ast.inpValid = !endErrorState(parser);
+    parser->ast.inp.isValid = !endErrorState(parser);
 }
 
 static void output(Parser* parser, bool write) {
@@ -295,7 +322,7 @@ static void output(Parser* parser, bool write) {
     }
 
     blockEnd(parser, brace);
-    parser->ast.outValid = !endErrorState(parser);
+    parser->ast.out.isValid = !endErrorState(parser);
 }
 
 static void opcode(Parser* parser) {
@@ -382,7 +409,7 @@ static Line* microcodeLine(Parser* parser) {
     bool first = true;
 
     Line* line = ArenaAlloc(sizeof(Line));
-    ARRAY_ALLOC(Token, *line, bit);
+    ARRAY_ALLOC(Token, line->bits, data);
     ARRAY_ALLOC(Condition, *line, condition);
     line->conditionErrorToken = (Token){.type = TOKEN_NULL};
     line->anyCondition = false;
@@ -417,7 +444,7 @@ static Line* microcodeLine(Parser* parser) {
             condition.value = value;
             PUSH_ARRAY(Condition, *line, condition, condition);
         } else {
-            PUSH_ARRAY(Token, *line, bit, name);
+            PUSH_ARRAY(Token, line->bits, data, name);
         }
 
         // are there more values to parse?
@@ -442,7 +469,7 @@ static Line* microcodeLine(Parser* parser) {
             break;
         }
         consume(parser, TOKEN_IDENTIFIER, 16, "Expected bit name");
-        PUSH_ARRAY(Token, *line, bit, parser->previous);
+        PUSH_ARRAY(Token, line->bits, data, parser->previous);
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }

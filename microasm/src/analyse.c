@@ -23,7 +23,7 @@ Table identifiers;
 static void AnalyseOutput(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
-    if(!mcode->outValid) {
+    if(!mcode->out.isValid) {
         return;
     }
 
@@ -60,7 +60,7 @@ static void AnalyseOutput(Parser* parser) {
 static void AnalyseInput(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
-    if(!mcode->inpValid) {
+    if(!mcode->inp.isValid) {
         return;
     }
 
@@ -116,23 +116,27 @@ static void AnalyseInput(Parser* parser) {
 static void AnalyseHeader(Parser* parser) {
     Microcode* mcode = &parser->ast;
 
-    if(!mcode->headValid) {
+    if(!mcode->head.isValid) {
         return;
     }
 
-    for(unsigned int i = 0; i < mcode->head.bitCount; i++) {
-        Token* bit = &mcode->head.bits[i];
+    for(unsigned int i = 0; i < mcode->head.lineCount; i++) {
+        BitArray* line = &mcode->head.lines[i];
 
-        Identifier* val;
-        if(tableGet(&identifiers, bit, (void**)&val)) {
-            if(val->type != TYPE_OUTPUT) {
-                void* v;
-                tableGetKey(&identifiers, bit, &v);
-                warnAt(parser, 106, bit, "Cannot use non output bit in header statement");
-                noteAt(parser, v, "Previously declared here");
+        for(unsigned int j = 0; j < line->dataCount; j++) {
+            Token* bit = &line->datas[j];
+
+            Identifier* val;
+            if(tableGet(&identifiers, bit, (void**)&val)) {
+                if(val->type != TYPE_OUTPUT) {
+                    void* v;
+                    tableGetKey(&identifiers, bit, &v);
+                    warnAt(parser, 106, bit, "Cannot use non output bit in header statement");
+                    noteAt(parser, v, "Previously declared here");
+                }
+            } else {
+                warnAt(parser, 105, bit, "Identifier was not defined");
             }
-        } else {
-            warnAt(parser, 105, bit, "Identifier was not defined");
         }
     }
 }
@@ -160,8 +164,8 @@ static void AnalyseOpcode(Parser* parser) {
         for(unsigned int j = 0; j < code->lineCount; j++) {
             Line* line = code->lines[j];
 
-            for(unsigned int k = 0; k < line->bitCount; k++) {
-                Token* bit = &line->bits[k];
+            for(unsigned int k = 0; k < line->bits.dataCount; k++) {
+                Token* bit = &line->bits.datas[k];
                 Identifier* bitIdentifier;
                 if(tableGet(&identifiers, bit, (void**)&bitIdentifier)) {
                     if(bitIdentifier->type != TYPE_OUTPUT) {

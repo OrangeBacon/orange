@@ -12,15 +12,20 @@ typedef struct Condition {
     struct Token value;
 } Condition;
 
+typedef struct BitArray {
+    DEFINE_ARRAY(struct Token, data);
+} BitArray;
+
 typedef struct Line {
     DEFINE_ARRAY(Condition, condition);
     bool anyCondition;
-    DEFINE_ARRAY(struct Token, bit);
+    BitArray bits;
     struct Token conditionErrorToken;
 } Line;
 
 typedef struct Header {
-    DEFINE_ARRAY(struct Token, bit);
+    DEFINE_ARRAY(BitArray, line);
+    bool isValid;
 } Header;
 
 typedef struct InputValue {
@@ -31,6 +36,7 @@ typedef struct InputValue {
 typedef struct Input {
     DEFINE_ARRAY(InputValue, value);
     struct Token inputHeadToken;
+    bool isValid;
 } Input;
 
 typedef struct OutputValue {
@@ -41,6 +47,7 @@ typedef struct OutputValue {
 typedef struct Output {
     DEFINE_ARRAY(OutputValue, value);
     struct Token width;
+    bool isValid;
 } Output;
 
 typedef struct OpCode {
@@ -55,14 +62,8 @@ typedef struct Microcode {
     const char* fileName;
     bool hasError;
     DEFINE_ARRAY(struct Error, error);
-
-    bool headValid;
     Header head;
-
-    bool inpValid;
     Input inp;
-
-    bool outValid;
     Output out;
 
     DEFINE_ARRAY(OpCode, opcode);
