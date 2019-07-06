@@ -35,7 +35,7 @@ typedef struct Parser {
     Token outputStatement;
 
     // the ast that is being constructed currently
-    Microcode ast;
+    AST ast;
 
 #ifdef debug
     bool readTests;

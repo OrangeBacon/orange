@@ -7,7 +7,7 @@
 #include "token.h"
 #include "memory.h"
 
-void InitMicrocode(Microcode* mcode, const char* fileName) {
+void InitAST(AST* mcode, const char* fileName) {
     mcode->hasError = false;
     mcode->fileName = fileName;
     mcode->head.isValid = false;
@@ -23,7 +23,11 @@ void InitMicrocode(Microcode* mcode, const char* fileName) {
 #endif
 }
 
-void PrintMicrocode(Microcode* mcode) {
+void initMicrocode(Microcode* mcode) {
+    ARRAY_ALLOC(NumericOpcode, *mcode, opcode);
+}
+
+void PrintAST(AST* mcode) {
     printf("Microcode:\n");
     printf("  Has Error: %s\n", mcode->hasError ? "true" : "false");
     printf("  File Name: %s\n", mcode->fileName);

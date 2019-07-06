@@ -41,7 +41,7 @@ void ParserInit(Parser* parser, Scanner* scan) {
     parser->readTests = false;
 #endif
     ARRAY_ALLOC(bool, *parser, errorStack);
-    InitMicrocode(&parser->ast, scan->fileName);
+    InitAST(&parser->ast, scan->fileName);
 }
 
 static void newErrorState(Parser* parser) {

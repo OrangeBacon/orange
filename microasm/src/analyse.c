@@ -20,8 +20,10 @@ typedef struct Identifier {
 
 Table identifiers;
 
+Microcode outputCode;
+
 static void AnalyseOutput(Parser* parser) {
-    Microcode* mcode = &parser->ast;
+    AST* mcode = &parser->ast;
 
     if(!mcode->out.isValid) {
         return;
@@ -58,7 +60,7 @@ static void AnalyseOutput(Parser* parser) {
 }
 
 static void AnalyseInput(Parser* parser) {
-    Microcode* mcode = &parser->ast;
+    AST* mcode = &parser->ast;
 
     if(!mcode->inp.isValid) {
         return;
@@ -114,7 +116,7 @@ static void AnalyseInput(Parser* parser) {
 }
 
 static void AnalyseHeader(Parser* parser) {
-    Microcode* mcode = &parser->ast;
+    AST* mcode = &parser->ast;
 
     if(!mcode->head.isValid) {
         return;
@@ -142,7 +144,7 @@ static void AnalyseHeader(Parser* parser) {
 }
 
 static void AnalyseOpcode(Parser* parser) {
-    Microcode* mcode = &parser->ast;
+    AST* mcode = &parser->ast;
 
     Identifier* opsize;
     Token opsizeTok;
@@ -186,6 +188,9 @@ static void AnalyseOpcode(Parser* parser) {
                 }
             }
         }
+
+        NumericOpcode ncode = {0};
+        PUSH_ARRAY(NumericOpcode, outputCode, opcode, ncode);
     }
 }
 
@@ -196,9 +201,12 @@ static Analysis Analyses[] = {
     AnalyseOpcode
 };
 
-void Analyse(Parser* parser) {
+Microcode Analyse(Parser* parser) {
     initTable(&identifiers, tokenHash, tokenCmp);
+    initMicrocode(&outputCode);
     for(unsigned int i = 0; i < sizeof(Analyses)/sizeof(Analysis); i++) {
         Analyses[i](parser);
     }
+
+    return outputCode;
 }

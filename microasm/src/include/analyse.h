@@ -2,6 +2,6 @@
 #define ANALYSE_H
 
 struct Parser;
-void Analyse(struct Parser* parser);
+Microcode Analyse(struct Parser* parser);
 
 #endif

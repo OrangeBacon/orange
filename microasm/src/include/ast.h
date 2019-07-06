@@ -58,7 +58,7 @@ typedef struct OpCode {
     DEFINE_ARRAY(Line*, line);
 } OpCode;
 
-typedef struct Microcode {
+typedef struct AST {
     const char* fileName;
     bool hasError;
     DEFINE_ARRAY(struct Error, error);
@@ -71,12 +71,25 @@ typedef struct Microcode {
 #ifdef debug
     DEFINE_ARRAY(struct Error, expectedError);
 #endif
+} AST;
+
+void InitAST(AST* mcode, const char* fileName);
+
+void PrintAST(AST* mcode);
+
+typedef struct NumericLine {
+    DEFINE_ARRAY(unsigned int, bit);
+} NumericLine;
+
+typedef struct NumericOpcode {
+    DEFINE_ARRAY(NumericLine, line);
+    unsigned int id;
+} NumericOpcode;
+
+typedef struct Microcode {
+    DEFINE_ARRAY(NumericOpcode, opcode);
 } Microcode;
 
-void InitMicrocode(Microcode* mcode, const char* fileName);
-
-void PrintMicrocode(Microcode* mcode);
-
-void FreeMicrocode(Microcode* mcode);
+void initMicrocode(Microcode* mcode);
 
 #endif
