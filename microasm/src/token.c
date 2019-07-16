@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <string.h>
 #include "token.h"
+#include "memory.h"
 
 #define STRING_TOKEN(x) #x,
 
@@ -14,4 +16,20 @@ const char* TokenNames[] = {
 void TokenPrint(Token* token) {
     printf("%.4i:%.4i %.17s: %.*s", token->line, token->column,
         TokenNames[token->type], token->length, TOKEN_GET(*token));
+}
+
+Token createStrToken(const char* str) {
+    Token t;
+    t.base = str;
+    t.length = strlen(str);
+    t.offset = 0;
+    return t;
+}
+
+Token* createStrTokenPtr(const char* str) {
+    Token* t = ArenaAlloc(sizeof(Token));
+    t->base = str;
+    t->length = strlen(str);
+    t->offset = 0;
+    return t;
 }

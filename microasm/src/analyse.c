@@ -86,10 +86,7 @@ static void AnalyseInput(Parser* parser) {
     }
 
     Identifier* val;
-    Token opsize;
-    opsize.base = "opsize";
-    opsize.length = 6;
-    opsize.offset = 0;
+    Token opsize = createStrToken("opsize");
     if(tableGet(&identifiers, &opsize, (void**)&val)) {
         if(val->type != TYPE_INPUT) {
             void* v;
@@ -100,10 +97,7 @@ static void AnalyseInput(Parser* parser) {
         warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
     }
 
-    Token phase;
-    phase.base = "phase";
-    phase.length = 5;
-    phase.offset = 0;
+    Token phase = createStrToken("phase");
     if(tableGet(&identifiers, &phase, (void**)&val)) {
         if(val->type != TYPE_INPUT) {
             void* v;
@@ -147,11 +141,13 @@ static void AnalyseOpcode(Parser* parser) {
     AST* mcode = &parser->ast;
 
     Identifier* opsize;
-    Token opsizeTok;
-    opsizeTok.base = "opsize";
-    opsizeTok.length = 6;
-    opsizeTok.offset = 0;
+    Token opsizeTok = createStrToken("opsize");
     tableGet(&identifiers, &opsizeTok, (void**)&opsize);
+
+    Table parameters;
+    initTable(&parameters, tokenHash, tokenCmp);
+    tableSet(&parameters, (void*)createStrTokenPtr("Reg"), (void*)true);
+
     for(unsigned int i = 0; i < mcode->opcodeCount; i++) {
         OpCode* code = &mcode->opcodes[i];
 
@@ -186,6 +182,14 @@ static void AnalyseOpcode(Parser* parser) {
                 if(!(cond->value.data.value == 0 || cond->value.data.value == 1)) {
                     warnAt(parser, 112, &cond->value, "Condition values must be 0 or 1");
                 }
+            }
+        }
+
+        for(unsigned int i = 0; i < code->parameterCount; i++) {
+            Token* param = &code->parameters[i];
+            void* _;
+            if(!tableGet(&parameters, param, &_)) {
+                warnAt(parser, 115, param, "Undefined parameter type");
             }
         }
 

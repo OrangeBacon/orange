@@ -38,7 +38,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* sca
     if(!strcmp(ext, "uasm")) {
         Parse(parse);
         Microcode m = Analyse(parse);
-        printf("%i", m.opcodeCount);
+        (void)m;
         return true;
     }
 

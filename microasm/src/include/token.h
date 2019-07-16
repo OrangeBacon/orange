@@ -44,4 +44,7 @@ typedef struct Token {
 // output the representation of a token to stdout
 void TokenPrint(Token* token);
 
+Token createStrToken(const char* str);
+Token* createStrTokenPtr(const char* str);
+
 #endif
