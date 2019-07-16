@@ -21,10 +21,6 @@ Text HLabel 2100 2650 0    50   Input ~ 0
 FunctionSelect
 Text HLabel 3650 2350 2    50   Output ~ 0
 Out
-Wire Wire Line
-	2100 2350 2500 2350
-Text Label 2150 2350 0    50   ~ 0
-h[7..0]
 Text HLabel 3650 2500 2    50   Output ~ 0
 Zero
 Text HLabel 3650 2650 2    50   Output ~ 0
@@ -39,4 +35,8 @@ Text HLabel 2100 2950 0    50   Input ~ 0
 OutputEnable
 Text HLabel 2100 2800 0    50   Input ~ 0
 8BitMode
+Text Label 2150 2350 0    50   ~ 0
+A[15..0]
+Wire Bus Line
+	2100 2350 3650 2350
 $EndSCHEMATC
