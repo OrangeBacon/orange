@@ -145,3 +145,20 @@ bool tableGetKey(Table* table, void* voidKey, void** realkey) {
 
     return entry->key.value != NULL;
 }
+
+bool tableHas(Table* table, void* key) {
+    if(table->entries == NULL) {
+        return false;
+    }
+    
+    Key test;
+    test.value = key;
+    test.hash = table->hash(key);
+
+    Entry* entry = findEntry(table->entries, table->capacity, &test, table->cmp);
+    if(entry->key.value == NULL) {
+        return false;
+    }
+
+    return true;
+}

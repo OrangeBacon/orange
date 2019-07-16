@@ -16,7 +16,13 @@ int main(int argc, char** argv){
 
     argParser parser;
     argInit(&parser);
+    argMode(&parser, "test");
+    argMode(&parser, "test");
     argParse(&parser, argc, argv);
+
+    if(argSuccess(&parser)) {
+        cOutPrintf(TextGreen, "Parsed args");
+    }
 
 /*
     if(argc <= 1) {

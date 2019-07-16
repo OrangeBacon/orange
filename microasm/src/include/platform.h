@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 // convert an relative path into an absolute path
 const char* resolvePath(const char* path);

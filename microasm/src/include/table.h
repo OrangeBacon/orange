@@ -37,5 +37,6 @@ void initTable(Table* table, HashFn hash, KeyCompare cmp);
 bool tableSet(Table* table, void* key, void* value);
 bool tableGet(Table* table, void* key, void** value);
 bool tableGetKey(Table* table, void* voidKey, void** realkey);
+bool tableHas(Table* table, void* key);
 
 #endif
