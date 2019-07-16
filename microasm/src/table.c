@@ -26,6 +26,25 @@ bool tokenCmp(void* a, void* b) {
     return strncmp(TOKEN_GET(*tokA), TOKEN_GET(*tokB), tokA->length) == 0;
 }
 
+uint32_t strHash(void* value) {
+    char* str = value;
+    uint32_t hash = 2166126261u;
+
+    for(size_t i = 0; i < strlen(str); i++) {
+        hash ^= str[i];
+        hash *= 16777619;
+    }
+
+    return hash;
+}
+
+bool strCmp(void* a, void* b) {
+    char* tokA = a;
+    char* tokB = b;
+
+    return strcmp(tokA, tokB) == 0;
+}
+
 void initTable(Table* table, HashFn hashfn, KeyCompare cmp) {
     table->count = 0;
     table->capacity = 0;

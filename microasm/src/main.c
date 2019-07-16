@@ -3,18 +3,22 @@
 #include <string.h>
 
 #include "scanner.h"
-#include "token.h"
 #include "parser.h"
 #include "ast.h"
-#include "error.h"
 #include "platform.h"
 #include "memory.h"
 #include "test.h"
+#include "arg.h"
 
 int main(int argc, char** argv){
     startColor();
     ArenaInit();
 
+    argParser parser;
+    argInit(&parser);
+    argParse(&parser, argc, argv);
+
+/*
     if(argc <= 1) {
         cErrPrintf(TextRed, "Not enough arguments provided, "
             "expected microcode file name"
@@ -55,4 +59,5 @@ int main(int argc, char** argv){
     Parser parser;
     runFile(argv[1], readFile(argv[1]), &parser, &scan, false);
     //PrintMicrocode(&parser.ast);
+    */
 }

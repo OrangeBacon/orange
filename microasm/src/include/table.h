@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "token.h"
 
 #define TABLE_MAX_LOAD 0.75
@@ -30,6 +31,8 @@ typedef struct Table {
 
 uint32_t tokenHash(void* value);
 bool tokenCmp(void* a, void* b);
+uint32_t strHash(void* value);
+bool strCmp(void* a, void* b);
 void initTable(Table* table, HashFn hash, KeyCompare cmp);
 bool tableSet(Table* table, void* key, void* value);
 bool tableGet(Table* table, void* key, void** value);
