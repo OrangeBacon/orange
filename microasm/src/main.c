@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "scanner.h"
-#include "parser.h"
 #include "platform.h"
 #include "memory.h"
 #include "test.h"
@@ -17,7 +11,7 @@ int main(int argc, char** argv){
     argInit(&parser);
     argString(&parser, "microcode file");
 
-#ifdef Debug
+#ifdef debug
     argParser* test = argMode(&parser, "test");
     argString(test, "test folder");
 #endif
@@ -25,15 +19,13 @@ int main(int argc, char** argv){
     argParse(&parser);
 
     if(argSuccess(&parser)) {
-#ifdef Debug
+#ifdef debug
         if(test->modeTaken) {
             runTests(test->posArgs[0].value.as_string);
         } else 
 #endif
         {
-            Scanner s;
-            Parser p;
-            runFile(strArg(parser, 0), readFile(strArg(parser, 0)), &p, &s, false);
+            runFileName(strArg(parser, 0));
         }
     }
 }
