@@ -16,12 +16,16 @@ int main(int argc, char** argv){
 
     argParser parser;
     argInit(&parser);
-    argMode(&parser, "test");
-    argMode(&parser, "test");
-    argParse(&parser, argc, argv);
+    argString(&parser, "microcode file");
+
+    argParser* test = argMode(&parser, "test");
+    argString(test, "test folder");
+
+    argArguments(&parser, argc, argv);
+    argParse(&parser);
 
     if(argSuccess(&parser)) {
-        cOutPrintf(TextGreen, "Parsed args");
+        cOutPrintf(TextGreen, "Parsed args\n");
     }
 
 /*

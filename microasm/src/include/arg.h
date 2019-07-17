@@ -6,10 +6,12 @@ typedef struct argParser {
     Table modes;
     bool parsed;
     bool success;
+    bool parseOptions;
 } argParser;
 
 void argInit(argParser* parser);
 argParser* argMode(argParser* parser, const char* name);
 void argString(argParser* parser, const char* name);
-void argParse(argParser* parser, int argc, char** argv);
+void argParse(argParser* parser);
+void argArguments(argParser* parser, int argc, char** argv);
 bool argSuccess(argParser* parser);

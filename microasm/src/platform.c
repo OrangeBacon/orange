@@ -28,16 +28,16 @@ const char* resolvePath(const char* path) {
 
 #ifdef _WIN32
 // stderr handle
-HANDLE HandleErr;
+static HANDLE HandleErr;
 
 // inital formatting of stderr
-CONSOLE_SCREEN_BUFFER_INFO ErrReset;
+static CONSOLE_SCREEN_BUFFER_INFO ErrReset;
 
 // stdout handle
-HANDLE HandleOut;
+static HANDLE HandleOut;
 
 // inital formatting of stdout
-CONSOLE_SCREEN_BUFFER_INFO OutReset;
+static CONSOLE_SCREEN_BUFFER_INFO OutReset;
 #endif
 
 bool EnableColor = false;
@@ -99,10 +99,10 @@ const char* readFile(const char* fileName) {
         printf("Could not read file \"%s\"\n", fileName);
         exit(1);
     }
-    return readFilePtr(file, fileName);
+    return readFilePtr(file);
 }
 
-const char* readFilePtr(FILE* file, const char* fileName) {
+const char* readFilePtr(FILE* file) {
     // get the length of the file
     fseek(file, 0L, SEEK_END);
     size_t fileSize = ftell(file);
@@ -111,11 +111,7 @@ const char* readFilePtr(FILE* file, const char* fileName) {
     // +1 so '\0' can be added
     // buffer should stay allocated for lifetime 
     // of compiler as all tokens reference it
-    char* buffer = (char*)ArenaAlloc((fileSize + 1) * sizeof(char));
-    if(buffer == NULL){
-        printf("Could not enough allocate memory to read file \"%s\".\n", fileName);
-        exit(1);
-    }
+    char* buffer = ArenaAlloc((fileSize + 1) * sizeof(char));
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
     buffer[bytesRead] = '\0';
 
@@ -151,7 +147,7 @@ void iterateDirectory(const char* basePath, directoryCallback callback) {
                 fclose(file);
                 iterateDirectory(path, callback);
             } else {
-                callback(path, readFilePtr(file, path));
+                callback(path, readFilePtr(file));
                 fclose(file);
             }
         }
