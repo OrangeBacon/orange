@@ -2,11 +2,16 @@
 #include "arg.h"
 #include "platform.h"
 
+// display error caused by in-correct arg-parser description
+// ony caused by errors in the executable - when raised
+// always a bug
 static void argInternalError(argParser* parser, const char* message) {
     parser->success = false;
     cErrPrintf(TextRed, "Implementation Error: %s\n", message);
 }
 
+// display error caused by incorrect command line
+// arguments being passed by the user
 static void argError(argParser* parser, const char* message) {
     parser->success = false;
     cErrPrintf(TextRed, "Error: %s\n", message);
@@ -47,27 +52,43 @@ void argString(argParser* parser, const char* name) {
 }
 
 void argParse(argParser* parser) {
+    // do not re-run the parser
     if(parser->parsed) {
         return;
     }
+
+    // indicate this parser actually ran, not all modes
+    // will be taken.  TODO: is there a difference
+    // between mode taken and parsed?
     parser->modeTaken = true;
+
+    // for all command line arguments
     for(int i = 0; i < parser->argc; i++) {
+
+        // is the argument one of the possible modes?
         argParser* new;
         if(tableGet(&parser->modes, parser->argv[i], (void**)&new)) {
+            // propagate options
             new->parseOptions = parser->parseOptions;
+            // increment arguments, ignoring the mode name
             argArguments(new, parser->argc, parser->argv);
             argParse(new);
+
+            // if sub-parser failed, propagate faliure
             parser->success &= new->success;
+            // flag so errors are not repeated or flagged incorrectly
             parser->usedSubParser = true;
             break;
         }
 
+        // if '--' parsed, stop parsing option arguments
         if(parser->parseOptions && strlen(parser->argv[i]) == 2 
             && parser->argv[i][0] == '-' && parser->argv[i][1] == '-') {
             parser->parseOptions = false;
             continue;
         }
 
+        // parse positional argument
         if(parser->currentPosArg < parser->posArgCount) {
             posArg* arg = &parser->posArgs[parser->currentPosArg];
             switch(arg->type) {
@@ -78,10 +99,12 @@ void argParse(argParser* parser) {
             continue;
         }
 
+        // no successfull use for the argument found
         argError(parser, "unexpected argument");
         return;
     }
 
+    // if not all positional arguments forfilled and using this parser
     if(!parser->usedSubParser && parser->currentPosArg != parser->posArgCount) {
         argError(parser, "not enough arguments");
     }
