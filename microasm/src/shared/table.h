@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "microcode/token.h"
 
 #define TABLE_MAX_LOAD 0.75
 
@@ -29,8 +28,6 @@ typedef struct Table {
     Entry* entries;
 } Table;
 
-uint32_t tokenHash(void* value);
-bool tokenCmp(void* a, void* b);
 uint32_t strHash(void* value);
 bool strCmp(void* a, void* b);
 void initTable(Table* table, HashFn hash, KeyCompare cmp);
