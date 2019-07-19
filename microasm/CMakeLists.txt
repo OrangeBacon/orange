@@ -16,6 +16,8 @@ add_executable(microasm
     src/microcode/analyse.c
 
     src/emulator/emu.c
+    src/emulator/register.c
+    src/emulator/bus.c
 
     src/shared/memory.c
     src/shared/platform.c
