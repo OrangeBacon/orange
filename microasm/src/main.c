@@ -1,58 +1,31 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "scanner.h"
-#include "token.h"
-#include "parser.h"
-#include "ast.h"
-#include "error.h"
-#include "platform.h"
-#include "memory.h"
-#include "test.h"
+#include "shared/platform.h"
+#include "shared/memory.h"
+#include "shared/arg.h"
+#include "microcode/test.h"
 
 int main(int argc, char** argv){
     startColor();
     ArenaInit();
 
-    if(argc <= 1) {
-        cErrPrintf(TextRed, "Not enough arguments provided, "
-            "expected microcode file name"
-#ifdef debug
-            " or \"test\".\n"
-#else
-            ".\n"
-#endif
-            );
-        exit(0);
-    }
+    argParser parser;
+    argInit(&parser);
+    argString(&parser, "microcode file");
 
 #ifdef debug
-    if(strcmp("test", argv[1]) == 0) {
-        if(argc < 3) {
-            cErrPrintf(TextRed, "Not enough arguments provided, "
-                "expected name of directory containing compiler tests.\n");
-        } else if(argc > 3) {
-            cErrPrintf(TextRed, "Too many arguments provided, "
-                "expected: microasm test <directory>\n");
-        } else {
-            runTests(argv[2]);
+    argParser* test = argMode(&parser, "test");
+    argString(test, "test folder");
+#endif
+    argArguments(&parser, argc, argv);
+    argParse(&parser);
+
+    if(argSuccess(&parser)) {
+#ifdef debug
+        if(test->modeTaken) {
+            runTests(test->posArgs[0].value.as_string);
+        } else 
+#endif
+        {
+            runFileName(strArg(parser, 0));
         }
-
-        // runTests will exit on its own depending on test success,
-        // to get here an argument input error will have occured
-        exit(1);
     }
-#endif
-
-    if(argc != 2) {
-        cErrPrintf(TextRed, "Too many arguments provided, "
-            "expected: microasm <filename>\n");
-        exit(1);
-    }
-
-    Scanner scan;
-    Parser parser;
-    runFile(argv[1], readFile(argv[1]), &parser, &scan, false);
-    //PrintMicrocode(&parser.ast);
 }

@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "memory.h"
-#include "parser.h"
-#include "platform.h"
-#include "error.h"
+#include "shared/memory.h"
+#include "shared/platform.h"
+#include "microcode/parser.h"
+#include "microcode/error.h"
 
 static bool printErrors = true;
 void enableErrorPrint() {

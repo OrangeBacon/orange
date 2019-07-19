@@ -2,7 +2,7 @@
 #define AST_H
 
 #include <stdbool.h>
-#include "memory.h"
+#include "shared/memory.h"
 
 struct Token;
 struct Error;

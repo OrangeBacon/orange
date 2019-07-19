@@ -2,16 +2,22 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "test.h"
-#include "platform.h"
-#include "error.h"
-#include "analyse.h"
+#include "shared/platform.h"
+#include "microcode/test.h"
+#include "microcode/error.h"
+#include "microcode/analyse.h"
 
-bool runFile(const char* fileName, const char* file, Parser* parse, Scanner* scan, bool testing) {
+bool runFileName(const char* fileName) {
+    Parser p;
+    return runFile(fileName, readFile(fileName), &p, false);
+}
+
+bool runFile(const char* fileName, const char* file, Parser* parse, bool testing) {
     const char* fullFileName = resolvePath(fileName);
 
-    ScannerInit(scan, file, fullFileName);
-    ParserInit(parse, scan);
+    Scanner scan;
+    ScannerInit(&scan, file, fullFileName);
+    ParserInit(parse, &scan);
 
     const char* ext = strrchr(fullFileName, '.');
     if(!ext) {
@@ -51,14 +57,10 @@ static int testCount;
 static int passedCount;
 static void runTest(const char* path, const char* file) {
     testCount++;
-    Scanner scanner;
     Parser parser;
 
     printf("Testing: %s  ->\n", resolvePath(path));
-    bool runSuccess = runFile(path, file, &parser, &scanner, true);
-    if(!runSuccess) {
-
-    }
+    bool runSuccess = runFile(path, file, &parser, true);
 
     unsigned int currentAstError = 0;
     while(currentAstError < parser.ast.errorCount) {

@@ -1,29 +1,25 @@
 #include <stdbool.h>
 #include <string.h>
-#include "table.h"
-#include "memory.h"
+#include "shared/table.h"
+#include "shared/memory.h"
 
-// FNV-1a
-uint32_t tokenHash(void* value) {
-    Token* token = value;
+uint32_t strHash(void* value) {
+    char* str = value;
     uint32_t hash = 2166126261u;
 
-    for(int i = 0; i < token->length; i++) {
-        hash ^= TOKEN_GET(*token)[i];
+    for(size_t i = 0; i < strlen(str); i++) {
+        hash ^= str[i];
         hash *= 16777619;
     }
 
     return hash;
 }
 
-bool tokenCmp(void* a, void* b) {
-    Token* tokA = a;
-    Token* tokB = b;
+bool strCmp(void* a, void* b) {
+    char* tokA = a;
+    char* tokB = b;
 
-    if(tokA->length != tokB->length) {
-        return false;
-    }
-    return strncmp(TOKEN_GET(*tokA), TOKEN_GET(*tokB), tokA->length) == 0;
+    return strcmp(tokA, tokB) == 0;
 }
 
 void initTable(Table* table, HashFn hashfn, KeyCompare cmp) {
@@ -125,4 +121,21 @@ bool tableGetKey(Table* table, void* voidKey, void** realkey) {
     *realkey = entry->key.value;
 
     return entry->key.value != NULL;
+}
+
+bool tableHas(Table* table, void* key) {
+    if(table->entries == NULL) {
+        return false;
+    }
+    
+    Key test;
+    test.value = key;
+    test.hash = table->hash(key);
+
+    Entry* entry = findEntry(table->entries, table->capacity, &test, table->cmp);
+    if(entry->key.value == NULL) {
+        return false;
+    }
+
+    return true;
 }

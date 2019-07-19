@@ -1,10 +1,10 @@
-#include "token.h"
-#include "ast.h"
-#include "analyse.h"
-#include "parser.h"
-#include "error.h"
-#include "table.h"
-#include "memory.h"
+#include "shared/table.h"
+#include "shared/memory.h"
+#include "microcode/token.h"
+#include "microcode/ast.h"
+#include "microcode/analyse.h"
+#include "microcode/parser.h"
+#include "microcode/error.h"
 
 typedef void(*Analysis)(Parser* parser);
 

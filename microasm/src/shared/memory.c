@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "memory.h"
+#include "shared/memory.h"
 
 // global instance of arena,
 // only place memory is stored in the program

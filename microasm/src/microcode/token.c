@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include "token.h"
-#include "memory.h"
+#include "shared/memory.h"
+#include "microcode/token.h"
 
 #define STRING_TOKEN(x) #x,
 
@@ -32,4 +32,27 @@ Token* createStrTokenPtr(const char* str) {
     t->length = strlen(str);
     t->offset = 0;
     return t;
+}
+
+// FNV-1a
+uint32_t tokenHash(void* value) {
+    Token* token = value;
+    uint32_t hash = 2166126261u;
+
+    for(int i = 0; i < token->length; i++) {
+        hash ^= TOKEN_GET(*token)[i];
+        hash *= 16777619;
+    }
+
+    return hash;
+}
+
+bool tokenCmp(void* a, void* b) {
+    Token* tokA = a;
+    Token* tokB = b;
+
+    if(tokA->length != tokB->length) {
+        return false;
+    }
+    return strncmp(TOKEN_GET(*tokA), TOKEN_GET(*tokB), tokA->length) == 0;
 }

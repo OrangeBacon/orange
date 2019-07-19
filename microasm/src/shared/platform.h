@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 // convert an relative path into an absolute path
 const char* resolvePath(const char* path);
@@ -49,7 +50,7 @@ void cOutVPrintf(TextColor color, const char* format, va_list args);
 
 // get a buffer containing the string contents of the file provided
 const char* readFile(const char* fileName);
-const char* readFilePtr(FILE* file, const char* fileName);
+const char* readFilePtr(FILE* file);
 
 typedef void(*directoryCallback)(const char* path, const char* file);
 

@@ -1,6 +1,9 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #define FOREACH_TOKEN(x) \
     x(LEFT_PAREN) x(RIGHT_PAREN) \
     x(LEFT_BRACE) x(RIGHT_BRACE) \
@@ -46,5 +49,8 @@ void TokenPrint(Token* token);
 
 Token createStrToken(const char* str);
 Token* createStrTokenPtr(const char* str);
+
+uint32_t tokenHash(void* value);
+bool tokenCmp(void* a, void* b);
 
 #endif

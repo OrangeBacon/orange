@@ -2,20 +2,23 @@ cmake_minimum_required(VERSION 3.9.4)
 
 project(microasm)
 
-include_directories(src/include)
+include_directories(src)
 
 add_executable(microasm
     src/main.c
-    src/scanner.c
-    src/token.c
-    src/parser.c
-    src/ast.c
-    src/memory.c
-    src/platform.c
-    src/error.c
-    src/test.c
-    src/analyse.c
-    src/table.c
+
+    src/microcode/scanner.c
+    src/microcode/token.c
+    src/microcode/parser.c
+    src/microcode/ast.c
+    src/microcode/error.c
+    src/microcode/test.c
+    src/microcode/analyse.c
+
+    src/shared/memory.c
+    src/shared/platform.c
+    src/shared/table.c
+    src/shared/arg.c
     )
 
 set_property(TARGET microasm PROPERTY C_STANDARD 99)
