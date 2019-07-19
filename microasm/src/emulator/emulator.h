@@ -6,6 +6,7 @@
 
 typedef struct BusId {
     unsigned int id;
+    struct VMCore* core;
 } BusId;
 
 typedef struct Bus {
@@ -14,6 +15,7 @@ typedef struct Bus {
 
 typedef struct RegisterId {
     unsigned int id;
+    struct VMCore* core;
 } RegisterId;
 
 typedef struct Register {

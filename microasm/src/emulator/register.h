@@ -5,7 +5,12 @@
 #include "shared/memory.h"
 #include "emulator/emulator.h"
 
-void regConnectBus(VMCore* core, RegisterId* reg, BusId* bus);
+void regInit(Register* reg);
+void regConnectBus(RegisterId* reg, BusId* bus);
 void regWriteInt(RegisterId* reg, uint16_t val);
+uint16_t regRead(RegisterId* reg);
+
+void regSetBus(RegisterId* reg, BusId* bus);
+void regReadBus(RegisterId* reg, BusId* bus);
 
 #endif

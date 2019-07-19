@@ -14,8 +14,13 @@ void emulator() {
     RegisterId R1 = createRegister(&core);
     BusId dataBus = createBus(&core);
     
-    regConnectBus(&core, &accumulator, &dataBus);
-    regConnectBus(&core, &R1, &dataBus);
+    regConnectBus(&accumulator, &dataBus);
+    regConnectBus(&R1, &dataBus);
 
     regWriteInt(&accumulator, 15);
+    regSetBus(&accumulator, &dataBus);
+    regWriteInt(&accumulator, 10);
+    regReadBus(&R1, &dataBus);
+
+    cOutPrintf(TextWhite, "%i\n", regRead(&R1));
 }
