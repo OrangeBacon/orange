@@ -4,8 +4,8 @@
 #include <stdarg.h>
 #include <limits.h>
 #include <dirent.h>
-#include "platform.h"
-#include "memory.h"
+#include "shared/platform.h"
+#include "shared/memory.h"
 
 #ifdef _WIN32
 #include <windows.h>

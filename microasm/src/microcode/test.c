@@ -2,10 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "test.h"
-#include "platform.h"
-#include "error.h"
-#include "analyse.h"
+#include "shared/platform.h"
+#include "microcode/test.h"
+#include "microcode/error.h"
+#include "microcode/analyse.h"
 
 bool runFileName(const char* fileName) {
     Parser p;

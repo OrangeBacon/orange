@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "token.h"
+#include "microcode/token.h"
 
 #define TABLE_MAX_LOAD 0.75
 

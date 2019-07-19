@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <limits.h>
-#include "token.h"
-#include "parser.h"
-#include "ast.h"
-#include "memory.h"
-#include "platform.h"
-#include "error.h"
+#include "shared/memory.h"
+#include "shared/platform.h"
+#include "microcode/token.h"
+#include "microcode/parser.h"
+#include "microcode/ast.h"
+#include "microcode/error.h"
 
 static void advance(Parser* parser);
 static bool match(Parser* parser, OrangeTokenType type);

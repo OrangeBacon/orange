@@ -1,7 +1,7 @@
-#include "platform.h"
-#include "memory.h"
-#include "test.h"
-#include "arg.h"
+#include "shared/platform.h"
+#include "shared/memory.h"
+#include "shared/arg.h"
+#include "microcode/test.h"
 
 int main(int argc, char** argv){
     startColor();

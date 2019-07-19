@@ -2,10 +2,10 @@
 #define PARSER_H
 
 #include <stdbool.h>
-#include "token.h"
-#include "scanner.h"
-#include "ast.h"
-#include "memory.h"
+#include "shared/memory.h"
+#include "microcode/token.h"
+#include "microcode/scanner.h"
+#include "microcode/ast.h"
 
 // state required to create the syntax tree
 typedef struct Parser {

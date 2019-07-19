@@ -1,11 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include "token.h"
-#include "ast.h"
-#include "error.h"
-#include "token.h"
-#include "memory.h"
+#include "shared/memory.h"
+#include "microcode/token.h"
+#include "microcode/ast.h"
+#include "microcode/error.h"
+#include "microcode/token.h"
 
 void InitAST(AST* mcode, const char* fileName) {
     mcode->hasError = false;

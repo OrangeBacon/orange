@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <limits.h>
-#include "scanner.h"
+#include "microcode/scanner.h"
 
 static char peek(Scanner* scanner);
 static char advance(Scanner* scanner);

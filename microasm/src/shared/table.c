@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <string.h>
-#include "table.h"
-#include "memory.h"
+#include "shared/table.h"
+#include "shared/memory.h"
 
 // FNV-1a
 uint32_t tokenHash(void* value) {

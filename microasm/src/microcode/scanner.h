@@ -2,7 +2,7 @@
 #define SCANNER_H
 
 #include <stdbool.h>
-#include "token.h"
+#include "microcode/token.h"
 
 // scanner current source infomation
 typedef struct Scanner {

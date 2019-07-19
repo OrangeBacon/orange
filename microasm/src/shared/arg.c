@@ -1,6 +1,6 @@
 #include <string.h>
-#include "arg.h"
-#include "platform.h"
+#include "shared/arg.h"
+#include "shared/platform.h"
 
 // display error caused by in-correct arg-parser description
 // ony caused by errors in the executable - when raised

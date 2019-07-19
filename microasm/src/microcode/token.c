@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include "token.h"
-#include "memory.h"
+#include "shared/memory.h"
+#include "microcode/token.h"
 
 #define STRING_TOKEN(x) #x,
 

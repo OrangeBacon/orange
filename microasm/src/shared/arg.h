@@ -1,5 +1,5 @@
-#include "table.h"
-#include "memory.h"
+#include "shared/table.h"
+#include "shared/memory.h"
 
 // positional argument
 // will allow for multiple argument types (ie add int)
