@@ -6,7 +6,7 @@
 
 void vmcoreInit(VMCore* core);
 
-BusId createBus(VMCore* core);
-RegisterId createRegister(VMCore* core);
+unsigned int createBus(VMCore* core);
+unsigned int createRegister(VMCore* core);
 
 #endif

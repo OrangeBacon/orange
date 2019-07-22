@@ -6,20 +6,16 @@ void vmcoreInit(VMCore* core) {
     ARRAY_ALLOC(Register, *core, register);
 }
 
-BusId createBus(VMCore* core) {
-    BusId id = {.id = core->busCount, .core = core};
-
+unsigned int createBus(VMCore* core) {
     Bus bus = {0};
     PUSH_ARRAY(Bus, *core, bus, bus);
 
-    return id;
+    return core->busCount - 1;
 }
 
-RegisterId createRegister(VMCore* core) {
-    RegisterId id = {.id = core->busCount, .core = core};
-
+unsigned int createRegister(VMCore* core) {
     Register reg;
     regInit(&reg);
     PUSH_ARRAY(Register, *core, register, reg);
-    return id;
+    return core->registerCount - 1;
 }

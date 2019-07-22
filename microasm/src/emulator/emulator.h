@@ -4,19 +4,9 @@
 #include <stdint.h>
 #include "shared/memory.h"
 
-typedef struct BusId {
-    unsigned int id;
-    struct VMCore* core;
-} BusId;
-
 typedef struct Bus {
     uint16_t value;
 } Bus;
-
-typedef struct RegisterId {
-    unsigned int id;
-    struct VMCore* core;
-} RegisterId;
 
 typedef struct Register {
     uint16_t value;
