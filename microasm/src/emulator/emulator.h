@@ -13,9 +13,15 @@ typedef struct Register {
     DEFINE_ARRAY(Bus*, bus);
 } Register;
 
+struct VMCore;
+
+typedef void(*Command)(struct VMCore* core, void*);
+
 typedef struct VMCore {
     DEFINE_ARRAY(Bus, bus);
     DEFINE_ARRAY(Register, register);
+    DEFINE_ARRAY(Command, command);
+    DEFINE_ARRAY(void*, context);
 } VMCore;
 
 #endif

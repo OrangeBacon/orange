@@ -14,13 +14,12 @@ void emulator() {
     unsigned int R1 = createRegister(&core);
     unsigned int dataBus = createBus(&core);
     
-    regConnectBus(&core, accumulator, dataBus);
-    regConnectBus(&core, R1, dataBus);
+    unsigned int dataToAcc = regConnectBus(&core, accumulator, dataBus);
+    unsigned int dataToR1  = regConnectBus(&core, R1, dataBus);
 
     regWriteInt(&core, accumulator, 15);
-    regSetBus(&core, accumulator, dataBus);
-    regWriteInt(&core, accumulator, 10);
-    regReadBus(&core, R1, dataBus);
+    coreCall(&core, dataToAcc + 1);
+    coreCall(&core, dataToR1);
 
     cOutPrintf(TextWhite, "%i\n", regRead(&core, R1));
 }

@@ -4,6 +4,8 @@
 void vmcoreInit(VMCore* core) {
     ARRAY_ALLOC(Bus, *core, bus);
     ARRAY_ALLOC(Register, *core, register);
+    ARRAY_ALLOC(Command, *core, command);
+    ARRAY_ALLOC(void*, *core, context);
 }
 
 unsigned int createBus(VMCore* core) {
@@ -18,4 +20,8 @@ unsigned int createRegister(VMCore* core) {
     regInit(&reg);
     PUSH_ARRAY(Register, *core, register, reg);
     return core->registerCount - 1;
+}
+
+void coreCall(VMCore* core, unsigned int method) {
+    core->commands[method](core, core->contexts[method]);
 }

@@ -8,5 +8,6 @@ void vmcoreInit(VMCore* core);
 
 unsigned int createBus(VMCore* core);
 unsigned int createRegister(VMCore* core);
+void coreCall(VMCore* core, unsigned int method);
 
 #endif
