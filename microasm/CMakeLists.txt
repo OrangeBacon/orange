@@ -19,6 +19,7 @@ add_executable(microasm
     src/emulator/register.c
     src/emulator/vmcore.c
     src/emulator/memory64k.c
+    src/emulator/instructionRegister.c
 
     src/shared/memory.c
     src/shared/platform.c
