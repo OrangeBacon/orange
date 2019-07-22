@@ -10,7 +10,6 @@ typedef struct Bus {
 
 typedef struct Register {
     uint16_t value;
-    DEFINE_ARRAY(Bus*, bus);
 } Register;
 
 struct VMCore;

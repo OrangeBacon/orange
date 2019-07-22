@@ -4,7 +4,6 @@
 #include "assert.h"
 
 void regInit(Register* reg) {
-    ARRAY_ALLOC(Bus*, *reg, bus);
     reg->value = 0;
 }
 
@@ -22,7 +21,6 @@ static void regToBus(VMCore* core, void* ctx) {
 }
 
 unsigned int regConnectBus(VMCore* core, unsigned int reg, unsigned int bus) {
-    PUSH_ARRAY(Bus*, core->registers[reg], bus, &core->buss[bus]);
     regContext* ctx = ArenaAlloc(sizeof(regContext));
     ctx->bus = bus;
     ctx->reg = reg;
