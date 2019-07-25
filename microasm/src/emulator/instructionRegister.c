@@ -22,7 +22,7 @@ unsigned int instRegInit(VMCore* core, InstReg* reg, unsigned int instBus) {
     instRegCtx* ctx = ArenaAlloc(sizeof(instRegCtx));
     ctx->bus = instBus;
     ctx->reg = reg;
-    PUSH_ARRAY(Command, *core, command, instRegSet);
-    PUSH_ARRAY(void*, *core, context, ctx);
+    ADD_COMMAND(instRegSet, ctx, &core->buss[instBus]);
+    CHANGES(reg);
     return core->commandCount - 1;
 }

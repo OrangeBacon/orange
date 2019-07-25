@@ -29,13 +29,14 @@ void emulator() {
 
     regWriteInt(&core, A, 0x3111);
     regWriteInt(&core, B, 11);
-    coreCall(&core, dataToA + 1);
-    coreCall(&core, addrToB + 1);
-    coreCall(&core, memAccess + 1);
-    coreCall(&core, memAccess);
-    coreCall(&core, dataToA);
-    coreCall(&core, dataToA + 1);
-    coreCall(&core, setIReg);
+    coreCallLine(&core, 7,
+    dataToA + 1,
+    addrToB + 1,
+    memAccess + 1,
+    memAccess,
+    dataToA,
+    dataToA + 1,
+    setIReg);
 
     cOutPrintf(TextWhite, "%i\n", mem.value[11]);
 }

@@ -22,9 +22,11 @@ unsigned int memoryInit(Memory64k* mem, VMCore* core, unsigned int addressBus, u
     ctx->addressBus = addressBus;
     ctx->dataBus = dataBus;
     ctx->mem = mem;
-    PUSH_ARRAY(Command, *core, command, memoryRead);
-    PUSH_ARRAY(void*, *core, context, ctx);
-    PUSH_ARRAY(Command, *core, command, memoryWrite);
-    PUSH_ARRAY(void*, *core, context, ctx);
+
+    ADD_COMMAND(memoryRead, ctx, &core->buss[addressBus], mem);
+    CHANGES(&core->buss[dataBus]);
+
+    ADD_COMMAND(memoryWrite, ctx, &core->buss[addressBus], &core->buss[dataBus]);
+    CHANGES(&mem);
     return core->commandCount - 2;
 }

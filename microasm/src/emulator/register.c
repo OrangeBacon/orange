@@ -24,10 +24,11 @@ unsigned int regConnectBus(VMCore* core, unsigned int reg, unsigned int bus) {
     regContext* ctx = ArenaAlloc(sizeof(regContext));
     ctx->bus = bus;
     ctx->reg = reg;
-    PUSH_ARRAY(Command, *core, command, busToReg);
-    PUSH_ARRAY(void*, *core, context, ctx);
-    PUSH_ARRAY(Command, *core, command, regToBus);
-    PUSH_ARRAY(void*, *core, context, ctx);
+    ADD_COMMAND(busToReg, ctx, &core->buss[bus]);
+    CHANGES(&core->registers[reg]);
+
+    ADD_COMMAND(regToBus, ctx, &core->registers[reg]);
+    CHANGES(&core->buss[bus]);
     return core->commandCount - 2;
 }
 
