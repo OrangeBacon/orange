@@ -1,13 +1,13 @@
 #include "shared/memory.h"
 
 typedef struct Node {
-    void* value;
+    unsigned int value;
     bool removed;
 } Node;
 
 typedef struct Edge {
-    Node start;
-    Node end;
+    Node* start;
+    Node* end;
 } Edge;
 
 typedef struct Graph {
@@ -19,7 +19,8 @@ typedef struct NodeArray {
     DEFINE_ARRAY(Node*, node);
 } NodeArray;
 
-void AddNode(Graph* graph, void* node);
-void AddEdge(Graph* graph, void* start, void* end);
+void InitGraph(Graph* graph);
+Node* AddNode(Graph* graph, unsigned int node);
+void AddEdge(Graph* graph, unsigned int start, unsigned int end);
 NodeArray NodesNoInput(Graph* graph);
 NodeArray TopologicalSort(Graph* graph);

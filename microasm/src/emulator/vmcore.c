@@ -1,5 +1,6 @@
 #include "emulator/vmcore.h"
 #include "emulator/register.h"
+#include "shared/graph.h"
 
 void vmcoreInit(VMCore* core) {
     ARRAY_ALLOC(Bus, *core, bus);
@@ -32,8 +33,36 @@ void coreCallLine(VMCore* core, unsigned int count, ...) {
     va_list args;
     va_start(args, count);
 
+    Graph graph;
+    InitGraph(&graph);
+
+    unsigned int* commands = ArenaAlloc(sizeof(unsigned int) * count);
+
     for(unsigned int i = 0; i < count; i++) {
-        coreCall(core, va_arg(args, int));
+        commands[i] = va_arg(args, unsigned int);
+    }
+
+    for(unsigned int i = 0; i < count; i++) {
+        unsigned int command = commands[i];
+        AddNode(&graph, command);
+        for(unsigned int j = 0; j < core->changess[command].depCount; j++) {
+            void* changed = core->changess[command].deps[j];
+            for(unsigned int k = 0; k < count; k++) {
+                unsigned int comm = commands[k];
+                for(unsigned int l = 0; l < core->dependss[comm].depCount; l++) {
+                    void* depended = core->dependss[comm].deps[l];
+                    if(changed == depended) {
+                        AddEdge(&graph, command, comm);
+                    }
+                }
+            }
+        }
+    }
+
+    NodeArray nodes = TopologicalSort(&graph);
+    
+    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
+        coreCall(core, nodes.nodes[i]->value);
     }
 
     va_end(args);
