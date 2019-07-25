@@ -2,6 +2,7 @@
 #define MEMORY_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 // section of memory
 typedef struct Area {
@@ -66,13 +67,5 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
 
 #define POP_ARRAY(container, name) \
     ((container).name##Count--,(container).name##s[(container).name##Count])
-
-// re-assign the array to a different container
-#define COPY_ARRAY(src, dest, name) \
-    do { \
-        (dest).name##s = (src).name##s; \
-        (dest).name##Count = (src).name##Count; \
-        (dest).name##Capacity = (src).name##Capacity; \
-    } while(0)
 
 #endif

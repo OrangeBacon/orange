@@ -26,6 +26,7 @@ add_executable(microasm
     src/shared/platform.c
     src/shared/table.c
     src/shared/arg.c
+    src/shared/graph.c
     )
 
 set_property(TARGET microasm PROPERTY C_STANDARD 99)
