@@ -33,7 +33,7 @@ void emulator() {
     dataToA + 1,
     addrToB + 1,
     memAccess + 1);
-    coreCallLine(&core, 2, memAccess, dataToA);
+    coreCallLine(&core, 3, memAccess, addrToB + 1, dataToA);
     coreCallLine(&core, 2,
     dataToA + 1,
     setIReg);

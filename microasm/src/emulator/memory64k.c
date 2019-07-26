@@ -1,5 +1,7 @@
 #include "emulator/memory64k.h"
 #include "shared/memory.h"
+#include "shared/platform.h"
+#include <stdlib.h>
 
 typedef struct memCtx {
     unsigned int addressBus; 
@@ -9,11 +11,20 @@ typedef struct memCtx {
 
 static void memoryRead(VMCore* core, void* vctx) {
     memCtx* ctx = vctx;
+    if(!core->buss[ctx->addressBus].isValid) {
+        cErrPrintf(TextRed, "invalid bus read - memrd");
+        exit(0);
+    }
     core->buss[ctx->dataBus].value = ctx->mem->value[core->buss[ctx->addressBus].value];
+    core->buss[ctx->dataBus].isValid = true;
 }
 
 static void memoryWrite(VMCore* core, void* vctx) {
     memCtx* ctx = vctx;
+    if(!core->buss[ctx->addressBus].isValid || !core->buss[ctx->dataBus].isValid) {
+        cErrPrintf(TextRed, "invalid bus read - memwt");
+        exit(0);
+    }
     ctx->mem->value[core->buss[ctx->addressBus].value] = core->buss[ctx->dataBus].value;
 }
 

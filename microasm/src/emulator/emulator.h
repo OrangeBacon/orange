@@ -6,6 +6,7 @@
 
 typedef struct Bus {
     uint16_t value;
+    bool isValid;
 } Bus;
 
 typedef struct Register {

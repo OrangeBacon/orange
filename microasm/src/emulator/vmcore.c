@@ -13,6 +13,7 @@ void vmcoreInit(VMCore* core) {
 
 unsigned int createBus(VMCore* core) {
     Bus bus = {0};
+    bus.isValid = false;
     PUSH_ARRAY(Bus, *core, bus, bus);
 
     return core->busCount - 1;
@@ -30,6 +31,10 @@ void coreCall(VMCore* core, unsigned int method) {
 }
 
 void coreCallLine(VMCore* core, unsigned int count, ...) {
+    for(unsigned int i = 0; i < core->busCount; i++) {
+        core->buss[i].isValid = false;
+    }
+
     va_list args;
     va_start(args, count);
 

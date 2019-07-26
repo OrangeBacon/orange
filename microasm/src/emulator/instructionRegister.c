@@ -1,5 +1,7 @@
 #include "emulator/instructionRegister.h"
 #include "shared/memory.h"
+#include "shared/platform.h"
+#include <stdlib.h>
 
 typedef struct instRegCtx {
     unsigned int bus;
@@ -8,6 +10,10 @@ typedef struct instRegCtx {
 
 static void instRegSet(VMCore* core, void* vctx) {
     instRegCtx* ctx = vctx;
+    if(!core->buss[ctx->bus].isValid) {
+        cErrPrintf(TextRed, "Invalid bus read - ireg");
+        exit(1);
+    }
     uint16_t inst =  core->buss[ctx->bus].value;
     ctx->reg->value = inst;
     ctx->reg->opcode = (inst >> 9) & 0x7F;

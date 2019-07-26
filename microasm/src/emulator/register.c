@@ -1,7 +1,8 @@
 #include "shared/memory.h"
 #include "emulator/register.h"
 #include "emulator/vmcore.h"
-#include "assert.h"
+#include "shared/platform.h"
+#include <stdlib.h>
 
 void regInit(Register* reg) {
     reg->value = 0;
@@ -13,11 +14,15 @@ typedef struct regContext {
 } regContext;
 
 static void busToReg(VMCore* core, void* ctx) {
+    if(!core->buss[((regContext*)ctx)->bus].isValid) {
+        cErrPrintf(TextRed, "invalid bus access - regwt");
+    }
     core->registers[((regContext*)ctx)->reg].value = core->buss[((regContext*)ctx)->bus].value;
 }
 
 static void regToBus(VMCore* core, void* ctx) {
     core->buss[((regContext*)ctx)->bus].value = core->registers[((regContext*)ctx)->reg].value;
+    core->buss[((regContext*)ctx)->bus].isValid = true;
 }
 
 unsigned int regConnectBus(VMCore* core, unsigned int reg, unsigned int bus) {
