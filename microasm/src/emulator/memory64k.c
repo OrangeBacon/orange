@@ -20,6 +20,10 @@ static void memoryRead(VMCore* core, void* vctx) {
         cErrPrintf(TextRed, "invalid bus read - memrd");
         exit(0);
     }
+    if(core->buss[ctx->dataBus].isValid) {
+        cErrPrintf(TextRed, "data bus already written to - memrd");
+        exit(0);
+    }
 
     // set bus values
     core->buss[ctx->dataBus].value = ctx->mem->value[core->buss[ctx->addressBus].value];

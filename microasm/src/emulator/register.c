@@ -26,6 +26,10 @@ static void busToReg(VMCore* core, void* ctx) {
 
 // write the contents of the register to the bus
 static void regToBus(VMCore* core, void* ctx) {
+    if(core->buss[((regContext*)ctx)->bus].isValid) {
+        cErrPrintf(TextRed, "bus already written to - regrd");
+        exit(0);
+    }
     core->buss[((regContext*)ctx)->bus].value = core->registers[((regContext*)ctx)->reg].value;
     core->buss[((regContext*)ctx)->bus].isValid = true;
 }
