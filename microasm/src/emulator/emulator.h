@@ -28,6 +28,7 @@ typedef struct VMCore {
     DEFINE_ARRAY(void*, context);
     DEFINE_ARRAY(Dependancy, depends);
     DEFINE_ARRAY(Dependancy, changes);
+    unsigned int phase : 4;
 } VMCore;
 
 void pushDepends(Dependancy* dep, size_t count, ...);

@@ -34,6 +34,7 @@ void coreCallLine(VMCore* core, unsigned int count, ...) {
     for(unsigned int i = 0; i < core->busCount; i++) {
         core->buss[i].isValid = false;
     }
+    core->phase++;
 
     va_list args;
     va_start(args, count);
