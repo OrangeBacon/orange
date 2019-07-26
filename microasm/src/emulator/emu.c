@@ -6,6 +6,10 @@
 #include "emulator/memory64k.h"
 #include "emulator/instructionRegister.h"
 
+// This file contains a simple test for the rest of the emulator and will
+// be re-written or removed when all of the emulator works, with regard to
+// loading microcdes and executable programs.
+
 void emulator() {
     cOutPrintf(TextGreen, "Emulation\n");
 
