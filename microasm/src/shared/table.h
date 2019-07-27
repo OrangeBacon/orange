@@ -21,8 +21,8 @@ typedef uint32_t(*HashFn)(void*);
 typedef bool(*KeyCompare)(void*, void*);
 
 typedef struct Table {
-    int count;
-    int capacity;
+    unsigned int count;
+    unsigned int capacity;
     HashFn hash;
     KeyCompare cmp;
     Entry* entries;

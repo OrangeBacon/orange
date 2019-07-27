@@ -43,10 +43,13 @@ typedef struct argParser {
 
     // which positional argument is next to be parsed
     unsigned int currentPosArg;
+
+    const char* name;
+    unsigned int nameLength;
 } argParser;
 
 // setup a new argument parser
-void argInit(argParser* parser);
+void argInit(argParser* parser, const char* name);
 
 // create a mode for the parser (sub-command)
 // that can handle parsing for that sub-command

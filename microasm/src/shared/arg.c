@@ -10,11 +10,36 @@ static void argInternalError(argParser* parser, const char* message) {
     cErrPrintf(TextRed, "Implementation Error: %s\n", message);
 }
 
+static void argUsage(argParser* parser) {
+    cErrPrintf(TextWhite, "%s ", parser->name);
+    for(unsigned int i = 0; i < parser->posArgCount; i++) {
+        posArg* arg = &parser->posArgs[i];
+        cErrPrintf(TextWhite, "<%s> ", arg->description);
+    }
+
+    cErrPrintf(TextWhite, "\n");
+
+    for(unsigned int i = 0; i < parser->modes.capacity; i++) {
+        Entry* entry = &parser->modes.entries[i];
+        if(entry->key.value == NULL) {
+            continue;
+        }
+        argUsage(entry->value);
+    }
+}
+
 // display error caused by incorrect command line
 // arguments being passed by the user
-static void argError(argParser* parser, const char* message) {
+static void argError(argParser* parser, const char* message, ...) {
+    va_list args;
+    va_start(args, message);
+
     parser->success = false;
-    cErrPrintf(TextRed, "Error: %s\n", message);
+    cErrPrintf(TextWhite, "Usage: \n");
+    argUsage(parser);
+    cErrPrintf(TextWhite, "\nError: ");
+    cErrVPrintf(TextRed, message, args);
+    cErrPrintf(TextWhite, "\n");
 }
 
 void argArguments(argParser* parser, int argc, char** argv) {
@@ -22,7 +47,7 @@ void argArguments(argParser* parser, int argc, char** argv) {
     parser->argv = &argv[1];
 }
 
-void argInit(argParser* parser) {
+static void argInitLen(argParser* parser, const char* name, unsigned int len) {
     initTable(&parser->modes, strHash, strCmp);
     ARRAY_ALLOC(posArg, *parser, posArg);
     parser->success = true;
@@ -31,6 +56,12 @@ void argInit(argParser* parser) {
     parser->usedSubParser = false;
     parser->modeTaken = false;
     parser->currentPosArg = 0;
+    parser->name = name;
+    parser->nameLength = len;
+}
+
+void argInit(argParser* parser, const char* name) {
+    argInitLen(parser, name, strlen(name));
 }
 
 argParser* argMode(argParser* parser, const char* name) {
@@ -39,7 +70,14 @@ argParser* argMode(argParser* parser, const char* name) {
     }
 
     argParser* new = ArenaAlloc(sizeof(argParser));
-    argInit(new);
+
+    unsigned int nameLen = parser->nameLength + 1 + strlen(name);
+    char* nameArr = ArenaAlloc(sizeof(char) * nameLen);
+    strncpy(nameArr, parser->name, parser->nameLength);
+    strcat(nameArr, " ");
+    strcat(nameArr, name);
+    argInitLen(new, nameArr, nameLen);
+
     tableSet(&parser->modes, (void*)name, new);
     return new;
 }
@@ -100,13 +138,14 @@ void argParse(argParser* parser) {
         }
 
         // no successfull use for the argument found
-        argError(parser, "unexpected argument");
+        argError(parser, "unexpected argument \"%s\"", parser->argv[i]);
         return;
     }
 
     // if not all positional arguments forfilled and using this parser
     if(!parser->usedSubParser && parser->currentPosArg != parser->posArgCount) {
-        argError(parser, "not enough arguments");
+        posArg* arg = &parser->posArgs[parser->currentPosArg];
+        argError(parser, "missing required positional argument <%s>", arg->description);
     }
     parser->parsed = true;
 }

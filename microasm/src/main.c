@@ -9,7 +9,7 @@ int main(int argc, char** argv){
     ArenaInit();
 
     argParser parser;
-    argInit(&parser);
+    argInit(&parser, "microasm");
     argString(&parser, "microcode file");
 
     argParser* vm = argMode(&parser, "vm");

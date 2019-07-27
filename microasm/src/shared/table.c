@@ -44,14 +44,14 @@ static Entry* findEntry(Entry* entries, int capacity, Key* key, KeyCompare cmp) 
     }
 }
 
-static void adjustCapacity(Table* table, int capacity) {
+static void adjustCapacity(Table* table, unsigned int capacity) {
     Entry* entries = ArenaAlloc(sizeof(Entry) * capacity);
-    for(int i = 0; i < capacity; i++) {
+    for(unsigned int i = 0; i < capacity; i++) {
         entries[i].key.value = NULL;
         entries[i].value = NULL;
     }
 
-    for(int i = 0; i < table->capacity; i++) {
+    for(unsigned int i = 0; i < table->capacity; i++) {
         Entry* entry = &table->entries[i];
         if(entry->key.value == NULL) {
             continue;
