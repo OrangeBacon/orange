@@ -4,14 +4,37 @@
 // positional argument
 // will allow for multiple argument types (ie add int)
 typedef struct posArg {
-    enum type {
-        TYPE_STRING
+    enum posType {
+        POS_STRING
     } type;
-    union value {
+    union posValue {
         char* as_string;
     } value;
     const char* description;
 } posArg;
+
+typedef void (*optionAction)(void* ctx);
+
+typedef struct optionArg {
+    const char* longName;
+
+    bool hasShortName;
+    char shortName;
+
+    enum optType {
+        OPT_STRING,
+        OPT_ACTION,
+        OPT_NONE
+    } type;
+    union optValue {
+        char* as_string;
+    } value;
+
+    optionAction action;
+    void* ctx;
+
+    bool found;
+} optionArg;
 
 // argument parser state
 typedef struct argParser {
@@ -22,6 +45,8 @@ typedef struct argParser {
     // map of all avaliable modes to parsers
     // that can handle the mode
     Table modes;
+
+    Table options;
 
     // has the parser run
     bool parsed;
@@ -44,7 +69,10 @@ typedef struct argParser {
     // which positional argument is next to be parsed
     unsigned int currentPosArg;
 
+    // the name of the current parser, including executable name (and mode name(s))
     const char* name;
+
+    // length of the name
     unsigned int nameLength;
 } argParser;
 
@@ -65,6 +93,10 @@ void argParse(argParser* parser);
 // set the parser's arguments to one beyond the provided
 // argc and argc, for ignoring program name and mode name
 void argArguments(argParser* parser, int argc, char** argv);
+
+optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg);
+
+optionArg* argActionOption(argParser* parser, char shortName, const char* longName, optionAction action, void* ctx);
 
 // has the parser !(encountered any errors)
 bool argSuccess(argParser* parser);
