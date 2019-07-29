@@ -14,6 +14,7 @@ add_executable(microasm
     src/microcode/error.c
     src/microcode/test.c
     src/microcode/analyse.c
+    src/microcode/codegen.c
 
     src/emulator/emu.c
     src/emulator/register.c

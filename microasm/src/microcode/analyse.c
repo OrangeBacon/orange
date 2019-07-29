@@ -205,12 +205,12 @@ static Analysis Analyses[] = {
     AnalyseOpcode
 };
 
-Microcode Analyse(Parser* parser) {
+Microcode* Analyse(Parser* parser) {
     initTable(&identifiers, tokenHash, tokenCmp);
     initMicrocode(&outputCode);
     for(unsigned int i = 0; i < sizeof(Analyses)/sizeof(Analysis); i++) {
         Analyses[i](parser);
     }
 
-    return outputCode;
+    return &outputCode;
 }
