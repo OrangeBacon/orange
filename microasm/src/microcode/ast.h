@@ -88,6 +88,10 @@ typedef struct NumericOpcode {
 
 typedef struct Microcode {
     DEFINE_ARRAY(NumericOpcode, opcode);
+    unsigned int opcodeSize;
+    unsigned int phaseSize;
+    unsigned int inputBitCount;
+    unsigned int outputBitCount;
 } Microcode;
 
 void initMicrocode(Microcode* mcode);

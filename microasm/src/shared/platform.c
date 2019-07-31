@@ -120,7 +120,7 @@ const char* readFilePtr(FILE* file) {
     return buffer;
 }
 
-static const char* pathSeperator =
+const char* pathSeperator =
 #ifdef _WIN32
     "\\";
 #else

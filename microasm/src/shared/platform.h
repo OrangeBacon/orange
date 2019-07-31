@@ -56,4 +56,6 @@ typedef void(*directoryCallback)(const char* path, const char* file);
 
 void iterateDirectory(const char* basePath, directoryCallback callback);
 
+extern const char* pathSeperator;
+
 #endif

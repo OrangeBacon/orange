@@ -33,6 +33,8 @@ static void AnalyseOutput(Parser* parser) {
         errorAt(parser, 100, &mcode->out.width, "Output width has to be one or greater");
     }
 
+    outputCode.outputBitCount = mcode->out.valueCount;
+
     Table outputs;
     initTable(&outputs, tokenHash, tokenCmp);
 
@@ -66,11 +68,13 @@ static void AnalyseInput(Parser* parser) {
         return;
     }
 
+    int totalWidth = 0;
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         InputValue* val = &mcode->inp.values[i];
         if(val->value.data.value < 1) {
             errorAt(parser, 101, &val->value, "Input width has to be one or greater");
         }
+        totalWidth += val->value.data.value;
 
         void* v;
         if(tableGetKey(&identifiers, &val->name, &v)) {
@@ -84,6 +88,7 @@ static void AnalyseInput(Parser* parser) {
             tableSet(&identifiers, &val->name, id);
         }
     }
+    outputCode.inputBitCount = totalWidth;
 
     Identifier* val;
     Token opsize = createStrToken("opsize");
@@ -96,6 +101,7 @@ static void AnalyseInput(Parser* parser) {
     } else {
         warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
     }
+    outputCode.opcodeSize = val->data->data.value;
 
     Token phase = createStrToken("phase");
     if(tableGet(&identifiers, &phase, (void**)&val)) {
@@ -107,6 +113,7 @@ static void AnalyseInput(Parser* parser) {
     } else {
         warnAt(parser, 114, &mcode->inp.inputHeadToken, "Input statements require a 'phase' parameter");
     }
+    outputCode.phaseSize = val->data->data.value;
 }
 
 static void AnalyseHeader(Parser* parser) {
@@ -194,6 +201,7 @@ static void AnalyseOpcode(Parser* parser) {
         }
 
         NumericOpcode ncode = {0};
+        ncode.id = code->id.data.value;
         PUSH_ARRAY(NumericOpcode, outputCode, opcode, ncode);
     }
 }

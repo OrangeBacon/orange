@@ -164,6 +164,7 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName, bo
     arg->shortName = shortName;
     arg->longName = longName;
     arg->type = takesArg ? OPT_STRING : OPT_NONE;
+    arg->found = false;
 
     tableSet(&parser->options, (void*)longName, arg);
     return arg;
