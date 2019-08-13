@@ -50,8 +50,8 @@ set_property(TARGET generator PROPERTY C_STANDARD 99)
 
 add_custom_command(
     OUTPUT switch.c
-    COMMAND generator "${CMAKE_CURRENT_SOURCE_DIR}/test/sample.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
-    DEPENDS generator "${CMAKE_CURRENT_SOURCE_DIR}/test/sample.uasm"
+    COMMAND generator "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
+    DEPENDS generator "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm"
 )
 
 add_executable(microasm
