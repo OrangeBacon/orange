@@ -1,6 +1,7 @@
 #ifndef EMULATOR_H
 #define EMULATOR_H
 
+#include <stdio.h>
 #include <stdint.h>
 #include "shared/memory.h"
 
@@ -52,6 +53,8 @@ typedef struct VMCore {
     // is the vm at, relies on overflowing to 0 instead of
     // having a value of 16 (is this undefined behaviour?)
     unsigned int phase : 4;
+
+    FILE* switchFile;
 } VMCore;
 
 // va args array push wrapper

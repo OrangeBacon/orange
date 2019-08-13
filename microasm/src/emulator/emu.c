@@ -19,10 +19,10 @@ void emulator() {
 
     vmcoreInit(&core);
 
-    unsigned int A = createRegister(&core);
-    unsigned int B = createRegister(&core);
-    unsigned int addressBus = createBus(&core);
-    unsigned int dataBus = createBus(&core);
+    unsigned int A = createRegister(&core, "A");
+    unsigned int B = createRegister(&core, "B");
+    unsigned int addressBus = createBus(&core, "address");
+    unsigned int dataBus = createBus(&core, "data");
 
     unsigned int memAccess = memoryInit(&mem, &core, addressBus, dataBus);
     unsigned int setIReg = instRegInit(&core, &instreg, dataBus);
@@ -43,4 +43,6 @@ void emulator() {
     setIReg);
 
     cOutPrintf(TextWhite, "%i\n", instreg.opcode);
+
+    vmcoreFree(&core);
 }

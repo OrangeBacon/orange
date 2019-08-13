@@ -8,11 +8,13 @@
 // create an emulator
 void vmcoreInit(VMCore* core);
 
+void vmcoreFree(VMCore* core);
+
 // add a bus to the emulator, return its id
-unsigned int createBus(VMCore* core);
+unsigned int createBus(VMCore* core, const char* name);
 
 // add a register to the emulator, return its id
-unsigned int createRegister(VMCore* core);
+unsigned int createRegister(VMCore* core, const char* name);
 
 // call a microcode command given its id
 void coreCall(VMCore* core, unsigned int method);
