@@ -5,6 +5,7 @@
 #include "microcode/scanner.h"
 #include "microcode/parser.h"
 #include "microcode/analyse.h"
+#include "emulator/compiletime/createEmulator.h"
 
 int main(int argc, char** argv){
     startColor();

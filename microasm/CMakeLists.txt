@@ -29,7 +29,11 @@ set(SHARED_FILES
     src/shared/graph.c
 )
 
-set(EMULATOR_FILES
+set(EMULATOR_GENERATE
+    src/emulator/compiletime/createEmulator.c
+)
+
+set(EMULATOR_RUNTIME
     src/emulator/runtime/emu.c
     src/emulator/runtime/register.c
     src/emulator/runtime/vmcore.c
@@ -39,9 +43,10 @@ set(EMULATOR_FILES
 )
 
 add_executable(generator
-    src/microcode/prebuild.c
+    src/emulator/compiletime/prebuild.c
     ${SHARED_FILES}
     ${MICROCODE_FILES}
+    ${EMULATOR_GENERATE}
 )
 target_link_libraries(generator m)
 target_compile_options(generator PRIVATE -Wall -Wextra -pedantic -Werror)
@@ -58,7 +63,7 @@ add_executable(microasm
     switch.c
     ${SHARED_FILES}
     ${MICROCODE_FILES}
-    ${EMULATOR_FILES}
+    ${EMULATOR_RUNTIME}
 )
 target_link_libraries(microasm m)
 target_compile_options(microasm PRIVATE -Wall -Wextra -pedantic -Werror)
