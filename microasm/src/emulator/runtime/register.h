@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "shared/memory.h"
-#include "emulator/emulator.h"
+#include "emulator/runtime/emulator.h"
 
 // create a register
 void regInit(Register* reg);

@@ -2,7 +2,7 @@
 #define INSTREG_H
 
 #include <stdint.h>
-#include "emulator/vmcore.h"
+#include "emulator/runtime/vmcore.h"
 
 // stores current opcode and arguments to said opcode
 typedef struct InstReg {

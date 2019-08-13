@@ -1,10 +1,10 @@
 #include "shared/platform.h"
-#include "emulator/emu.h"
-#include "emulator/emulator.h"
-#include "emulator/vmcore.h"
-#include "emulator/register.h"
-#include "emulator/memory64k.h"
-#include "emulator/instructionRegister.h"
+#include "emulator/runtime/emu.h"
+#include "emulator/runtime/emulator.h"
+#include "emulator/runtime/vmcore.h"
+#include "emulator/runtime/register.h"
+#include "emulator/runtime/memory64k.h"
+#include "emulator/runtime/instructionRegister.h"
 
 // This file contains a simple test for the rest of the emulator and will
 // be re-written or removed when all of the emulator works, with regard to

@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 #include "shared/memory.h"
-#include "emulator/emulator.h"
+#include "emulator/runtime/emulator.h"
 
 // create an emulator
 void vmcoreInit(VMCore* core);

@@ -31,12 +31,12 @@ set(SHARED_FILES
 )
 
 set(EMULATOR_FILES
-    src/emulator/emu.c
-    src/emulator/register.c
-    src/emulator/vmcore.c
-    src/emulator/memory64k.c
-    src/emulator/instructionRegister.c
-    src/emulator/emulator.c
+    src/emulator/runtime/emu.c
+    src/emulator/runtime/register.c
+    src/emulator/runtime/vmcore.c
+    src/emulator/runtime/memory64k.c
+    src/emulator/runtime/instructionRegister.c
+    src/emulator/runtime/emulator.c
 )
 
 add_executable(generator

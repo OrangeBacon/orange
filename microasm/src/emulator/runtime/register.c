@@ -1,6 +1,6 @@
 #include "shared/memory.h"
-#include "emulator/register.h"
-#include "emulator/vmcore.h"
+#include "emulator/runtime/register.h"
+#include "emulator/runtime/vmcore.h"
 #include "shared/platform.h"
 #include <stdlib.h>
 

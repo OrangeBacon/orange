@@ -1,5 +1,5 @@
-#include "emulator/vmcore.h"
-#include "emulator/register.h"
+#include "emulator/runtime/vmcore.h"
+#include "emulator/runtime/register.h"
 #include "shared/graph.h"
 
 // allocate arrays within the virtual machine

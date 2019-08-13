@@ -1,4 +1,4 @@
-#include "emulator/instructionRegister.h"
+#include "emulator/runtime/instructionRegister.h"
 #include "shared/memory.h"
 #include "shared/platform.h"
 #include <stdlib.h>

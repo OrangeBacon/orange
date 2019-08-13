@@ -1,4 +1,4 @@
-#include "emulator/memory64k.h"
+#include "emulator/runtime/memory64k.h"
 #include "shared/memory.h"
 #include "shared/platform.h"
 #include <stdlib.h>
