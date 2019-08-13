@@ -2,7 +2,7 @@
 #include "shared/memory.h"
 #include "shared/arg.h"
 #include "microcode/test.h"
-#include "emulator/emu.h"
+#include "emulator/runtime/emu.h"
 
 int main(int argc, char** argv){
     startColor();
@@ -11,8 +11,6 @@ int main(int argc, char** argv){
     argParser parser;
     argInit(&parser, "microasm");
     argString(&parser, "microcode file");
-    optionArg* output = argOption(&parser, 'o', "output", true);
-    output->value.as_string = "\0";
 
     argParser* vm = argMode(&parser, "vm");
 
@@ -32,7 +30,7 @@ int main(int argc, char** argv){
         if(vm->modeTaken) {
             emulator();
         } else {
-            runFileName(strArg(parser, 0), output->value.as_string);
+            runFileName(strArg(parser, 0));
         }
     }
 }

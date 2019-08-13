@@ -2,7 +2,9 @@
 
 #include "shared/platform.h"
 #include "shared/memory.h"
-#include "microcode/test.h"
+#include "microcode/scanner.h"
+#include "microcode/parser.h"
+#include "microcode/analyse.h"
 
 int main(int argc, char** argv){
     startColor();
@@ -13,5 +15,13 @@ int main(int argc, char** argv){
         exit(-1);
     }
 
-    runFileName(argv[1], argv[2]);
+    Scanner scan;
+    ScannerInit(&scan, readFile(argv[1]), argv[1]);
+
+    Parser parse;
+    ParserInit(&parse, &scan);
+
+    Parse(&parse);
+    Microcode* m = Analyse(&parse);
+    (void)m;
 }

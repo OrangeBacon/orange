@@ -19,7 +19,6 @@ set(MICROCODE_FILES
     src/microcode/error.c
     src/microcode/test.c
     src/microcode/analyse.c
-    src/microcode/codegen.c
 )
 
 set(SHARED_FILES

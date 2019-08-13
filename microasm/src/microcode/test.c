@@ -6,14 +6,13 @@
 #include "microcode/test.h"
 #include "microcode/error.h"
 #include "microcode/analyse.h"
-#include "microcode/codegen.h"
 
-bool runFileName(const char* fileName, char* outputFile) {
+bool runFileName(const char* fileName) {
     Parser p;
-    return runFile(fileName, readFile(fileName), &p, false, outputFile);
+    return runFile(fileName, readFile(fileName), &p, false);
 }
 
-bool runFile(const char* fileName, const char* file, Parser* parse, bool testing, char* outputFile) {
+bool runFile(const char* fileName, const char* file, Parser* parse, bool testing) {
     const char* fullFileName = resolvePath(fileName);
 
     Scanner scan;
@@ -44,10 +43,7 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
 #endif
     if(!strcmp(ext, "uasm")) {
         Parse(parse);
-        Microcode* m = Analyse(parse);
-        if(outputFile[0] != '\0') {
-            codegen(m, outputFile);
-        }
+        Analyse(parse);
         return true;
     }
 
@@ -63,7 +59,7 @@ static void runTest(const char* path, const char* file) {
     Parser parser;
 
     printf("Testing: %s  ->\n", resolvePath(path));
-    bool runSuccess = runFile(path, file, &parser, true, "\0");
+    bool runSuccess = runFile(path, file, &parser, true);
 
     unsigned int currentAstError = 0;
     while(currentAstError < parser.ast.errorCount) {
