@@ -24,5 +24,7 @@ int main(int argc, char** argv){
 
     Parse(&parse);
     Microcode* m = Analyse(&parse);
-    (void)m;
+    if(!parse.hadError) {
+        createEmulator(argv[2], m);
+    }
 }

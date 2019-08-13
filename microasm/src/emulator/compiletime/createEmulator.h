@@ -4,4 +4,6 @@
 #include "microcode/token.h"
 #include "microcode/ast.h"
 
+void createEmulator(const char* fileName, Microcode* mcode);
+
 #endif
