@@ -1,5 +1,6 @@
 #include "emulator/compiletime/createEmulator.h"
 #include "emulator/compiletime/cWriter.h"
+#include "emulator/compiletime/emulatorWriter.h"
 
 void createEmulator(const char* fileName, Microcode* mcode) {
     (void)mcode;
@@ -7,16 +8,14 @@ void createEmulator(const char* fileName, Microcode* mcode) {
     cWriter writer;
     initWriter(&writer);
 
+    writer.preamble = "void emulator(){\n";
+    writer.footer = "}\n";
+
     addHeader(&writer, "stdio.h", true);
     addHeader(&writer, "stdbool.h", true);
 
-    writer.preamble =
-        "void emulator() {\n"
-        "switch(true){\n"
-        "case false: break;\n"
-        "case true: break;\n"
-        "}\n"
-        "}\n";
+    addRegister(&writer, "A");
+    addRegister(&writer, "B");
 
     writeC(fileName, &writer);
 }

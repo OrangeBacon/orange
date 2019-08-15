@@ -1,8 +1,13 @@
 #include "emulator/compiletime/cWriter.h"
 #include <stdio.h>
+#include <stdarg.h>
 
 void initWriter(cWriter* writer) {
-    ARRAY_ALLOC(const char*, *writer, header);
+    writer->preamble = NULL;
+    ARRAY_ALLOC(cHeader, *writer, header);
+    ARRAY_ALLOC(cVariable, *writer, variable);
+    ARRAY_ALLOC(char*, *writer, initCode);
+    writer->footer = NULL;
 }
 
 void addHeader(cWriter* writer, const char* header, bool system) {
@@ -11,6 +16,27 @@ void addHeader(cWriter* writer, const char* header, bool system) {
     head.system = system;
 
     PUSH_ARRAY(cHeader, *writer, header, head);
+}
+
+void addVariable(cWriter* writer, const char* type, const char* name) {
+    cVariable var;
+    var.name = name;
+    var.type = type;
+
+    PUSH_ARRAY(cVariable, *writer, variable, var);
+}
+
+void addInitCode(cWriter* writer, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    size_t bufSize = vsnprintf(NULL, 0, format, args);
+    char* buf = ArenaAlloc(sizeof(char) * (bufSize + 1));
+    vsnprintf(buf, bufSize, format, args);
+
+    PUSH_ARRAY(char*, *writer, initCode, buf);
+
+    va_end(args);
 }
 
 void writeC(const char* fileName, cWriter* writer) {
@@ -31,7 +57,26 @@ void writeC(const char* fileName, cWriter* writer) {
         }
     }
 
-    fputs(writer->preamble, file);
+    if(writer->preamble) {
+        fputs(writer->preamble, file);
+    }
+
+    for(unsigned int i = 0; i < writer->variableCount; i++) {
+        cVariable* var = &writer->variables[i];
+        fputs(var->type, file);
+        fputs(" ", file);
+        fputs(var->name, file);
+        fputs(";\n", file);
+    }
+
+    for(unsigned int i = 0; i < writer->initCodeCount; i++) {
+        fputs(writer->initCodes[i], file);
+        fputs("\n", file);
+    }
+
+    if(writer->footer) {
+        fputs(writer->footer, file);
+    }
 
     fclose(file);
 }
