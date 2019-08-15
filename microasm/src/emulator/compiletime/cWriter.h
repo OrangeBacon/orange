@@ -2,6 +2,7 @@
 #define CWRITER_HEADER
 
 #include "shared/memory.h"
+#include "shared/table.h"
 #include <stdbool.h>
 
 typedef struct cHeader {
@@ -16,8 +17,8 @@ typedef struct cVariable {
 
 typedef struct cWriter {
     const char* preamble;
-    DEFINE_ARRAY(cHeader, header);
-    DEFINE_ARRAY(cVariable, variable);
+    Table headers;
+    Table variables;
     DEFINE_ARRAY(const char*, initCode);
     const char* footer;
 } cWriter;

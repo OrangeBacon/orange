@@ -52,7 +52,7 @@ add_executable(generator
 )
 target_link_libraries(generator m)
 target_compile_options(generator PRIVATE -Wall -Wextra -pedantic -Werror)
-set_property(TARGET generator PROPERTY C_STANDARD 99)
+set_property(TARGET generator PROPERTY C_STANDARD 11)
 
 add_custom_command(
     OUTPUT switch.c
@@ -69,7 +69,7 @@ add_executable(microasm
 )
 target_link_libraries(microasm m)
 target_compile_options(microasm PRIVATE -Wall -Wextra -pedantic -Werror)
-set_property(TARGET microasm PROPERTY C_STANDARD 99)
+set_property(TARGET microasm PROPERTY C_STANDARD 11)
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     include(CheckIPOSupported)
