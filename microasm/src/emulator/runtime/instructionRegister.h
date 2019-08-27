@@ -5,7 +5,7 @@
 #include "emulator/runtime/vmcore.h"
 
 // stores current opcode and arguments to said opcode
-typedef struct InstReg {
+typedef struct instructionRegister {
     uint16_t value;
     uint16_t opcode;
     uint16_t arg1;
@@ -13,9 +13,9 @@ typedef struct InstReg {
     uint16_t arg3;
     uint16_t arg12;
     uint16_t arg123;
-} InstReg;
+} instructionRegister;
 
 // create an instruction register
-unsigned int instRegInit(VMCore* core, InstReg* reg, unsigned int instBus);
+unsigned int instRegInit(VMCore* core, instructionRegister* reg, unsigned int instBus);
 
 #endif

@@ -7,6 +7,11 @@ typedef struct Register {
     const char* name;
 } Register;
 
+typedef struct Bus {
+    const char* name;
+} Bus;
+
 Register* addRegister(cWriter* writer, const char* name);
+Bus* addBus(cWriter* writer, const char* name);
 
 #endif

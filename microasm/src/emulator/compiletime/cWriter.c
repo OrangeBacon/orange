@@ -51,9 +51,16 @@ void initWriter(cWriter* writer) {
     writer->footer = NULL;
 }
 
-void addHeader(cWriter* writer, const char* header, bool system) {
+void addHeader(cWriter* writer, bool system, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    size_t bufSize = vsnprintf(NULL, 0, format, args);
+    char* buf = ArenaAlloc(sizeof(char) * (bufSize + 1));
+    vsnprintf(buf, bufSize, format, args);
+
     cHeader* head = ArenaAlloc(sizeof(cHeader));
-    head->fileName = header;
+    head->fileName = buf;
     head->system = system;
 
     tableSet(&writer->headers, head, (void*)1);

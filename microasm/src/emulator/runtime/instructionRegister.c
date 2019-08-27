@@ -11,7 +11,7 @@ typedef struct instRegCtx {
     // which bus to read from
     unsigned int bus;
     // which register to set the values in
-    InstReg* reg;
+    instructionRegister* reg;
 } instRegCtx;
 
 // set the values in the intruction register
@@ -37,7 +37,7 @@ static void instRegSet(VMCore* core, void* vctx) {
         (ctx->reg->arg2 << 0x7) + ctx->reg->arg3; // bits 8-16
 }
 
-unsigned int instRegInit(VMCore* core, InstReg* reg, unsigned int instBus) {
+unsigned int instRegInit(VMCore* core, instructionRegister* reg, unsigned int instBus) {
     // context needs to live for life of vm
     instRegCtx* ctx = ArenaAlloc(sizeof(instRegCtx));
     ctx->bus = instBus;

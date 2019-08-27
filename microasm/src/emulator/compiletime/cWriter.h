@@ -24,7 +24,7 @@ typedef struct cWriter {
 } cWriter;
 
 void initWriter(cWriter* writer);
-void addHeader(cWriter* writer, const char* header, bool system);
+void addHeader(cWriter* writer, bool system, const char* header, ...);
 void addVariable(cWriter* writer, const char* type, const char* name);
 void addInitCode(cWriter* writer, const char* code, ...);
 void writeC(const char* fileName, cWriter* writer);

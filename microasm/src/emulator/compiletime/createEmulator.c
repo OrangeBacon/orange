@@ -11,11 +11,12 @@ void createEmulator(const char* fileName, Microcode* mcode) {
     writer.preamble = "void emulator(){\n";
     writer.footer = "}\n";
 
-    addHeader(&writer, "stdio.h", true);
-    addHeader(&writer, "stdbool.h", true);
+    addHeader(&writer, true, "stdio.h");
+    addHeader(&writer, true, "stdbool.h");
 
     addRegister(&writer, "A");
     addRegister(&writer, "B");
+    addBus(&writer, "data");
 
     writeC(fileName, &writer);
 }
