@@ -8,9 +8,6 @@ void createEmulator(const char* fileName, Microcode* mcode) {
     cWriter writer;
     initWriter(&writer);
 
-    writer.preamble = "void emulator(){\n";
-    writer.footer = "}\n";
-
     addHeader(&writer, true, "stdio.h");
     addHeader(&writer, true, "stdbool.h");
 

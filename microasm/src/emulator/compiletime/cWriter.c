@@ -44,11 +44,8 @@ static bool varCmp(void* a, void* b) {
 }
 
 void initWriter(cWriter* writer) {
-    writer->preamble = NULL;
     initTable(&writer->headers, headerHash, headerCmp);
     initTable(&writer->variables, varHash, varCmp);
-    ARRAY_ALLOC(char*, *writer, initCode);
-    writer->footer = NULL;
 }
 
 void addHeader(cWriter* writer, bool system, const char* format, ...) {
@@ -77,19 +74,6 @@ void addVariable(cWriter* writer, const char* type, const char* name) {
     }
 }
 
-void addInitCode(cWriter* writer, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-
-    size_t bufSize = vsnprintf(NULL, 0, format, args);
-    char* buf = ArenaAlloc(sizeof(char) * (bufSize + 1));
-    vsnprintf(buf, bufSize, format, args);
-
-    PUSH_ARRAY(char*, *writer, initCode, buf);
-
-    va_end(args);
-}
-
 void writeC(const char* fileName, cWriter* writer) {
     FILE* file = fopen(fileName, "w");
 
@@ -112,9 +96,7 @@ void writeC(const char* fileName, cWriter* writer) {
         }
     }
 
-    if(writer->preamble) {
-        fputs(writer->preamble, file);
-    }
+    fputs("void emulator(){\n", file);
 
     for(unsigned int i = 0; i < writer->variables.capacity; i++) {
         Entry* entry = &writer->variables.entries[i];
@@ -126,16 +108,12 @@ void writeC(const char* fileName, cWriter* writer) {
         fputs(" ", file);
         fputs(var->name, file);
         fputs(";\n", file);
+        fputs("(void)", file);
+        fputs(var->name, file);
+        fputs(";\n", file);
     }
 
-    for(unsigned int i = 0; i < writer->initCodeCount; i++) {
-        fputs(writer->initCodes[i], file);
-        fputs("\n", file);
-    }
-
-    if(writer->footer) {
-        fputs(writer->footer, file);
-    }
+    fputs("}", file);
 
     fclose(file);
 }
