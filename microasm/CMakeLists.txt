@@ -30,9 +30,7 @@ set(SHARED_FILES
 )
 
 set(EMULATOR_GENERATE
-    src/emulator/compiletime/createEmulator.c
-    src/emulator/compiletime/cWriter.c
-    src/emulator/compiletime/emulatorWriter.c
+    src/emulator/compiletime/writeEmulator.c
 )
 
 set(EMULATOR_RUNTIME
