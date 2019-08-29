@@ -4,6 +4,7 @@
 #include <stdarg.h>
 
 void initCore(VMCoreGen* core) {
+    ARRAY_ALLOC(const char*, *core, compName);
     ARRAY_ALLOC(const char*, *core, variable);
     initTable(&core->headers, strHash, strCmp);
 }
@@ -30,9 +31,24 @@ void addVariable(VMCoreGen* core, const char* format, ...) {
     PUSH_ARRAY(const char*, *core, variable, buf);
 }
 
-void addRegister(VMCoreGen* core, const char* name) {
+Register addRegister(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
-    addVariable(core, "uint16_t %s", name);
+    addVariable(core, "uint16_t register%s", name);
+    PUSH_ARRAY(const char*, *core, compName, name);
+    return core->compNameCount - 1;
+}
+
+Bus addBus(VMCoreGen* core, const char* name) {
+    addHeader(core, "<stdint.h>");
+    addVariable(core, "uint16_t bus%s", name);
+    PUSH_ARRAY(const char*, *core, compName, name);
+    return core->compNameCount - 1;
+}
+
+void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg) {
+    (void)core;
+    (void)bus;
+    (void)reg;
 }
 
 void writeCore(VMCoreGen* core, const char* filename) {
