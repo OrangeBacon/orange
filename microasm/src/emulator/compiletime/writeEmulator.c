@@ -1,12 +1,15 @@
 #include "emulator/compiletime/writeEmulator.h"
 
-#include <stdio.h>
+#include "emulator/compiletime/vmcoregen.h"
 
 void writeEmulator(const char* filename, Microcode* mcode) {
-    FILE* file = fopen(filename, "w");
-
-    fputs("void emulator(){}", file);
-
-    fclose(file);
     (void)mcode;
+
+    VMCoreGen core;
+    initCore(&core);
+
+    addRegister(&core, "A");
+    addRegister(&core, "B");
+
+    writeCore(&core, filename);
 }

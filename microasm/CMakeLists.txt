@@ -31,6 +31,7 @@ set(SHARED_FILES
 
 set(EMULATOR_GENERATE
     src/emulator/compiletime/writeEmulator.c
+    src/emulator/compiletime/vmcoregen.c
 )
 
 set(EMULATOR_RUNTIME
