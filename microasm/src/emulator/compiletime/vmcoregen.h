@@ -4,6 +4,15 @@
 #include "shared/memory.h"
 #include "shared/table.h"
 
+typedef struct Argument {
+    const char* name;
+    const char* value;
+} Argument;
+
+typedef struct Arguments {
+    DEFINE_ARRAY(Argument, arg);
+} Arguments;
+
 typedef struct Dependancy {
     DEFINE_ARRAY(unsigned int, dep);
 } Dependancy;
@@ -15,7 +24,7 @@ typedef struct VMCoreGen {
     DEFINE_ARRAY(const char*, variable);
 
     DEFINE_ARRAY(const char*, command);
-    DEFINE_ARRAY(void*, context);
+    DEFINE_ARRAY(Arguments, argument);
     DEFINE_ARRAY(Dependancy, depends);
     DEFINE_ARRAY(Dependancy, changes);
 } VMCoreGen;
