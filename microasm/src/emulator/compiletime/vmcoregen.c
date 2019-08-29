@@ -49,9 +49,36 @@ Bus addBus(VMCoreGen* core, const char* name) {
     return core->compNameCount - 1;
 }
 
+void addInstructionRegister(VMCoreGen* core, Bus iBus) {
+    addHeader(core, "<stdint.h>");
+    addVariable(core, "uint16_t value");
+    addVariable(core, "uint16_t opcode");
+    addVariable(core, "uint16_t arg1");
+    addVariable(core, "uint16_t arg2");
+    addVariable(core, "uint16_t arg3");
+    addVariable(core, "uint16_t arg12");
+    addVariable(core, "uint16_t arg123");
+    PUSH_ARRAY(const char*, *core, compName, "IReg");
+    unsigned int this = core->compNameCount - 1;
+
+    {
+        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/instRegSet.c");
+        Arguments args;
+        ARRAY_ALLOC(Argument, args, arg);
+        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "inst", .value = core->compNames[iBus]}));
+        PUSH_ARRAY(Arguments, *core, argument, args);
+        Dependancy depends;
+        ARRAY_ALLOC(unsigned int, depends, dep);
+        PUSH_ARRAY(unsigned int, depends, dep, iBus);
+        PUSH_ARRAY(Dependancy, *core, depends, depends);
+        Dependancy changes;
+        ARRAY_ALLOC(unsigned int, changes, dep);
+        PUSH_ARRAY(unsigned int, changes, dep, this);
+        PUSH_ARRAY(Dependancy, *core, changes, changes);
+    }
+}
+
 void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg) {
-    (void)bus;
-    (void)reg;
     {
         PUSH_ARRAY(const char*, *core, command, "emulator/runtime/busToReg.c");
         Arguments args;
@@ -102,7 +129,7 @@ void writeCore(VMCoreGen* core, const char* filename) {
     fputs("void emulator() {\n", file);
 
     for(unsigned int i = 0; i < core->variableCount; i++) {
-        fprintf(file, "%s;\n", core->variables[i]);
+        fprintf(file, "%s = {0};\n", core->variables[i]);
     }
 
     for(unsigned int i = 0; i < core->commandCount; i++) {

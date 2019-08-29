@@ -1,28 +1,13 @@
-# create opcode for value 0x78, depends on three registers
-opcode 127 ADD(Reg, Reg, Reg) {
-    MI,GE,HE;  # assert the MI, GE, and HE signals when the phase counter is 0, opcode is 78 for all flags
-    TX,MI,MT,GE;
-    *: ; # explicit no operation, `*:` reqired as repeated `;` ignored
-    overflow = 1: MI, MT, TX;
-    overflow = 0: ;
-}
-
-header {
-    HE, TE, MT # any condition codes here are an error (other than `*:`)
-}
-
-opcode 0x11 JMP(Reg) {
-    TX, RE;
-}
-
-output(878) {
-    0: MT;
-    1: TE;
-    2: HE;
-    3: MI;
-    4: GE;
-    5: TX;
-    6: RE;
+output(16) {
+    0: dataToA;
+    1: aToData;
+    2: dataToB;
+    3: bToData;
+    4: addressToA;
+    5: aToAddress;
+    6: addressToB;
+    7: bToAddress;
+    8: HLT;
 }
 
 input {
@@ -30,4 +15,18 @@ input {
     phase: 4;
 }
 
-opcode 0x11 JMP(Reg) = overflow = 1: TX, RE;
+header {
+
+}
+
+opcode 1 memToA(Reg, Reg, Reg) {
+    
+}
+
+opcode 2 memToB() {
+
+}
+
+opcode 3 halt() {
+    HLT
+}

@@ -39,6 +39,7 @@ void addVariable(VMCoreGen* core, const char* format, ...);
 
 Register addBus(VMCoreGen* core, const char* name);
 Bus addRegister(VMCoreGen* core, const char* name);
+void addInstructionRegister(VMCoreGen* core, Bus iBus);
 
 void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg);
 
