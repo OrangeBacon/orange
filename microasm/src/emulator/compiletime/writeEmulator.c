@@ -19,6 +19,7 @@ void writeEmulator(const char* filename, Microcode* mcode) {
     addBusRegisterConnection(&core, address, B);
 
     addInstructionRegister(&core, data);
+    addMemory64k(&core, address, data);
 
     writeCore(&core, filename);
 }

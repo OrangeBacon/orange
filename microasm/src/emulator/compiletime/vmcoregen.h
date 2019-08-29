@@ -42,6 +42,7 @@ Bus addRegister(VMCoreGen* core, const char* name);
 void addInstructionRegister(VMCoreGen* core, Bus iBus);
 
 void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg);
+void addMemory64k(VMCoreGen* core, Bus address, Bus data);
 
 void writeCore(VMCoreGen* core, const char* filename);
 

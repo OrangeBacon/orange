@@ -78,6 +78,49 @@ void addInstructionRegister(VMCoreGen* core, Bus iBus) {
     }
 }
 
+void addMemory64k(VMCoreGen* core, Bus address, Bus data) {
+    addHeader(core, "<stdint.h>");
+    addVariable(core, "uint16_t memory[2<<15]");
+    PUSH_ARRAY(const char*, *core, compName, "Memory64");
+    unsigned int this = core->compNameCount - 1;
+
+    {
+        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/memRead.c");
+        Arguments args;
+        ARRAY_ALLOC(Argument, args, arg);
+        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "data", .value = core->compNames[data]}));
+        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "address", .value = core->compNames[address]}));
+        PUSH_ARRAY(Arguments, *core, argument, args);
+        Dependancy depends;
+        ARRAY_ALLOC(unsigned int, depends, dep);
+        PUSH_ARRAY(unsigned int, depends, dep, address);
+        PUSH_ARRAY(unsigned int, depends, dep, this);
+        PUSH_ARRAY(Dependancy, *core, depends, depends);
+        Dependancy changes;
+        ARRAY_ALLOC(unsigned int, changes, dep);
+        PUSH_ARRAY(unsigned int, changes, dep, data);
+        PUSH_ARRAY(Dependancy, *core, changes, changes);
+    }
+
+    {
+        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/memWrite.c");
+        Arguments args;
+        ARRAY_ALLOC(Argument, args, arg);
+        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "data", .value = core->compNames[data]}));
+        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "address", .value = core->compNames[address]}));
+        PUSH_ARRAY(Arguments, *core, argument, args);
+        Dependancy depends;
+        ARRAY_ALLOC(unsigned int, depends, dep);
+        PUSH_ARRAY(unsigned int, depends, dep, address);
+        PUSH_ARRAY(unsigned int, depends, dep, data);
+        PUSH_ARRAY(Dependancy, *core, depends, depends);
+        Dependancy changes;
+        ARRAY_ALLOC(unsigned int, changes, dep);
+        PUSH_ARRAY(unsigned int, changes, dep, this);
+        PUSH_ARRAY(Dependancy, *core, changes, changes);
+    }
+}
+
 void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg) {
     {
         PUSH_ARRAY(const char*, *core, command, "emulator/runtime/busToReg.c");
