@@ -23,8 +23,8 @@ int main(int argc, char** argv){
     ParserInit(&parse, &scan);
 
     Parse(&parse);
-    Microcode* m = Analyse(&parse);
+    Analyse(&parse);
     if(!parse.hadError) {
-        writeEmulator(argv[2], m);
+        writeEmulator(argv[2], &parse);
     }
 }

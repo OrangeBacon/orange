@@ -2,7 +2,7 @@
 
 #include "emulator/compiletime/vmcoregen.h"
 
-void writeEmulator(const char* filename, Microcode* mcode) {
+void writeEmulator(const char* filename, Parser* mcode) {
     (void)mcode;
 
     VMCoreGen core;

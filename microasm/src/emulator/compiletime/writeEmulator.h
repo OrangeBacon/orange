@@ -1,9 +1,8 @@
 #ifndef WRITE_EMULATOR_H
 #define WRITE_EMULATOR_H
 
-#include "microcode/token.h"
-#include "microcode/ast.h"
+#include "microcode/parser.h"
 
-void writeEmulator(const char* filename, Microcode* mcode);
+void writeEmulator(const char* filename, Parser* mcode);
 
 #endif

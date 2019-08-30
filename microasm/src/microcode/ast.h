@@ -77,23 +77,4 @@ void InitAST(AST* mcode, const char* fileName);
 
 void PrintAST(AST* mcode);
 
-typedef struct NumericLine {
-    DEFINE_ARRAY(unsigned int, bit);
-} NumericLine;
-
-typedef struct NumericOpcode {
-    DEFINE_ARRAY(NumericLine, line);
-    unsigned int id;
-} NumericOpcode;
-
-typedef struct Microcode {
-    DEFINE_ARRAY(NumericOpcode, opcode);
-    unsigned int opcodeSize;
-    unsigned int phaseSize;
-    unsigned int inputBitCount;
-    unsigned int outputBitCount;
-} Microcode;
-
-void initMicrocode(Microcode* mcode);
-
 #endif

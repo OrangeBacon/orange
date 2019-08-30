@@ -23,10 +23,6 @@ void InitAST(AST* mcode, const char* fileName) {
 #endif
 }
 
-void initMicrocode(Microcode* mcode) {
-    ARRAY_ALLOC(NumericOpcode, *mcode, opcode);
-}
-
 void PrintAST(AST* mcode) {
     printf("Microcode:\n");
     printf("  Has Error: %s\n", mcode->hasError ? "true" : "false");
