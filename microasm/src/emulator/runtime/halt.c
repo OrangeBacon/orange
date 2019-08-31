@@ -1,0 +1,1 @@
+printf("A: %u\nB: %u\n", A, B);

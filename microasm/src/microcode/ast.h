@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "shared/memory.h"
+#include "shared/table.h"
 
 struct Token;
 struct Error;
@@ -48,6 +49,7 @@ typedef struct Output {
     DEFINE_ARRAY(OutputValue, value);
     struct Token width;
     bool isValid;
+    Table outputMap;
 } Output;
 
 typedef struct OpCode {
@@ -67,6 +69,7 @@ typedef struct AST {
     Output out;
 
     DEFINE_ARRAY(OpCode, opcode);
+    unsigned int opsize;
     
 #ifdef debug
     DEFINE_ARRAY(struct Error, expectedError);

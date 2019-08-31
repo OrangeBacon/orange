@@ -7,7 +7,10 @@ output(16) {
     5: aToAddress;
     6: addressToB;
     7: bToAddress;
-    8: HLT;
+    8: iRegSet;
+    9: memRead;
+    10: memWrite;
+    11: halt;
 }
 
 input {
@@ -16,11 +19,12 @@ input {
 }
 
 header {
-
+    iRegSet;
 }
 
 opcode 1 memToA(Reg, Reg, Reg) {
-    
+    aToData, dataToA;
+    bToData, dataToB;
 }
 
 opcode 2 memToB() {
@@ -28,5 +32,5 @@ opcode 2 memToB() {
 }
 
 opcode 3 halt() {
-    HLT
+    halt
 }

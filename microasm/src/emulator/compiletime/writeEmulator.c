@@ -21,5 +21,9 @@ void writeEmulator(const char* filename, Parser* mcode) {
     addInstructionRegister(&core, data);
     addMemory64k(&core, address, data);
 
+    addHaltInstruction(&core);
+
+    addCoreLoop(&core, mcode);
+
     writeCore(&core, filename);
 }

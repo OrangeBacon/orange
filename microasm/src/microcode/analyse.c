@@ -55,6 +55,18 @@ static void AnalyseOutput(Parser* parser) {
         id->data = &val->id;
         tableSet(&identifiers, &val->name, id);
     }
+
+    // reverse hash for id-based lookup
+    initTable(&mcode->out.outputMap, tokenHash, tokenCmp);
+    for(unsigned int i = 0; i < outputs.capacity; i++) {
+        Entry* entry = &outputs.entries[i];
+        if(entry->key.value == NULL) {
+            continue;
+        }
+        Token* id = entry->key.value;
+        Token* name = entry->value;
+        tableSet(&mcode->out.outputMap, name, id);
+    }
 }
 
 static void AnalyseInput(Parser* parser) {
@@ -96,6 +108,7 @@ static void AnalyseInput(Parser* parser) {
     } else {
         warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
     }
+    parser->ast.opsize = val->data->data.value;
 
     Token phase = createStrToken("phase");
     if(tableGet(&identifiers, &phase, (void**)&val)) {

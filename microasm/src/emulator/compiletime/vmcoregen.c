@@ -80,7 +80,7 @@ void addInstructionRegister(VMCoreGen* core, Bus iBus) {
 
 void addMemory64k(VMCoreGen* core, Bus address, Bus data) {
     addHeader(core, "<stdint.h>");
-    addVariable(core, "uint16_t memory[2<<15]");
+    addVariable(core, "uint16_t memory[1<<16]");
     PUSH_ARRAY(const char*, *core, compName, "Memory64");
     unsigned int this = core->compNameCount - 1;
 
@@ -157,6 +157,60 @@ void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg) {
     }
 }
 
+void addHaltInstruction(VMCoreGen* core) {
+    addHeader(core, "<stdlib.h>");
+    {
+        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/halt.c");
+        Arguments args;
+        ARRAY_ALLOC(Argument, args, arg);
+        PUSH_ARRAY(Arguments, *core, argument, args);
+        Dependancy depends;
+        ARRAY_ALLOC(unsigned int, depends, dep);
+        PUSH_ARRAY(Dependancy, *core, depends, depends);
+        Dependancy changes;
+        ARRAY_ALLOC(unsigned int, changes, dep);
+        PUSH_ARRAY(Dependancy, *core, changes, changes);
+    }
+}
+
+void addCoreLoop(VMCoreGen* core, Parser* mcode) {
+    addHeader(core, "<stdbool.h>");
+    addHeader(core, "<stdlib.h>");
+    core->opcodeCount = 1 << mcode->ast.opsize;
+    core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
+    for(unsigned int i = 0; i < core->opcodeCount; i++) {
+        core->opcodes[i].isValid = false;
+    }
+
+    for(unsigned int i = 0; i < mcode->ast.opcodeCount; i++) {
+        OpCode* code = &mcode->ast.opcodes[i];
+        GenOpCode* gencode = &core->opcodes[code->id.data.value];
+
+        gencode->isValid = true;
+        gencode->name = TOKEN_GET(code->name);
+        gencode->nameLen = code->name.length;
+
+        unsigned int count = 0;
+        for(unsigned int j = 0; j < code->lineCount; j++) {
+            Line** line = &code->lines[j];
+            count += (*line)->bits.dataCount;
+        }
+        gencode->bitCount = count;
+        gencode->bits = ArenaAlloc(sizeof(unsigned int) * gencode->bitCount);
+
+        unsigned int bitCounter = 0;
+        for(unsigned int j = 0; j < code->lineCount; j++) {
+            BitArray* line = &code->lines[j]->bits;
+            for(unsigned int k = 0; k < line->dataCount; k++) {
+                Token* value;
+                tableGet(&mcode->ast.out.outputMap, &line->datas[k], (void**)&value);
+                gencode->bits[bitCounter] = value->data.value;
+                bitCounter++;
+            }
+        }
+    }
+}
+
 void writeCore(VMCoreGen* core, const char* filename) {
     FILE* file = fopen(filename, "w");
 
@@ -175,19 +229,22 @@ void writeCore(VMCoreGen* core, const char* filename) {
         fprintf(file, "%s = {0};\n", core->variables[i]);
     }
 
-    for(unsigned int i = 0; i < core->commandCount; i++) {
-        for(unsigned int j = 0; j < core->arguments[i].argCount; j++) {
-            Argument* arg = &core->arguments[i].args[j];
-            fprintf(file, "#define %s %s\n", arg->name, arg->value);
-        }
-        fprintf(file, "#include \"%s\"\n", core->commands[i]);
-        for(unsigned int j = 0; j < core->arguments[i].argCount; j++) {
-            Argument* arg = &core->arguments[i].args[j];
-            fprintf(file, "#undef %s\n", arg->name);
+    fputs("while(true) {\nswitch(opcode) {\n", file);
+
+    for(unsigned int i = 0; i < core->opcodeCount; i++) {
+        GenOpCode* code = &core->opcodes[i];
+        if(code->isValid) {
+            fprintf(file, "// %.*s\ncase %u: // %u commands\n", code->nameLen, code->name, i, code->bitCount);
+            for(unsigned int j = 0; j < code->bitCount; j++) {
+                fprintf(file, "// command %u\n", code->bits[j]);
+            }
+            fputs("break;\n", file);
         }
     }
 
-    fputs("}\n", file);
+    fputs("default: exit(0);", file);
+
+    fputs("}}}\n", file);
 
     fclose(file);
 }

@@ -3,6 +3,7 @@
 
 #include "shared/memory.h"
 #include "shared/table.h"
+#include "microcode/parser.h"
 
 typedef struct Argument {
     const char* name;
@@ -17,6 +18,14 @@ typedef struct Dependancy {
     DEFINE_ARRAY(unsigned int, dep);
 } Dependancy;
 
+typedef struct GenOpCode {
+    bool isValid;
+    const char* name;
+    unsigned int nameLen;
+    unsigned int bitCount;
+    unsigned int* bits;
+} GenOpCode;
+
 typedef struct VMCoreGen {
     DEFINE_ARRAY(const char*, compName);
 
@@ -27,6 +36,9 @@ typedef struct VMCoreGen {
     DEFINE_ARRAY(Arguments, argument);
     DEFINE_ARRAY(Dependancy, depends);
     DEFINE_ARRAY(Dependancy, changes);
+
+    unsigned int opcodeCount;
+    GenOpCode* opcodes;
 } VMCoreGen;
 
 typedef unsigned int Register;
@@ -40,9 +52,11 @@ void addVariable(VMCoreGen* core, const char* format, ...);
 Register addBus(VMCoreGen* core, const char* name);
 Bus addRegister(VMCoreGen* core, const char* name);
 void addInstructionRegister(VMCoreGen* core, Bus iBus);
+void addHaltInstruction(VMCoreGen* core);
 
 void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg);
 void addMemory64k(VMCoreGen* core, Bus address, Bus data);
+void addCoreLoop(VMCoreGen* core, Parser* mcode);
 
 void writeCore(VMCoreGen* core, const char* filename);
 
