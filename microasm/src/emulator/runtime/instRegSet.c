@@ -1,4 +1,3 @@
-value = inst;
 opcode = (inst >> 9) & 0x7F; // first 7 bits
 arg1 =   (inst >> 6) & 0x7;  // next 3 bits
 arg2 =   (inst >> 3) & 0x7;  // next 3 bits

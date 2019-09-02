@@ -7,10 +7,12 @@ output(16) {
     5: aToAddress;
     6: addressToB;
     7: bToAddress;
-    8: iRegSet;
-    9: memRead;
-    10: memWrite;
-    11: halt;
+    8: IPToAddress;
+    9: iRegSet;
+    10: memReadToData;
+    11: memWrite;
+    12: memReadToInst;
+    13: halt;
 }
 
 input {
@@ -19,7 +21,7 @@ input {
 }
 
 header {
-    iRegSet;
+    IPToAddress, memReadToInst, iRegSet
 }
 
 opcode 1 memToA(Reg, Reg, Reg) {

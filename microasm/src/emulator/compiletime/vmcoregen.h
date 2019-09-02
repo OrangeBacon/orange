@@ -39,10 +39,18 @@ typedef struct VMCoreGen {
 
     unsigned int opcodeCount;
     GenOpCode* opcodes;
+
+    unsigned int headCount;
+    unsigned int* headBits;
 } VMCoreGen;
 
 typedef unsigned int Register;
 typedef unsigned int Bus;
+
+typedef struct Memory {
+    Bus address;
+    unsigned int id;
+} Memory;
 
 void initCore(VMCoreGen* core);
 
@@ -54,8 +62,9 @@ Bus addRegister(VMCoreGen* core, const char* name);
 void addInstructionRegister(VMCoreGen* core, Bus iBus);
 void addHaltInstruction(VMCoreGen* core);
 
-void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg);
-void addMemory64k(VMCoreGen* core, Bus address, Bus data);
+void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg, int state);
+Memory addMemory64k(VMCoreGen* core, Bus address, Bus data);
+void addMemoryBusOutput(VMCoreGen* core, Memory* mem, Bus bus);
 void addCoreLoop(VMCoreGen* core, Parser* mcode);
 
 void writeCore(VMCoreGen* core, const char* filename);
