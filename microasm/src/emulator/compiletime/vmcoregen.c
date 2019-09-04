@@ -79,7 +79,6 @@ void addInstructionRegister(VMCoreGen* core, Bus iBus) {
 
 Memory addMemory64k(VMCoreGen* core, Bus address, Bus data) {
     addHeader(core, "<stdint.h>");
-    addVariable(core, "uint16_t memory[1<<16]");
     PUSH_ARRAY(const char*, *core, compName, "Memory64");
     unsigned int this = core->compNameCount - 1;
 
@@ -268,7 +267,7 @@ void writeCore(VMCoreGen* core, const char* filename) {
         fprintf(file, "#include %s\n", header);
     }
 
-    fputs("void emulator() {\n", file);
+    fputs("void emulator(uint16_t* memory) {\n", file);
 
     for(unsigned int i = 0; i < core->variableCount; i++) {
         fprintf(file, "%s = {0};\n", core->variables[i]);

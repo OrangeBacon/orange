@@ -43,6 +43,16 @@ set(EMULATOR_RUNTIME
     src/emulator/runtime/emulator.c
 )
 
+set(MICROCODE_COMPILE_SOURCES
+    src/emulator/microcode.uasm
+    src/emulator/runtime/busToReg.c
+    src/emulator/runtime/halt.c
+    src/emulator/runtime/instRegSet.c
+    src/emulator/runtime/memRead.c
+    src/emulator/runtime/memWrite.c
+    src/emulator/runtime/regToBus.c
+)
+
 add_executable(generator
     src/emulator/compiletime/prebuild.c
     ${SHARED_FILES}
@@ -56,7 +66,7 @@ set_property(TARGET generator PROPERTY C_STANDARD 11)
 add_custom_command(
     OUTPUT switch.c
     COMMAND generator "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
-    DEPENDS generator "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm"
+    DEPENDS generator ${MICROCODE_COMPILE_SOURCES}
 )
 
 add_executable(microasm

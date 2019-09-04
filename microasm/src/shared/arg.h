@@ -101,4 +101,4 @@ optionArg* argActionOption(argParser* parser, char shortName, const char* longNa
 // has the parser !(encountered any errors)
 bool argSuccess(argParser* parser);
 
-#define strArg(parser, count) parser.posArgs[count].value.as_string
+#define strArg(parser, count) (parser).posArgs[count].value.as_string

@@ -13,6 +13,7 @@ int main(int argc, char** argv){
     argString(&parser, "microcode file");
 
     argParser* vm = argMode(&parser, "vm");
+    argString(vm, "main memory file");
 
 #ifdef debug
     argParser* test = argMode(&parser, "test");
@@ -24,11 +25,11 @@ int main(int argc, char** argv){
     if(argSuccess(&parser)) {
 #ifdef debug
         if(test->modeTaken) {
-            runTests(test->posArgs[0].value.as_string);
+            runTests(strArg(*test, 0));
         } else 
 #endif
         if(vm->modeTaken) {
-            emulator();
+            runEmulator(strArg(*vm, 0));
         } else {
             runFileName(strArg(parser, 0));
         }
