@@ -255,20 +255,7 @@ void addCoreLoop(VMCoreGen* core, Parser* mcode) {
     }
 }
 
-void writeCore(VMCoreGen* core, const char* filename) {
-    FILE* file = fopen(filename, "w");
-
-    for(unsigned int i = 0; i < core->headers.capacity; i++) {
-        Entry* entry = &core->headers.entries[i];
-        const char* header = entry->key.value;
-        if(header == NULL) {
-            continue;
-        }
-        fprintf(file, "#include %s\n", header);
-    }
-
-    fputs("void emulator(uint16_t* memory) {\n", file);
-
+static void outputLoop(VMCoreGen* core, FILE* file) {
     for(unsigned int i = 0; i < core->variableCount; i++) {
         fprintf(file, "%s = {0};\n", core->variables[i]);
     }
@@ -313,6 +300,26 @@ void writeCore(VMCoreGen* core, const char* filename) {
     fputs("default: exit(0);\n", file);
 
     fputs("}\nIP++;\n}}\n", file);
+}
+
+void writeCore(VMCoreGen* core, const char* filename) {
+    FILE* file = fopen(filename, "w");
+
+    for(unsigned int i = 0; i < core->headers.capacity; i++) {
+        Entry* entry = &core->headers.entries[i];
+        const char* header = entry->key.value;
+        if(header == NULL) {
+            continue;
+        }
+        fprintf(file, "#include %s\n", header);
+    }
+
+    fputs("void emulator(uint16_t* memory) {\n", file);
+    outputLoop(core, file);
+
+    fputs("#define DEBUG_OUTPUT\n", file);
+    fputs("void emulatorVerbose(uint16_t* memory) {\n", file);
+    outputLoop(core, file);
 
     fclose(file);
 }

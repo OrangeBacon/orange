@@ -3,7 +3,8 @@
 #include "shared/platform.h"
 #include <stdio.h>
 
-void runEmulator(const char* filename) {
+void runEmulator(const char* filename, bool verbose) {
+    (void)verbose;
     FILE* file = fopen(filename, "rb");
 
     uint16_t* memory = ArenaAlloc(sizeof(uint16_t) * (1<<16));
@@ -22,7 +23,11 @@ void runEmulator(const char* filename) {
         i++;
     }
 
-    emulator(memory);
-
     fclose(file);
+
+    if(verbose) {
+        emulatorVerbose(memory);
+    } else {
+        emulator(memory);
+    }
 }
