@@ -318,7 +318,7 @@ void writeCore(VMCoreGen* core, const char* filename) {
     outputLoop(core, file);
 
     fputs("#define DEBUG_OUTPUT\n", file);
-    fputs("void emulatorVerbose(uint16_t* memory) {\n", file);
+    fputs("void emulatorVerbose(uint16_t* memory, FILE* logFile) {\n", file);
     outputLoop(core, file);
 
     fclose(file);

@@ -1,7 +1,7 @@
 #define _str(x) #x
 #define str(x) _str(x)
 #ifdef DEBUG_OUTPUT
-printf(str(BUS)"(%u) = "str(REGISTER)"(%u)\n", BUS, REGISTER);
+fprintf(logFile, str(BUS)"(%u) = "str(REGISTER)"(%u)\n", BUS, REGISTER);
 #endif
 BUS = REGISTER;
 #undef _str

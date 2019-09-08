@@ -3,16 +3,15 @@
 #include "shared/platform.h"
 #include <stdio.h>
 
-void runEmulator(const char* filename, bool verbose) {
-    (void)verbose;
-    FILE* file = fopen(filename, "rb");
+void runEmulator(const char* filename, bool verbose, const char* logFileName) {
+    FILE* data = fopen(filename, "rb");
 
     uint16_t* memory = ArenaAlloc(sizeof(uint16_t) * (1<<16));
 
     unsigned int i = 0;
     while(true) {
-        int num1 = fgetc(file);
-        int num2 = fgetc(file);
+        int num1 = fgetc(data);
+        int num2 = fgetc(data);
         if(num1 == EOF) {
             break;
         }
@@ -23,10 +22,17 @@ void runEmulator(const char* filename, bool verbose) {
         i++;
     }
 
-    fclose(file);
+    fclose(data);
+
+    FILE* logFile;
+    if(logFileName == NULL) {
+        logFile = stdout;
+    } else {
+        logFile = fopen(logFileName, "w");
+    }
 
     if(verbose) {
-        emulatorVerbose(memory);
+        emulatorVerbose(memory, logFile);
     } else {
         emulator(memory);
     }

@@ -15,6 +15,7 @@ int main(int argc, char** argv){
     argParser* vm = argMode(&parser, "vm");
     argString(vm, "main memory file");
     optionArg* vmVerbose = argOption(vm, 'v', "verbose", false);
+    optionArg* vmLogFile = argOption(vm, 'l', "log", true);
 
 #ifdef debug
     argParser* test = argMode(&parser, "test");
@@ -30,7 +31,7 @@ int main(int argc, char** argv){
         } else 
 #endif
         if(vm->modeTaken) {
-            runEmulator(strArg(*vm, 0), vmVerbose->found);
+            runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);
         } else {
             runFileName(strArg(parser, 0));
         }

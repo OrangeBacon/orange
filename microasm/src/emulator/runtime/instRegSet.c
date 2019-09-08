@@ -16,7 +16,7 @@ arg12 = (arg1 << 0x7) + arg2;  // bits 8-13
 arg123 = (arg1 << 0x7) + 
     (arg2 << 0x7) + arg3; // bits 8-16
 #ifdef DEBUG_OUTPUT
-printf("ISet("BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN") => %u\n", BYTE_TO_BINARY(inst>>8), BYTE_TO_BINARY(inst), opcode);
+fprintf(logFile, "ISet("BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN") => %u\n", BYTE_TO_BINARY(inst>>8), BYTE_TO_BINARY(inst), opcode);
 #endif
 #undef BYTE_TO_BINARY_PATTERN
 #undef BYTE_TO_BINARY
