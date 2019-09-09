@@ -10,14 +10,6 @@ typedef struct Argument {
     const char* value;
 } Argument;
 
-typedef struct Arguments {
-    DEFINE_ARRAY(Argument, arg);
-} Arguments;
-
-typedef struct Dependancy {
-    DEFINE_ARRAY(unsigned int, dep);
-} Dependancy;
-
 typedef struct GenOpCode {
     bool isValid;
     const char* name;
@@ -26,29 +18,36 @@ typedef struct GenOpCode {
     unsigned int* bits;
 } GenOpCode;
 
+typedef struct Command {
+    const char* name;
+    const char* file;
+    Argument* args;
+    unsigned int argsLength;
+    unsigned int* depends;
+    unsigned int dependsLength;
+    unsigned int* changes;
+    unsigned int changesLength;
+} Command;
+
 typedef struct VMCoreGen {
     DEFINE_ARRAY(const char*, compName);
 
     Table headers;
     DEFINE_ARRAY(const char*, variable);
 
-    DEFINE_ARRAY(const char*, command);
-    DEFINE_ARRAY(Arguments, argument);
-    DEFINE_ARRAY(Dependancy, depends);
-    DEFINE_ARRAY(Dependancy, changes);
+    DEFINE_ARRAY(Command, command);
 
     unsigned int opcodeCount;
     GenOpCode* opcodes;
 
     unsigned int headCount;
     unsigned int* headBits;
+
+    const char* codeIncludeBase;
 } VMCoreGen;
 
-typedef unsigned int Register;
-typedef unsigned int Bus;
-
 typedef struct Memory {
-    Bus address;
+    unsigned int address;
     unsigned int id;
 } Memory;
 
@@ -57,16 +56,33 @@ void initCore(VMCoreGen* core);
 void addHeader(VMCoreGen* core, const char* format, ...);
 void addVariable(VMCoreGen* core, const char* format, ...);
 
-Register addBus(VMCoreGen* core, const char* name);
-Bus addRegister(VMCoreGen* core, const char* name);
-void addInstructionRegister(VMCoreGen* core, Bus iBus);
+unsigned int addBus(VMCoreGen* core, const char* name);
+unsigned int addRegister(VMCoreGen* core, const char* name);
+void addInstructionRegister(VMCoreGen* core, unsigned int iBus);
 void addHaltInstruction(VMCoreGen* core);
 
-void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg, int state);
-Memory addMemory64k(VMCoreGen* core, Bus address, Bus data);
-void addMemoryBusOutput(VMCoreGen* core, Memory* mem, Bus bus);
+void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int reg, int state);
+Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data);
+void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus);
 void addCoreLoop(VMCoreGen* core, Parser* mcode);
 
 void writeCore(VMCoreGen* core, const char* filename);
+
+void addCommand(VMCoreGen* core, Command command);
+
+unsigned int* AllocUInt(unsigned int itemCount, ...);
+Argument* AllocArgument(unsigned int itemCount, ...);
+
+#define DEPENDS(...) \
+    .depends = AllocUInt(sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int), __VA_ARGS__), \
+    .dependsLength = sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int)
+
+#define CHANGES(...) \
+    .changes = AllocUInt(sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int), __VA_ARGS__), \
+    .changesLength = sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int)
+
+#define ARGUMENTS(...) \
+    .args = AllocArgument(sizeof((Argument[]){__VA_ARGS__})/sizeof(Argument), __VA_ARGS__), \
+    .argsLength = sizeof((Argument[]){__VA_ARGS__})/sizeof(Argument)
 
 #endif

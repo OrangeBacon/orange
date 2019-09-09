@@ -10,10 +10,50 @@ void initCore(VMCoreGen* core) {
     ARRAY_ALLOC(const char*, *core, compName);
     ARRAY_ALLOC(const char*, *core, variable);
     ARRAY_ALLOC(const char*, *core, command);
-    ARRAY_ALLOC(Arguments, *core, argument);
-    ARRAY_ALLOC(Dependancy, *core, depends);
-    ARRAY_ALLOC(Dependancy, *core, changes);
+    ARRAY_ALLOC(Command, *core, command);
     initTable(&core->headers, strHash, strCmp);
+    core->codeIncludeBase = "emulator/runtime/";
+}
+
+unsigned int* AllocUInt(unsigned int itemCount, ...) {
+    va_list args;
+    va_start(args, itemCount);
+
+    unsigned int* data = ArenaAlloc(sizeof(unsigned int) * itemCount);
+
+    for(unsigned int i = 0; i < itemCount; i++) {
+        data[i] = va_arg(args, unsigned int);
+    }
+
+    return data;
+}
+
+Argument* AllocArgument(unsigned int itemCount, ...) {
+    va_list args;
+    va_start(args, itemCount);
+
+    Argument* data = ArenaAlloc(sizeof(Argument) * itemCount);
+
+    for(unsigned int i = 0; i < itemCount; i++) {
+        data[i] = va_arg(args, Argument);
+    }
+
+    return data;
+}
+
+void addCommand(VMCoreGen* core, Command command) {
+    PUSH_ARRAY(Command, *core, command, command);
+}
+
+char* aprintf(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    size_t len = vsnprintf(NULL, 0, format, args);
+    char* buf = ArenaAlloc(len * sizeof(char) + 1);
+    vsnprintf(buf, len + 1, format, args);
+
+    return buf;
 }
 
 void addHeader(VMCoreGen* core, const char* format, ...) {
@@ -38,21 +78,21 @@ void addVariable(VMCoreGen* core, const char* format, ...) {
     PUSH_ARRAY(const char*, *core, variable, buf);
 }
 
-Register addRegister(VMCoreGen* core, const char* name) {
+unsigned int addRegister(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
     PUSH_ARRAY(const char*, *core, compName, name);
     return core->compNameCount - 1;
 }
 
-Bus addBus(VMCoreGen* core, const char* name) {
+unsigned int addBus(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
     PUSH_ARRAY(const char*, *core, compName, name);
     return core->compNameCount - 1;
 }
 
-void addInstructionRegister(VMCoreGen* core, Bus iBus) {
+void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t opcode");
     addVariable(core, "uint16_t arg1");
@@ -63,63 +103,39 @@ void addInstructionRegister(VMCoreGen* core, Bus iBus) {
     PUSH_ARRAY(const char*, *core, compName, "IReg");
     unsigned int this = core->compNameCount - 1;
 
-    {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/instRegSet.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "inst", .value = core->compNames[iBus]}));
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(unsigned int, depends, dep, iBus);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(unsigned int, changes, dep, this);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
-    }
+    addCommand(core, (Command) {
+        .name = "instRegSet",
+        .file = "instRegSet",
+        ARGUMENTS(((Argument){.name = "inst", .value = core->compNames[iBus]})),
+        DEPENDS(iBus),
+        CHANGES(this)
+    });
 }
 
-Memory addMemory64k(VMCoreGen* core, Bus address, Bus data) {
+Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
     addHeader(core, "<stdint.h>");
     PUSH_ARRAY(const char*, *core, compName, "Memory64");
     unsigned int this = core->compNameCount - 1;
 
-    {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/memRead.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "data", .value = core->compNames[data]}));
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "address", .value = core->compNames[address]}));
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(unsigned int, depends, dep, address);
-        PUSH_ARRAY(unsigned int, depends, dep, this);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(unsigned int, changes, dep, data);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
-    }
+    addCommand(core, (Command) {
+        .name = aprintf("memReadTo%s", core->compNames[data]),
+        .file = "memRead",
+        ARGUMENTS(
+            ((Argument){.name = "data", .value = core->compNames[data]}), 
+            ((Argument){.name = "address", .value = core->compNames[address]})),
+        DEPENDS(address, this),
+        CHANGES(data)
+    });
 
-    {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/memWrite.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "data", .value = core->compNames[data]}));
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "address", .value = core->compNames[address]}));
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(unsigned int, depends, dep, address);
-        PUSH_ARRAY(unsigned int, depends, dep, data);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(unsigned int, changes, dep, this);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
-    }
+    addCommand(core, (Command) {
+        .name = "memWrite",
+        .file = "memWrite",
+        ARGUMENTS(
+            ((Argument){.name = "data", .value = core->compNames[data]}), 
+            ((Argument){.name = "address", .value = core->compNames[address]})),
+        DEPENDS(address, data),
+        CHANGES(this)
+    });
 
     return (Memory){
         .id = this,
@@ -127,77 +143,51 @@ Memory addMemory64k(VMCoreGen* core, Bus address, Bus data) {
     };
 }
 
-void addMemoryBusOutput(VMCoreGen* core, Memory* mem, Bus bus) {
-    {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/memRead.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "data", .value = core->compNames[bus]}));
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "address", .value = core->compNames[mem->address]}));
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(unsigned int, depends, dep, mem->address);
-        PUSH_ARRAY(unsigned int, depends, dep, mem->id);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(unsigned int, changes, dep, bus);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
-    }
+void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
+    addCommand(core, (Command) {
+        .name = aprintf("memReadTo%s", core->compNames[bus]),
+        .file = "memRead",
+        ARGUMENTS(
+            ((Argument){.name = "data", .value = core->compNames[bus]}), 
+            ((Argument){.name = "address", .value = core->compNames[mem->address]})),
+        DEPENDS(mem->address, mem->id),
+        CHANGES(bus)
+    });
 }
 
-void addBusRegisterConnection(VMCoreGen* core, Bus bus, Register reg, int state) {
+void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int reg, int state) {
     if(state == -1 || state == 0) {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/busToReg.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "BUS", .value = core->compNames[bus]}));
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "REGISTER", .value = core->compNames[reg]}));
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(unsigned int, depends, dep, bus);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(unsigned int, changes, dep, reg);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
+        addCommand(core, (Command) {
+            .name = aprintf("%sTo%s", core->compNames[bus], core->compNames[reg]),
+            .file = "busToReg",
+            ARGUMENTS(
+                ((Argument){.name = "BUS", .value = core->compNames[bus]}), 
+                ((Argument){.name = "REGISTER", .value = core->compNames[reg]})),
+            DEPENDS(bus),
+            CHANGES(reg)
+        });
     }
 
     if(state == 0 || state == 1) {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/regToBus.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "BUS", .value = core->compNames[bus]}));
-        PUSH_ARRAY(Argument, args, arg, ((Argument){.name = "REGISTER", .value = core->compNames[reg]}));
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(unsigned int, depends, dep, reg);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(unsigned int, changes, dep, bus);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
+        addCommand(core, (Command) {
+            .name = aprintf("%sTo%s", core->compNames[reg], core->compNames[bus]),
+            .file = "regToBus",
+            ARGUMENTS(
+                ((Argument){.name = "BUS", .value = core->compNames[bus]}), 
+                ((Argument){.name = "REGISTER", .value = core->compNames[reg]})),
+            DEPENDS(reg),
+            CHANGES(bus)
+        });
     }
 }
 
 void addHaltInstruction(VMCoreGen* core) {
     addHeader(core, "<stdlib.h>");
     addHeader(core, "<stdio.h>");
-    {
-        PUSH_ARRAY(const char*, *core, command, "emulator/runtime/halt.c");
-        Arguments args;
-        ARRAY_ALLOC(Argument, args, arg);
-        PUSH_ARRAY(Arguments, *core, argument, args);
-        Dependancy depends;
-        ARRAY_ALLOC(unsigned int, depends, dep);
-        PUSH_ARRAY(Dependancy, *core, depends, depends);
-        Dependancy changes;
-        ARRAY_ALLOC(unsigned int, changes, dep);
-        PUSH_ARRAY(Dependancy, *core, changes, changes);
-    }
+    addCommand(core, (Command) {
+        .name = "halt",
+        .file = "halt"
+    });
 }
 
 static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Token* opcodeName, unsigned int lineNumber) {
@@ -209,16 +199,14 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
         tableGet(&mcode->ast.out.outputMap, &line->datas[i], (void**)&value);
         unsigned int command = value->data.value;
         AddNode(&graph, command);
-        for(unsigned int j = 0; j < core->changess[command].depCount; j++) {
-            unsigned int changed = core->changess[command].deps[j];
+        for(unsigned int j = 0; j < core->commands[command].changesLength; j++) {
+            unsigned int changed = core->commands[command].changes[j];
             for(unsigned int k = 0; k < line->dataCount; k++) {
                 Token* value;
                 tableGet(&mcode->ast.out.outputMap, &line->datas[k], (void**)&value);
                 unsigned int comm = value->data.value;
-                for(unsigned int l = 0; l < core->dependss[comm].depCount; l++) {
-                    Dependancy temp = core->dependss[comm];
-                    unsigned int* temp2 = temp.deps;
-                    unsigned int depended = temp2[l];
+                for(unsigned int l = 0; l < core->commands[comm].dependsLength; l++) {
+                    unsigned int depended = core->commands[comm].depends[l];
                     if(changed == depended) {
                         AddEdge(&graph, command, comm);
                     }
@@ -309,13 +297,13 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
 
     for(unsigned int i = 0; i < core->headCount; i++) {
         unsigned int command = core->headBits[i];
-        for(unsigned int k = 0; k < core->arguments[command].argCount; k++) {
-            Argument* arg = &core->arguments[command].args[k];
+        for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
+            Argument* arg = &core->commands[command].args[k];
             fprintf(file, "#define %s %s\n", arg->name, arg->value);
         }
-        fprintf(file, "#include \"%s\"\n", core->commands[command]);
-        for(unsigned int k = 0; k < core->arguments[command].argCount; k++) {
-            Argument* arg = &core->arguments[command].args[k];
+        fprintf(file, "#include \"%s%s.c\"\n", core->codeIncludeBase, core->commands[command].file);
+        for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
+            Argument* arg = &core->commands[command].args[k];
             fprintf(file, "#undef %s\n", arg->name);
         }
     }
@@ -328,13 +316,13 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
             fprintf(file, "// %.*s\ncase %u: // %u commands\n", code->nameLen, code->name, i, code->bitCount);
             for(unsigned int j = 0; j < code->bitCount; j++) {
                 unsigned int command = code->bits[j];
-                for(unsigned int k = 0; k < core->arguments[command].argCount; k++) {
-                    Argument* arg = &core->arguments[command].args[k];
+                for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
+                    Argument* arg = &core->commands[command].args[k];
                     fprintf(file, "#define %s %s\n", arg->name, arg->value);
                 }
-                fprintf(file, "#include \"%s\"\n", core->commands[command]);
-                for(unsigned int k = 0; k < core->arguments[command].argCount; k++) {
-                    Argument* arg = &core->arguments[command].args[k];
+                fprintf(file, "#include \"%s%s.c\"\n", core->codeIncludeBase, core->commands[command].file);
+                for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
+                    Argument* arg = &core->commands[command].args[k];
                     fprintf(file, "#undef %s\n", arg->name);
                 }
             }
