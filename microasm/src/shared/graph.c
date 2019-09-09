@@ -81,10 +81,6 @@ NodeArray TopologicalSort(Graph* graph) {
         }
     }
 
-    if(retNull) {
-        cErrPrintf(TextRed, "Graph Cycle\n");
-        exit(1);
-    }
-
+    ret.validArray = !retNull;
     return ret;
 }

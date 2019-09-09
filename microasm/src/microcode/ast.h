@@ -27,6 +27,7 @@ typedef struct Line {
 typedef struct Header {
     DEFINE_ARRAY(BitArray, line);
     bool isValid;
+    struct Token errorPoint;
 } Header;
 
 typedef struct InputValue {

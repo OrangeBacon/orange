@@ -187,6 +187,7 @@ static void header(Parser* parser, bool write) {
 
     Header head;
     ARRAY_ALLOC(BitArray, head, line);
+    head.errorPoint = parser->previous;
 
     bool brace = blockStart(parser);
 

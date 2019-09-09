@@ -17,6 +17,7 @@ typedef struct Graph {
 
 typedef struct NodeArray {
     DEFINE_ARRAY(Node*, node);
+    bool validArray;
 } NodeArray;
 
 void InitGraph(Graph* graph);

@@ -2,6 +2,9 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include "shared/graph.h"
+#include "microcode/error.h"
 
 void initCore(VMCoreGen* core) {
     ARRAY_ALLOC(const char*, *core, compName);
@@ -197,9 +200,45 @@ void addHaltInstruction(VMCoreGen* core) {
     }
 }
 
+static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Token* opcodeName, unsigned int lineNumber) {
+    Graph graph;
+    InitGraph(&graph);
+
+    for(unsigned int i = 0; i < line->dataCount; i++) {
+        Token* value;
+        tableGet(&mcode->ast.out.outputMap, &line->datas[i], (void**)&value);
+        unsigned int command = value->data.value;
+        AddNode(&graph, command);
+        for(unsigned int j = 0; j < core->changess[command].depCount; j++) {
+            unsigned int changed = core->changess[command].deps[j];
+            for(unsigned int k = 0; k < line->dataCount; k++) {
+                Token* value;
+                tableGet(&mcode->ast.out.outputMap, &line->datas[k], (void**)&value);
+                unsigned int comm = value->data.value;
+                for(unsigned int l = 0; l < core->dependss[comm].depCount; l++) {
+                    Dependancy temp = core->dependss[comm];
+                    unsigned int* temp2 = temp.deps;
+                    unsigned int depended = temp2[l];
+                    if(changed == depended) {
+                        AddEdge(&graph, command, comm);
+                    }
+                }
+            }
+        }
+    }
+
+    NodeArray nodes = TopologicalSort(&graph);
+    if(!nodes.validArray) {
+        warnAt(mcode, 200, opcodeName, "Unable to order microcode bits in line %u", lineNumber);
+    }
+
+    return nodes;
+}
+
 void addCoreLoop(VMCoreGen* core, Parser* mcode) {
     addHeader(core, "<stdbool.h>");
     addHeader(core, "<stdlib.h>");
+
     core->opcodeCount = 1 << mcode->ast.opsize;
     core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
     for(unsigned int i = 0; i < core->opcodeCount; i++) {
@@ -225,10 +264,11 @@ void addCoreLoop(VMCoreGen* core, Parser* mcode) {
         unsigned int bitCounter = 0;
         for(unsigned int j = 0; j < code->lineCount; j++) {
             BitArray* line = &code->lines[j]->bits;
-            for(unsigned int k = 0; k < line->dataCount; k++) {
-                Token* value;
-                tableGet(&mcode->ast.out.outputMap, &line->datas[k], (void**)&value);
-                gencode->bits[bitCounter] = value->data.value;
+
+            NodeArray nodes = analyseLine(core, mcode, line, &code->name, j);
+
+            for(unsigned int k = 0; k < nodes.nodeCount; k++) {
+                gencode->bits[bitCounter] = nodes.nodes[k]->value;
                 bitCounter++;
             }
         }
@@ -244,14 +284,19 @@ void addCoreLoop(VMCoreGen* core, Parser* mcode) {
     core->headBits = ArenaAlloc(sizeof(unsigned int) * count);
 
     unsigned int bitCounter = 0;
-    for(unsigned int j = 0; j < mcode->ast.head.lineCount; j++) {
-        BitArray* line = &mcode->ast.head.lines[j];
-        for(unsigned int k = 0; k < line->dataCount; k++) {
-            Token* value;
-            tableGet(&mcode->ast.out.outputMap, &line->datas[k], (void**)&value);
-            core->headBits[bitCounter] = value->data.value;
+    for(unsigned int i = 0; i < mcode->ast.head.lineCount; i++) {
+        BitArray* line = &mcode->ast.head.lines[i];
+        
+        NodeArray nodes = analyseLine(core, mcode, line, &mcode->ast.head.errorPoint, i);
+
+        for(unsigned int j = 0; j < nodes.nodeCount; j++) {
+            core->headBits[bitCounter] = nodes.nodes[j]->value;
             bitCounter++;
         }
+    }
+
+    if(mcode->hadError) {
+        exit(-1);
     }
 }
 
