@@ -36,11 +36,6 @@ set(EMULATOR_GENERATE
 
 set(EMULATOR_RUNTIME
     src/emulator/runtime/emu.c
-    src/emulator/runtime/register.c
-    src/emulator/runtime/vmcore.c
-    src/emulator/runtime/memory64k.c
-    src/emulator/runtime/instructionRegister.c
-    src/emulator/runtime/emulator.c
 )
 
 set(MICROCODE_COMPILE_SOURCES
