@@ -23,8 +23,12 @@ int main(int argc, char** argv){
     ParserInit(&parse, &scan);
 
     Parse(&parse);
-    Analyse(&parse);
+
+    VMCoreGen core;
+    createEmulator(&core);
+    Analyse(&parse, &core);
+
     if(!parse.hadError) {
-        writeEmulator(argv[2], &parse);
+        writeEmulator(&parse, &core, argv[2]);
     }
 }

@@ -36,6 +36,7 @@ set(EMULATOR_GENERATE
 
 set(EMULATOR_RUNTIME
     src/emulator/runtime/emu.c
+    "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
 )
 
 set(MICROCODE_COMPILE_SOURCES
@@ -66,10 +67,10 @@ add_custom_command(
 
 add_executable(microasm
     src/main.c
-    switch.c
     ${SHARED_FILES}
     ${MICROCODE_FILES}
     ${EMULATOR_RUNTIME}
+    ${EMULATOR_GENERATE}
 )
 target_link_libraries(microasm m)
 target_compile_options(microasm PRIVATE -Wall -Wextra -pedantic -Werror)

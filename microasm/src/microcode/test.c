@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "shared/platform.h"
+#include "emulator/compiletime/writeEmulator.h"
 #include "microcode/test.h"
 #include "microcode/error.h"
 #include "microcode/analyse.h"
@@ -32,7 +33,9 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
     if(isTestFile && testing) {
         expectTestStatements(parse);
         Parse(parse);
-        Analyse(parse);
+        VMCoreGen core;
+        createEmulator(&core);
+        Analyse(parse, &core);
         return true;
     } else if(isTestFile && !testing) {
         cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"\n", ext, fullFileName);
@@ -43,7 +46,9 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
 #endif
     if(!strcmp(ext, "uasm")) {
         Parse(parse);
-        Analyse(parse);
+        VMCoreGen core;
+        createEmulator(&core);
+        Analyse(parse, &core);
         return true;
     }
 

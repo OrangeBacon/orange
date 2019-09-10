@@ -15,7 +15,6 @@ static bool check(Parser* parser, OrangeTokenType type);
 static void block(Parser* parser);
 static void header(Parser* parser, bool write);
 static void input(Parser* parser, bool write);
-static void output(Parser* parser, bool write);
 static void opcode(Parser* parser);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
@@ -36,7 +35,6 @@ void ParserInit(Parser* parser, Scanner* scan) {
     parser->panicMode = false;
     parser->headerStatement.line = -1;
     parser->inputStatement.line = -1;
-    parser->outputStatement.line = -1;
 #ifdef debug
     parser->readTests = false;
 #endif
@@ -72,9 +70,6 @@ bool Parse(Parser* parser) {
     }
     if(parser->headerStatement.line == -1) {
         warnAt(parser, 38, &parser->previous, "No header statement found");
-    }
-    if(parser->outputStatement.line == -1) {
-        warnAt(parser, 39, &parser->previous, "No output statement found");
     }
 
     return !parser->hadError;
@@ -124,7 +119,6 @@ static void syncronise(Parser* parser) {
             case TOKEN_INPUT:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
-            case TOKEN_OUTPUT:
             case TOKEN_MACRO:
                 return;
             default:;  // do nothing - cannot calculate a known parser state
@@ -156,15 +150,6 @@ static void block(Parser* parser) {
         } else {
             parser->inputStatement = parser->previous;
             input(parser, true);
-        }
-    } else if(match(parser, TOKEN_OUTPUT)) {
-        if(parser->outputStatement.line != -1){
-            bool e = warn(parser, 5, "Only one output statement allowed per microcode");
-            if(e) noteAt(parser, &parser->outputStatement, "Previously declared here");
-            output(parser, false);
-        } else {
-            parser->outputStatement = parser->previous;
-            output(parser, true);
         }
     }
 #ifdef debug
@@ -277,53 +262,6 @@ static void input(Parser* parser, bool write) {
     }
     blockEnd(parser, brace);
     parser->ast.inp.isValid = !endErrorState(parser);
-}
-
-static void output(Parser* parser, bool write) {
-    newErrorState(parser);
-
-    Output output;
-    ARRAY_ALLOC(OutputValue, output, value);
-
-    consume(parser, TOKEN_LEFT_PAREN, 20, "Expected left paren, got %s", TokenNames[parser->current.type]);
-    consume(parser, TOKEN_NUMBER, 2, "Expected output width, got %s", TokenNames[parser->current.type]);
-    output.width = parser->previous;
-
-    consume(parser, TOKEN_RIGHT_PAREN, 21, "Expected right paren, got %s", TokenNames[parser->current.type]);
-
-    bool brace = blockStart(parser);
-
-    if(brace) {
-        while(!check(parser, TOKEN_EOF)) {
-            if(check(parser, TOKEN_NUMBER)) {
-                consume(parser, TOKEN_NUMBER, 19, "Expected output bit number, got %s", TokenNames[parser->current.type]);
-                Token id = parser->previous;
-                consume(parser, TOKEN_COLON, 22, "Expected colon, got %s", TokenNames[parser->current.type]);
-                consume(parser, TOKEN_IDENTIFIER, 23, "Expected identifier, got %s", TokenNames[parser->current.type]);
-                Token name = parser->previous;
-                PUSH_ARRAY(OutputValue, output, value, ((OutputValue){.id = id, .name = name}));
-                if(!match(parser, TOKEN_SEMICOLON)) {
-                    break;
-                }
-                while(match(parser, TOKEN_SEMICOLON)){}
-            } else {
-                break;
-            }
-        }
-    } else {
-        consume(parser, TOKEN_NUMBER, 29, "Expected output bit number, got %s", TokenNames[parser->current.type]);
-        Token id = parser->previous;
-        consume(parser, TOKEN_COLON, 24, "Expected colon, got %s", TokenNames[parser->current.type]);
-        consume(parser, TOKEN_IDENTIFIER, 25, "Expected identifier, got %s", TokenNames[parser->current.type]);
-        Token name = parser->previous;
-        PUSH_ARRAY(OutputValue, output, value, ((OutputValue){.id = id, .name = name}));
-    }
-    if(write) {
-        parser->ast.out = output;
-    }
-
-    blockEnd(parser, brace);
-    parser->ast.out.isValid = !endErrorState(parser);
 }
 
 static void opcode(Parser* parser) {

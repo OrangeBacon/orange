@@ -1,5 +1,6 @@
 #include "shared/table.h"
 #include "shared/memory.h"
+#include "emulator/compiletime/vmcoregen.h"
 #include "microcode/token.h"
 #include "microcode/ast.h"
 #include "microcode/analyse.h"
@@ -14,60 +15,11 @@ typedef enum IdentifierType {
 } IdentifierType;
 
 typedef struct Identifier {
-    IdentifierType type;
     Token* data;
+    IdentifierType type;
 } Identifier;
 
 Table identifiers;
-
-static void AnalyseOutput(Parser* parser) {
-    AST* mcode = &parser->ast;
-
-    if(!mcode->out.isValid) {
-        return;
-    }
-
-    if(mcode->out.width.data.value < 1) {
-        errorAt(parser, 100, &mcode->out.width, "Output width has to be one or greater");
-    }
-
-    Table outputs;
-    initTable(&outputs, tokenHash, tokenCmp);
-
-    for(unsigned int i = 0; i < mcode->out.valueCount; i++) {
-        OutputValue* val = &mcode->out.values[i];
-        void* v;
-        if(tableGetKey(&outputs, &val->id, &v)) {
-            // existing key
-            warnAt(parser, 103, &val->id, "Cannot re-declare output id");
-            noteAt(parser, v, "Previously declared here");
-            continue;
-        }
-        tableSet(&outputs, &val->id, &val->name);
-
-        if(tableGetKey(&identifiers, &val->name, &v)) {
-            warnAt(parser, 104, &val->name, "Cannot identifier as output");
-            noteAt(parser, v, "Previously declared here");
-        }
-        
-        Identifier* id = ArenaAlloc(sizeof(Identifier));
-        id->type = TYPE_OUTPUT;
-        id->data = &val->id;
-        tableSet(&identifiers, &val->name, id);
-    }
-
-    // reverse hash for id-based lookup
-    initTable(&mcode->out.outputMap, tokenHash, tokenCmp);
-    for(unsigned int i = 0; i < outputs.capacity; i++) {
-        Entry* entry = &outputs.entries[i];
-        if(entry->key.value == NULL) {
-            continue;
-        }
-        Token* id = entry->key.value;
-        Token* name = entry->value;
-        tableSet(&mcode->out.outputMap, name, id);
-    }
-}
 
 static void AnalyseInput(Parser* parser) {
     AST* mcode = &parser->ast;
@@ -210,13 +162,20 @@ static void AnalyseOpcode(Parser* parser) {
 
 static Analysis Analyses[] = {
     AnalyseInput,
-    AnalyseOutput,
     AnalyseHeader,
     AnalyseOpcode
 };
 
-void Analyse(Parser* parser) {
+void Analyse(Parser* parser, VMCoreGen* core) {
     initTable(&identifiers, tokenHash, tokenCmp);
+
+    for(unsigned int i = 0; i < core->commandCount; i++) {
+        Token* key = createStrTokenPtr(core->commands[i].name);
+        tableSet(&identifiers, key, &(Identifier) {
+            .data = createUIntTokenPtr(i),
+            .type = TYPE_OUTPUT
+        });
+    }
 
     for(unsigned int i = 0; i < sizeof(Analyses)/sizeof(Analysis); i++) {
         Analyses[i](parser);

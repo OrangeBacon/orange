@@ -1,20 +1,3 @@
-output(16) {
-    0: dataToA;
-    1: aToData;
-    2: dataToB;
-    3: bToData;
-    4: addressToA;
-    5: aToAddress;
-    6: addressToB;
-    7: bToAddress;
-    8: IPToAddress;
-    9: iRegSet;
-    10: memReadToData;
-    11: memWrite;
-    12: memReadToInst;
-    13: halt;
-}
-
 input {
     opsize: 7;
     phase: 4;
@@ -25,8 +8,8 @@ header {
 }
 
 opcode 1 memToA(Reg, Reg, Reg) {
-    aToData; dataToA;
-    bToData; dataToB;
+    AToData; DataToA;
+    BToData; DataToB;
 }
 
 opcode 2 memToB() {

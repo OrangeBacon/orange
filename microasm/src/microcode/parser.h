@@ -32,7 +32,6 @@ typedef struct Parser {
 
     Token headerStatement;
     Token inputStatement;
-    Token outputStatement;
 
     // the ast that is being constructed currently
     AST ast;

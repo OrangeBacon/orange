@@ -104,7 +104,7 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     unsigned int this = core->compNameCount - 1;
 
     addCommand(core, (Command) {
-        .name = "instRegSet",
+        .name = "iRegSet",
         .file = "instRegSet",
         ARGUMENTS(((Argument){.name = "inst", .value = core->compNames[iBus]})),
         DEPENDS(iBus),
@@ -194,16 +194,24 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
     Graph graph;
     InitGraph(&graph);
 
+    Table outputMap;
+    initTable(&outputMap, tokenHash, tokenCmp);
+
+    for(unsigned int i = 0; i < core->commandCount; i++) {
+        Token* key = createStrTokenPtr(core->commands[i].name);
+        tableSet(&outputMap, key, createUIntTokenPtr(i));
+    }
+
     for(unsigned int i = 0; i < line->dataCount; i++) {
         Token* value;
-        tableGet(&mcode->ast.out.outputMap, &line->datas[i], (void**)&value);
+        tableGet(&outputMap, &line->datas[i], (void**)&value);
         unsigned int command = value->data.value;
         AddNode(&graph, command);
         for(unsigned int j = 0; j < core->commands[command].changesLength; j++) {
             unsigned int changed = core->commands[command].changes[j];
             for(unsigned int k = 0; k < line->dataCount; k++) {
                 Token* value;
-                tableGet(&mcode->ast.out.outputMap, &line->datas[k], (void**)&value);
+                tableGet(&outputMap, &line->datas[k], (void**)&value);
                 unsigned int comm = value->data.value;
                 for(unsigned int l = 0; l < core->commands[comm].dependsLength; l++) {
                     unsigned int depended = core->commands[comm].depends[l];

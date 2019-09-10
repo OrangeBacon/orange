@@ -41,18 +41,6 @@ typedef struct Input {
     bool isValid;
 } Input;
 
-typedef struct OutputValue {
-    struct Token id;
-    struct Token name;
-} OutputValue;
-
-typedef struct Output {
-    DEFINE_ARRAY(OutputValue, value);
-    struct Token width;
-    bool isValid;
-    Table outputMap;
-} Output;
-
 typedef struct OpCode {
     struct Token id;
     struct Token name;
@@ -67,7 +55,6 @@ typedef struct AST {
     DEFINE_ARRAY(struct Error, error);
     Header head;
     Input inp;
-    Output out;
 
     DEFINE_ARRAY(OpCode, opcode);
     unsigned int opsize;

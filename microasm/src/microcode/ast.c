@@ -12,10 +12,8 @@ void InitAST(AST* mcode, const char* fileName) {
     mcode->fileName = fileName;
     mcode->head.isValid = false;
     mcode->inp.isValid = false;
-    mcode->out.isValid = false;
     ARRAY_ZERO(mcode->head, line);
     ARRAY_ZERO(mcode->inp, value);
-    ARRAY_ZERO(mcode->out, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);
     ARRAY_ALLOC(Error, *mcode, error);
 #ifdef debug
@@ -38,13 +36,6 @@ void PrintAST(AST* mcode) {
         printf("\n    ");
         TokenPrint(&mcode->inp.values[i].name);
         printf(" = %i", mcode->inp.values[i].value.data.value);
-    }
-    printf("\n");
-    printf("  Output(%u): %u", mcode->out.width.data.value, mcode->out.valueCount);
-    for(unsigned int i = 0; i < mcode->out.valueCount; i++) {
-        printf("\n    ");
-        printf("%i = ", mcode->out.values[i].id.data.value);
-        TokenPrint(&mcode->out.values[i].name);
     }
     printf("\n");
     printf("  OpCodes: %u", mcode->opcodeCount);
