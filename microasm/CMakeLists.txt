@@ -30,8 +30,12 @@ set(SHARED_FILES
 )
 
 set(EMULATOR_GENERATE
-    src/emulator/compiletime/writeEmulator.c
-    src/emulator/compiletime/vmcoregen.c
+    src/emulator/compiletime/template.c
+    src/emulator/compiletime/create.c
+)
+
+set(EMULATOR_WRITE
+    src/emulator/compiletime/codegen.c
 )
 
 set(EMULATOR_RUNTIME
@@ -50,10 +54,11 @@ set(MICROCODE_COMPILE_SOURCES
 )
 
 add_executable(generator
-    src/emulator/compiletime/prebuild.c
+    src/emulator/compiletime/main.c
     ${SHARED_FILES}
     ${MICROCODE_FILES}
     ${EMULATOR_GENERATE}
+    ${EMULATOR_WRITE}
 )
 target_link_libraries(generator m)
 target_compile_options(generator PRIVATE -Wall -Wextra -pedantic -Werror)

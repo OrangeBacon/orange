@@ -5,7 +5,8 @@
 #include "microcode/scanner.h"
 #include "microcode/parser.h"
 #include "microcode/analyse.h"
-#include "emulator/compiletime/writeEmulator.h"
+#include "emulator/compiletime/template.h"
+#include "emulator/compiletime/codegen.h"
 
 int main(int argc, char** argv){
     startColor();
@@ -29,6 +30,7 @@ int main(int argc, char** argv){
     Analyse(&parse, &core);
 
     if(!parse.hadError) {
-        writeEmulator(&parse, &core, argv[2]);
+        addCoreLoop(&core, &parse);
+        writeCore(&core, argv[2]);
     }
 }

@@ -1,6 +1,6 @@
 #include "shared/table.h"
 #include "shared/memory.h"
-#include "emulator/compiletime/vmcoregen.h"
+#include "emulator/compiletime/create.h"
 #include "microcode/token.h"
 #include "microcode/ast.h"
 #include "microcode/analyse.h"

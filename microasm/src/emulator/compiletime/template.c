@@ -1,4 +1,4 @@
-#include "emulator/compiletime/writeEmulator.h"
+#include "emulator/compiletime/template.h"
 
 void createEmulator(VMCoreGen* core) {
     initCore(core);
@@ -21,9 +21,4 @@ void createEmulator(VMCoreGen* core) {
     addMemoryBusOutput(core, &mem, instBus);
 
     addHaltInstruction(core);
-}
-
-void writeEmulator(Parser* parser, VMCoreGen* core, const char* filename) {
-    addCoreLoop(core, parser);
-    writeCore(core, filename);
 }

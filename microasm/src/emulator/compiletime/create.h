@@ -64,9 +64,6 @@ void addHaltInstruction(VMCoreGen* core);
 void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int reg, int state);
 Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data);
 void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus);
-void addCoreLoop(VMCoreGen* core, Parser* mcode);
-
-void writeCore(VMCoreGen* core, const char* filename);
 
 void addCommand(VMCoreGen* core, Command command);
 

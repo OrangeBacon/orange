@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "shared/platform.h"
-#include "emulator/compiletime/writeEmulator.h"
+#include "emulator/compiletime/template.h"
 #include "microcode/test.h"
 #include "microcode/error.h"
 #include "microcode/analyse.h"
