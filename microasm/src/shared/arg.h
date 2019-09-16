@@ -7,17 +7,26 @@ typedef struct posArg {
     enum posType {
         POS_STRING
     } type;
+
     union posValue {
         char* as_string;
     } value;
+
     const char* description;
 } posArg;
 
-typedef void (*optionAction)(void* ctx);
+// the function run in an action option.
+// void* ctx is a user provided value from calling optActionArg
+// return true = parser should continue
+// return false = exits after calling function
+typedef bool (*optionAction)(void* ctx);
 
+// data for a optional, non-positional argument
 typedef struct optionArg {
+    // multi character name
     const char* longName;
 
+    // single character name
     bool hasShortName;
     char shortName;
 
@@ -30,9 +39,14 @@ typedef struct optionArg {
         char* as_string;
     } value;
 
+    // name of argument to this option if string option
+    const char* argumentName;
+
+    // action if the argument is an action argument
     optionAction action;
     void* ctx;
 
+    // was the argument present
     bool found;
 } optionArg;
 
@@ -46,6 +60,8 @@ typedef struct argParser {
     // that can handle the mode
     Table modes;
 
+    // map of all optional arguments
+    // by their long names
     Table options;
 
     // has the parser run
@@ -88,17 +104,23 @@ argParser* argMode(argParser* parser, const char* name);
 void argString(argParser* parser, const char* name);
 
 // run the parser on the arguments prieviously set
+// can call exit() under some circumstances
 void argParse(argParser* parser);
 
 // set the parser's arguments to one beyond the provided
 // argc and argc, for ignoring program name and mode name
 void argArguments(argParser* parser, int argc, char** argv);
 
+// add an optional argument to the parser, can be identified by "-${shortName}"
+// or "--${longName}".  The argument cannot be repeated and optionaly takes an argument
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg);
 
+// add an optional argument that runs a function if it is found.
+// the option cannot take any arguments
 optionArg* argActionOption(argParser* parser, char shortName, const char* longName, optionAction action, void* ctx);
 
 // has the parser !(encountered any errors)
 bool argSuccess(argParser* parser);
 
+// get the count'th argument of a parser as a char pointer
 #define strArg(parser, count) (parser).posArgs[count].value.as_string

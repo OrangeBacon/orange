@@ -18,12 +18,8 @@ static int AlignForward(void* real_ptr, size_t align) {
     uintptr_t ptr = (uintptr_t)real_ptr;
     uintptr_t align_ptr = align;
 
-    // equivalent to ptr % align_ptr but more efficient for power fo two
-    uintptr_t modulo = ptr & (align_ptr - 1);
-    if(modulo != 0) {
-        ptr += align_ptr - modulo;
-    }
-    real_ptr = (void*)ptr;
+    uintptr_t modulo = ptr % align_ptr;
+
     return modulo==0?0:align_ptr - modulo;
 }
 
@@ -84,7 +80,7 @@ void* ArenaAllocAlign(size_t size, size_t align) {
         arena.areas[arena.arenaCount-1].bytesLeft = arena.pageSize;
     }
 
-    // align pointer and ensure area's pointers are updated
+    // align end pointer and ensure area's pointers are updated
     int alignOffset = AlignForward(ptr, align);
     arena.areas[i].end = (void*)((uintptr_t)arena.areas[i].end + size + alignOffset);
     arena.areas[i].bytesLeft -= size + alignOffset;

@@ -12,13 +12,13 @@ const char* resolvePath(const char* path);
 typedef enum TextColor {
 #ifdef _WIN32
     TextBlack = 0,
-    TextRed = 4,
-    TextGreen = 2,
-    TextYellow = 6,
-    TextBlue = 1,
-    TextMagenta = 5,
-    TextCyan = 3,
-    TextWhite = 7
+    TextBlue,
+    TextGreen,
+    TextCyan,
+    TextRed,
+    TextMagenta,
+    TextYellow,
+    TextWhite
 #else
     TextBlack = 30,
     TextRed,
@@ -31,6 +31,7 @@ typedef enum TextColor {
 #endif
 } TextColor;
 
+// is terminal output in color
 extern bool EnableColor;
 
 // setup color terminal output
@@ -48,14 +49,21 @@ void cOutPrintf(TextColor color, const char* format, ...);
 // printf a forat string and arguments with a given color to stdout
 void cOutVPrintf(TextColor color, const char* format, va_list args);
 
-// get a buffer containing the string contents of the file provided
+// get a buffer containing the string contents of the filename provided
 const char* readFile(const char* fileName);
+
+// get a buffer containing the string contents of the file pointer provided
 const char* readFilePtr(FILE* file);
 
+// function called while iterating a directory, passed the path to a file
+// and a buffer containing the contents of that file
 typedef void(*directoryCallback)(const char* path, const char* file);
 
+// Run a function for every file in a directory, and recurse for
+// all folders in the directory
 void iterateDirectory(const char* basePath, directoryCallback callback);
 
+// the character to use to seperate sections in a path
 extern const char* pathSeperator;
 
 #endif

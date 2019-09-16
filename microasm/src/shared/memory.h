@@ -65,6 +65,7 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
         (container).name##Count++; \
     } while(0)
 
+// return and remove the last item in an array
 #define POP_ARRAY(container, name) \
     ((container).name##Count--,(container).name##s[(container).name##Count])
 

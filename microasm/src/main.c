@@ -16,24 +16,29 @@ int main(int argc, char** argv){
     argString(vm, "main memory file");
     optionArg* vmVerbose = argOption(vm, 'v', "verbose", false);
     optionArg* vmLogFile = argOption(vm, 'l', "log", true);
+    vmLogFile->argumentName = "path to log file";
 
 #ifdef debug
     argParser* test = argMode(&parser, "test");
     argString(test, "test folder");
 #endif
+
     argArguments(&parser, argc, argv);
     argParse(&parser);
 
-    if(argSuccess(&parser)) {
+    if(!argSuccess(&parser)) {
+        return 0;
+    }
+
 #ifdef debug
-        if(test->modeTaken) {
-            runTests(strArg(*test, 0));
-        } else 
+    if(test->modeTaken) {
+        runTests(strArg(*test, 0));
+    } else 
 #endif
-        if(vm->modeTaken) {
-            runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);
-        } else {
-            runFileName(strArg(parser, 0));
-        }
+
+    if(vm->modeTaken) {
+        runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);
+    } else {
+        runFileName(strArg(parser, 0));
     }
 }
