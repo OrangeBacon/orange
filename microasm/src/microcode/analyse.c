@@ -57,10 +57,10 @@ static void AnalyseInput(Parser* parser) {
             tableGetKey(&identifiers, &opsize, &v);
             warnAt(parser, 107, v, "The 'opsize' identifier must be an input");
         }
+        parser->ast.opsize = val->data->data.value;
     } else {
         warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
     }
-    parser->ast.opsize = val->data->data.value;
 
     Token phase = createStrToken("phase");
     if(tableGet(&identifiers, &phase, (void**)&val)) {

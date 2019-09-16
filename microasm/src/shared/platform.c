@@ -131,7 +131,7 @@ const char* pathSeperator =
     "/";
 #endif
 
-void iterateDirectory(const char* basePath, directoryCallback callback) {
+bool iterateDirectory(const char* basePath, directoryCallback callback) {
     // assumes path max as 1000
     char path[1000];
 
@@ -141,8 +141,10 @@ void iterateDirectory(const char* basePath, directoryCallback callback) {
 
     // path provided was not a directory
     if(!directory) {
-        return;
+        return false;
     }
+
+    bool result = false;
 
     // foreach entry in the directory
     while((entry = readdir(directory)) != NULL) {
@@ -159,12 +161,15 @@ void iterateDirectory(const char* basePath, directoryCallback callback) {
             FILE* file = fopen(path, "r");
             if(file == NULL) {
                 fclose(file);
-                iterateDirectory(path, callback);
+                result = result || iterateDirectory(path, callback);
             } else {
                 // otherwise file found, read it and run callback on it.
                 callback(path, readFilePtr(file));
                 fclose(file);
+                result = true;
             }
         }
     }
+
+    return result;
 }

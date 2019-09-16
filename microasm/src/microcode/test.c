@@ -103,7 +103,10 @@ static void runTest(const char* path, const char* file) {
 void runTests(const char* directory) {
     disableErrorPrint();
 
-    iterateDirectory(directory, runTest);
+    if(!iterateDirectory(directory, runTest)) {
+        cOutPrintf(TextRed, "Could not find any tests in supplied directory.\n");
+        return;
+    }
 
     if(testCount == passedCount) {
         cOutPrintf(TextGreen, "\nAll Tests Passed\n");

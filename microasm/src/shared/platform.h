@@ -61,7 +61,8 @@ typedef void(*directoryCallback)(const char* path, const char* file);
 
 // Run a function for every file in a directory, and recurse for
 // all folders in the directory
-void iterateDirectory(const char* basePath, directoryCallback callback);
+// returns true if it ran the callback
+bool iterateDirectory(const char* basePath, directoryCallback callback);
 
 // the character to use to seperate sections in a path
 extern const char* pathSeperator;
