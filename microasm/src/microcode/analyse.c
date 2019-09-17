@@ -7,7 +7,7 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
-typedef void(*Analysis)(Parser* parser);
+typedef void(*Analysis)(Parser* parser, AnalysisAst* out);
 
 typedef enum IdentifierType {
     TYPE_INPUT,
@@ -21,7 +21,7 @@ typedef struct Identifier {
 
 Table identifiers;
 
-static void AnalyseInput(Parser* parser) {
+static void AnalyseInput(Parser* parser, AnalysisAst* out) {
     AST* mcode = &parser->ast;
 
     if(!mcode->inp.isValid) {
@@ -57,7 +57,7 @@ static void AnalyseInput(Parser* parser) {
             tableGetKey(&identifiers, &opsize, &v);
             warnAt(parser, 107, v, "The 'opsize' identifier must be an input");
         }
-        parser->ast.opsize = val->data->data.value;
+        out->opsize = val->data->data.value;
     } else {
         warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
     }
@@ -74,7 +74,8 @@ static void AnalyseInput(Parser* parser) {
     }
 }
 
-static void AnalyseHeader(Parser* parser) {
+static void AnalyseHeader(Parser* parser, AnalysisAst* out) {
+    (void)out;
     AST* mcode = &parser->ast;
 
     if(!mcode->head.isValid) {
@@ -102,12 +103,8 @@ static void AnalyseHeader(Parser* parser) {
     }
 }
 
-static void AnalyseOpcode(Parser* parser) {
+static void AnalyseOpcode(Parser* parser, AnalysisAst* out) {
     AST* mcode = &parser->ast;
-
-    Identifier* opsize;
-    Token opsizeTok = createStrToken("opsize");
-    tableGet(&identifiers, &opsizeTok, (void**)&opsize);
 
     Table parameters;
     initTable(&parameters, tokenHash, tokenCmp);
@@ -120,7 +117,7 @@ static void AnalyseOpcode(Parser* parser) {
             continue;
         }
         
-        if(opsize != NULL && code->id.data.value >= (unsigned int)(2 << (opsize->data->data.value - 1))) {
+        if(code->id.data.value >= (unsigned int)(2 << (out->opsize - 1))) {
             warnAt(parser, 109, &code->id, "Opcode id is too large");
         }
 
@@ -166,7 +163,7 @@ static Analysis Analyses[] = {
     AnalyseOpcode
 };
 
-void Analyse(Parser* parser, VMCoreGen* core) {
+AnalysisAst* Analyse(Parser* parser, VMCoreGen* core) {
     initTable(&identifiers, tokenHash, tokenCmp);
 
     for(unsigned int i = 0; i < core->commandCount; i++) {
@@ -177,7 +174,11 @@ void Analyse(Parser* parser, VMCoreGen* core) {
         });
     }
 
+    AnalysisAst* out = ArenaAlloc(sizeof(AnalysisAst));
+
     for(unsigned int i = 0; i < sizeof(Analyses)/sizeof(Analysis); i++) {
-        Analyses[i](parser);
+        Analyses[i](parser, out);
     }
+
+    return out;
 }

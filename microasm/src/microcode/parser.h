@@ -51,7 +51,6 @@ bool Parse(Parser* parse);
 
 #ifdef debug
 void expectTestStatements(Parser* parser);
-void noTestStatements(Parser* parser);
 #endif
 
 void setErrorState(Parser* parser);

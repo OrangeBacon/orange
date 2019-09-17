@@ -3,8 +3,8 @@
 
 #include "emulator/compiletime/create.h"
 
-void addCoreLoop(VMCoreGen* core, Parser* mcode);
+void coreLinkAnalysisResult(VMCoreGen* core, Parser* mcode, AnalysisAst* ast);
 
-void writeCore(VMCoreGen* core, const char* filename);
+void coreCodegen(VMCoreGen* core, const char* filename);
 
 #endif

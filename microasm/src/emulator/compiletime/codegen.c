@@ -46,11 +46,11 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
     return nodes;
 }
 
-void addCoreLoop(VMCoreGen* core, Parser* mcode) {
+void coreLinkAnalysisResult(VMCoreGen* core, Parser* mcode, AnalysisAst* ast) {
     addHeader(core, "<stdbool.h>");
     addHeader(core, "<stdlib.h>");
 
-    core->opcodeCount = 1 << mcode->ast.opsize;
+    core->opcodeCount = 1 << ast->opsize;
     core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
     for(unsigned int i = 0; i < core->opcodeCount; i++) {
         core->opcodes[i].isValid = false;
@@ -158,7 +158,7 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
     fputs("}\nIP++;\n}}\n", file);
 }
 
-void writeCore(VMCoreGen* core, const char* filename) {
+void coreCodegen(VMCoreGen* core, const char* filename) {
     FILE* file = fopen(filename, "w");
 
     for(unsigned int i = 0; i < core->headers.capacity; i++) {

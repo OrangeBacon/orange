@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "shared/memory.h"
-#include "shared/table.h"
 
 struct Token;
 struct Error;
@@ -51,13 +50,12 @@ typedef struct OpCode {
 
 typedef struct AST {
     const char* fileName;
-    bool hasError;
+
     DEFINE_ARRAY(struct Error, error);
     Header head;
     Input inp;
 
     DEFINE_ARRAY(OpCode, opcode);
-    unsigned int opsize;
     
 #ifdef debug
     DEFINE_ARRAY(struct Error, expectedError);
@@ -66,6 +64,8 @@ typedef struct AST {
 
 void InitAST(AST* mcode, const char* fileName);
 
-void PrintAST(AST* mcode);
+typedef struct AnalysisAst {
+    unsigned int opsize;
+} AnalysisAst;
 
 #endif

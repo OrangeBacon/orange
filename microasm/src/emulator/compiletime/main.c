@@ -27,10 +27,10 @@ int main(int argc, char** argv){
 
     VMCoreGen core;
     createEmulator(&core);
-    Analyse(&parse, &core);
+    AnalysisAst* ast = Analyse(&parse, &core);
 
     if(!parse.hadError) {
-        addCoreLoop(&core, &parse);
-        writeCore(&core, argv[2]);
+        coreLinkAnalysisResult(&core, &parse, ast);
+        coreCodegen(&core, argv[2]);
     }
 }

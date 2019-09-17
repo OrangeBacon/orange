@@ -333,9 +333,7 @@ static void errorStatement(Parser* parser) {
 void expectTestStatements(Parser* parser) {
     parser->readTests = true;
 }
-void noTestStatements(Parser* parser) {
-    parser->readTests = false;
-}
+
 #endif
 
 // parses a line of microcode commands with conditions
