@@ -64,8 +64,4 @@ typedef struct AST {
 
 void InitAST(AST* mcode, const char* fileName);
 
-typedef struct AnalysisAst {
-    unsigned int opsize;
-} AnalysisAst;
-
 #endif

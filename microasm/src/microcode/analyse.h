@@ -3,8 +3,7 @@
 
 struct Parser;
 struct VMCoreGen;
-struct AnalysisAst;
 
-AnalysisAst* Analyse(struct Parser* parser, struct VMCoreGen* core);
+void Analyse(struct Parser* parser, struct VMCoreGen* core);
 
 #endif

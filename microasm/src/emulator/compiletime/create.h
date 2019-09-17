@@ -3,7 +3,6 @@
 
 #include "shared/memory.h"
 #include "shared/table.h"
-#include "microcode/parser.h"
 
 typedef struct Argument {
     const char* name;
@@ -53,7 +52,7 @@ typedef struct Memory {
 
 void initCore(VMCoreGen* core);
 
-void addHeader(VMCoreGen* core, const char* format, ...);
+void addHeader(VMCoreGen* core, const char* header);
 void addVariable(VMCoreGen* core, const char* format, ...);
 
 unsigned int addBus(VMCoreGen* core, const char* name);

@@ -27,10 +27,9 @@ int main(int argc, char** argv){
 
     VMCoreGen core;
     createEmulator(&core);
-    AnalysisAst* ast = Analyse(&parse, &core);
+    Analyse(&parse, &core);
 
     if(!parse.hadError) {
-        coreLinkAnalysisResult(&core, &parse, ast);
         coreCodegen(&core, argv[2]);
     }
 }

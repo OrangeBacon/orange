@@ -1,5 +1,6 @@
 #include "shared/table.h"
 #include "shared/memory.h"
+#include "shared/graph.h"
 #include "emulator/compiletime/create.h"
 #include "microcode/token.h"
 #include "microcode/ast.h"
@@ -7,7 +8,7 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
-typedef void(*Analysis)(Parser* parser, AnalysisAst* out);
+typedef void(*Analysis)(Parser* parser, VMCoreGen* core);
 
 typedef enum IdentifierType {
     TYPE_INPUT,
@@ -21,7 +22,7 @@ typedef struct Identifier {
 
 Table identifiers;
 
-static void AnalyseInput(Parser* parser, AnalysisAst* out) {
+static void AnalyseInput(Parser* parser, VMCoreGen* core) {
     AST* mcode = &parser->ast;
 
     if(!mcode->inp.isValid) {
@@ -57,7 +58,7 @@ static void AnalyseInput(Parser* parser, AnalysisAst* out) {
             tableGetKey(&identifiers, &opsize, &v);
             warnAt(parser, 107, v, "The 'opsize' identifier must be an input");
         }
-        out->opsize = val->data->data.value;
+        core->opcodeCount = 1 << val->data->data.value;
     } else {
         warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
     }
@@ -74,13 +75,56 @@ static void AnalyseInput(Parser* parser, AnalysisAst* out) {
     }
 }
 
-static void AnalyseHeader(Parser* parser, AnalysisAst* out) {
-    (void)out;
+static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Token* opcodeName, unsigned int lineNumber) {
+    Graph graph;
+    InitGraph(&graph);
+
+    for(unsigned int i = 0; i < line->dataCount; i++) {
+        Identifier* value;
+        tableGet(&identifiers, &line->datas[i], (void**)&value);
+        unsigned int command = value->data->data.value;
+        AddNode(&graph, command);
+        for(unsigned int j = 0; j < core->commands[command].changesLength; j++) {
+            unsigned int changed = core->commands[command].changes[j];
+            for(unsigned int k = 0; k < line->dataCount; k++) {
+                Identifier* value;
+                tableGet(&identifiers, &line->datas[k], (void**)&value);
+                unsigned int comm = value->data->data.value;
+                for(unsigned int l = 0; l < core->commands[comm].dependsLength; l++) {
+                    unsigned int depended = core->commands[comm].depends[l];
+                    if(changed == depended) {
+                        AddEdge(&graph, command, comm);
+                    }
+                }
+            }
+        }
+    }
+
+    NodeArray nodes = TopologicalSort(&graph);
+    if(!nodes.validArray) {
+        warnAt(mcode, 200, opcodeName, "Unable to order microcode bits in line %u", lineNumber);
+    }
+
+    return nodes;
+}
+
+static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
     AST* mcode = &parser->ast;
 
     if(!mcode->head.isValid) {
         return;
     }
+
+    unsigned int count = 0;
+    for(unsigned int j = 0; j < parser->ast.head.lineCount; j++) {
+        BitArray* line = &parser->ast.head.lines[j];
+        count += line->dataCount;
+    }
+
+    core->headCount = count;
+    core->headBits = ArenaAlloc(sizeof(unsigned int) * count);
+
+    unsigned int bitCounter = 0;
 
     for(unsigned int i = 0; i < mcode->head.lineCount; i++) {
         BitArray* line = &mcode->head.lines[i];
@@ -100,29 +144,62 @@ static void AnalyseHeader(Parser* parser, AnalysisAst* out) {
                 warnAt(parser, 105, bit, "Identifier was not defined");
             }
         }
+
+        NodeArray nodes = analyseLine(core, parser, line, &parser->ast.head.errorPoint, i);
+        for(unsigned int j = 0; j < nodes.nodeCount; j++) {
+            core->headBits[bitCounter] = nodes.nodes[j]->value;
+            bitCounter++;
+        }
     }
 }
 
-static void AnalyseOpcode(Parser* parser, AnalysisAst* out) {
+static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
     AST* mcode = &parser->ast;
 
     Table parameters;
     initTable(&parameters, tokenHash, tokenCmp);
     tableSet(&parameters, (void*)createStrTokenPtr("Reg"), (void*)true);
 
+    core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
+    for(unsigned int i = 0; i < core->opcodeCount; i++) {
+        core->opcodes[i].isValid = false;
+    }
+
     for(unsigned int i = 0; i < mcode->opcodeCount; i++) {
         OpCode* code = &mcode->opcodes[i];
+        GenOpCode* gencode = &core->opcodes[code->id.data.value];
 
         if(!code->isValid) {
             continue;
         }
         
-        if(code->id.data.value >= (unsigned int)(2 << (out->opsize - 1))) {
+        if(code->id.data.value >= (unsigned int)(core->opcodeCount)) {
             warnAt(parser, 109, &code->id, "Opcode id is too large");
         }
 
+        gencode->isValid = true;
+        gencode->name = TOKEN_GET(code->name);
+        gencode->nameLen = code->name.length;
+
+        unsigned int count = 0;
+        for(unsigned int j = 0; j < code->lineCount; j++) {
+            Line** line = &code->lines[j];
+            count += (*line)->bits.dataCount;
+        }
+        gencode->bitCount = count;
+        gencode->bits = ArenaAlloc(sizeof(unsigned int) * gencode->bitCount);
+
+        unsigned int bitCounter = 0;
+
         for(unsigned int j = 0; j < code->lineCount; j++) {
             Line* line = code->lines[j];
+
+            NodeArray nodes = analyseLine(core, parser, &line->bits, &code->name, j);
+
+            for(unsigned int k = 0; k < nodes.nodeCount; k++) {
+                gencode->bits[bitCounter] = nodes.nodes[k]->value;
+                bitCounter++;
+            }
 
             for(unsigned int k = 0; k < line->bits.dataCount; k++) {
                 Token* bit = &line->bits.datas[k];
@@ -163,22 +240,18 @@ static Analysis Analyses[] = {
     AnalyseOpcode
 };
 
-AnalysisAst* Analyse(Parser* parser, VMCoreGen* core) {
+void Analyse(Parser* parser, VMCoreGen* core) {
     initTable(&identifiers, tokenHash, tokenCmp);
 
     for(unsigned int i = 0; i < core->commandCount; i++) {
         Token* key = createStrTokenPtr(core->commands[i].name);
-        tableSet(&identifiers, key, &(Identifier) {
-            .data = createUIntTokenPtr(i),
-            .type = TYPE_OUTPUT
-        });
+        Identifier* value = ArenaAlloc(sizeof(Identifier));
+        value->data = createUIntTokenPtr(i);
+        value->type = TYPE_OUTPUT;
+        tableSet(&identifiers, key, value);
     }
-
-    AnalysisAst* out = ArenaAlloc(sizeof(AnalysisAst));
 
     for(unsigned int i = 0; i < sizeof(Analyses)/sizeof(Analysis); i++) {
-        Analyses[i](parser, out);
+        Analyses[i](parser, core);
     }
-
-    return out;
 }

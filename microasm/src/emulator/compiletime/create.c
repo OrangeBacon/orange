@@ -11,6 +11,7 @@ void initCore(VMCoreGen* core) {
     ARRAY_ALLOC(Command, *core, command);
     initTable(&core->headers, strHash, strCmp);
     core->codeIncludeBase = "emulator/runtime/";
+    addHeader(core, "<stdbool.h>");
 }
 
 unsigned int* AllocUInt(unsigned int itemCount, ...) {
@@ -54,15 +55,8 @@ char* aprintf(const char* format, ...) {
     return buf;
 }
 
-void addHeader(VMCoreGen* core, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-
-    size_t len = vsnprintf(NULL, 0, format, args);
-    char* buf = ArenaAlloc(len * sizeof(char) + 1);
-    vsnprintf(buf, len + 1, format, args);
-
-    tableSet(&core->headers, buf, (void*)1);
+void addHeader(VMCoreGen* core, const char* header) {
+    tableSet(&core->headers, (void*)header, (void*)1);
 }
 
 void addVariable(VMCoreGen* core, const char* format, ...) {
