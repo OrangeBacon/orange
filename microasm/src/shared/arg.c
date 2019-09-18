@@ -214,10 +214,7 @@ argParser* argMode(argParser* parser, const char* name) {
     // +1 for the null byte
     unsigned int nameLen = parser->nameLength + 1 + strlen(name) + 1;
     char* nameArr = ArenaAlloc(sizeof(char) * nameLen);
-    strncpy(nameArr, parser->name, parser->nameLength);
-    strcat(nameArr, " ");
-    strcat(nameArr, name);
-    nameArr[nameLen - 1] = '\0';
+    sprintf(nameArr, "%.*s %s", parser->nameLength, parser->name, name);
     argInitLen(new, nameArr, nameLen);
 
     tableSet(&parser->modes, (void*)name, new);
