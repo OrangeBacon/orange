@@ -1,0 +1,21 @@
+input {
+    opsize: 7;
+    phase: 4;
+}
+
+header {
+    IPToAddress, memReadToInst, iRegSet
+}
+
+opcode 1 memToA(Reg, Reg, Reg) {
+    AToData; DataToA;
+    BToData; DataToB;
+}
+
+opcode 2 memToB() {
+
+}
+
+opcode 3 halt() {
+    halt
+}

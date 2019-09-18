@@ -10,7 +10,7 @@
     x(COMMA) x(DOT) x(COLON) x(NUMBER) \
     x(SEMICOLON) x(STAR) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
-    x(MACRO) x(INPUT) x(OUTPUT) \
+    x(MACRO) x(INPUT) \
     x(ERROR) x(EOF) x(NULL)
 
 #define ENUM_TOKEN(x) TOKEN_##x,
@@ -49,6 +49,7 @@ void TokenPrint(Token* token);
 
 Token createStrToken(const char* str);
 Token* createStrTokenPtr(const char* str);
+Token* createUIntTokenPtr(unsigned int num);
 
 uint32_t tokenHash(void* value);
 bool tokenCmp(void* a, void* b);

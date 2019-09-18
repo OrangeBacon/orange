@@ -32,7 +32,6 @@ typedef struct Parser {
 
     Token headerStatement;
     Token inputStatement;
-    Token outputStatement;
 
     // the ast that is being constructed currently
     AST ast;
@@ -52,7 +51,6 @@ bool Parse(Parser* parse);
 
 #ifdef debug
 void expectTestStatements(Parser* parser);
-void noTestStatements(Parser* parser);
 #endif
 
 void setErrorState(Parser* parser);

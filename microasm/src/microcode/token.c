@@ -34,6 +34,17 @@ Token* createStrTokenPtr(const char* str) {
     return t;
 }
 
+Token* createUIntTokenPtr(unsigned int num) {
+    Token* t = ArenaAlloc(sizeof(Token));
+    char* str = ArenaAlloc(sizeof(char) * 6);
+    sprintf(str, "%u", num);
+    t->base = str;
+    t->length = strlen(str);
+    t->offset = 0;
+    t->data.value = num;
+    return t;
+}
+
 // FNV-1a
 uint32_t tokenHash(void* value) {
     Token* token = value;

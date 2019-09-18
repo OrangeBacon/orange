@@ -26,6 +26,7 @@ typedef struct Line {
 typedef struct Header {
     DEFINE_ARRAY(BitArray, line);
     bool isValid;
+    struct Token errorPoint;
 } Header;
 
 typedef struct InputValue {
@@ -39,17 +40,6 @@ typedef struct Input {
     bool isValid;
 } Input;
 
-typedef struct OutputValue {
-    struct Token id;
-    struct Token name;
-} OutputValue;
-
-typedef struct Output {
-    DEFINE_ARRAY(OutputValue, value);
-    struct Token width;
-    bool isValid;
-} Output;
-
 typedef struct OpCode {
     struct Token id;
     struct Token name;
@@ -60,11 +50,10 @@ typedef struct OpCode {
 
 typedef struct AST {
     const char* fileName;
-    bool hasError;
+
     DEFINE_ARRAY(struct Error, error);
     Header head;
     Input inp;
-    Output out;
 
     DEFINE_ARRAY(OpCode, opcode);
     
@@ -74,26 +63,5 @@ typedef struct AST {
 } AST;
 
 void InitAST(AST* mcode, const char* fileName);
-
-void PrintAST(AST* mcode);
-
-typedef struct NumericLine {
-    DEFINE_ARRAY(unsigned int, bit);
-} NumericLine;
-
-typedef struct NumericOpcode {
-    DEFINE_ARRAY(NumericLine, line);
-    unsigned int id;
-} NumericOpcode;
-
-typedef struct Microcode {
-    DEFINE_ARRAY(NumericOpcode, opcode);
-    unsigned int opcodeSize;
-    unsigned int phaseSize;
-    unsigned int inputBitCount;
-    unsigned int outputBitCount;
-} Microcode;
-
-void initMicrocode(Microcode* mcode);
 
 #endif

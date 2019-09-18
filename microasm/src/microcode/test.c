@@ -3,17 +3,17 @@
 #include <stdlib.h>
 
 #include "shared/platform.h"
+#include "emulator/compiletime/template.h"
 #include "microcode/test.h"
 #include "microcode/error.h"
 #include "microcode/analyse.h"
-#include "microcode/codegen.h"
 
-bool runFileName(const char* fileName, char* outputFile) {
+bool runFileName(const char* fileName) {
     Parser p;
-    return runFile(fileName, readFile(fileName), &p, false, outputFile);
+    return runFile(fileName, readFile(fileName), &p, false);
 }
 
-bool runFile(const char* fileName, const char* file, Parser* parse, bool testing, char* outputFile) {
+bool runFile(const char* fileName, const char* file, Parser* parse, bool testing) {
     const char* fullFileName = resolvePath(fileName);
 
     Scanner scan;
@@ -33,7 +33,9 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
     if(isTestFile && testing) {
         expectTestStatements(parse);
         Parse(parse);
-        Analyse(parse);
+        VMCoreGen core;
+        createEmulator(&core);
+        Analyse(parse, &core);
         return true;
     } else if(isTestFile && !testing) {
         cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"\n", ext, fullFileName);
@@ -44,10 +46,9 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
 #endif
     if(!strcmp(ext, "uasm")) {
         Parse(parse);
-        Microcode* m = Analyse(parse);
-        if(outputFile[0] != '\0') {
-            codegen(m, outputFile);
-        }
+        VMCoreGen core;
+        createEmulator(&core);
+        Analyse(parse, &core);
         return true;
     }
 
@@ -63,7 +64,7 @@ static void runTest(const char* path, const char* file) {
     Parser parser;
 
     printf("Testing: %s  ->\n", resolvePath(path));
-    bool runSuccess = runFile(path, file, &parser, true, "\0");
+    bool runSuccess = runFile(path, file, &parser, true);
 
     unsigned int currentAstError = 0;
     while(currentAstError < parser.ast.errorCount) {
@@ -102,7 +103,10 @@ static void runTest(const char* path, const char* file) {
 void runTests(const char* directory) {
     disableErrorPrint();
 
-    iterateDirectory(directory, runTest);
+    if(!iterateDirectory(directory, runTest)) {
+        cOutPrintf(TextRed, "Could not find any tests in supplied directory.\n");
+        return;
+    }
 
     if(testCount == passedCount) {
         cOutPrintf(TextGreen, "\nAll Tests Passed\n");

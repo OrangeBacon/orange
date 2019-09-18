@@ -16,6 +16,7 @@ const char* resolvePath(const char* path) {
     // _fullpath is defined in microsoft's stdlib.h
     return _fullpath(NULL, path, _MAX_PATH);
 #else
+    // realpath is defined in linux's stdlib.h
     char* buf = malloc(PATH_MAX + 1);
     char* ret = realpath(path, buf);
     if(ret) {
@@ -40,10 +41,13 @@ static HANDLE HandleOut;
 static CONSOLE_SCREEN_BUFFER_INFO OutReset;
 #endif
 
+// is color printing enabled?
 bool EnableColor = false;
 
 void startColor() {
+    // assumes it will succeed enabling color
     EnableColor = true;
+
 #ifdef _WIN32
     HandleErr = GetStdHandle(STD_ERROR_HANDLE);
     HandleOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -52,6 +56,8 @@ void startColor() {
         EnableColor = false;
     }
 #endif
+    // on linux, nothing is done as color uses vt100
+    // escape sequences, rather than standard library calls
 }
 
 void cErrPrintf(TextColor color, const char* format, ...) {
@@ -109,8 +115,6 @@ const char* readFilePtr(FILE* file) {
     rewind(file);
 
     // +1 so '\0' can be added
-    // buffer should stay allocated for lifetime 
-    // of compiler as all tokens reference it
     char* buffer = ArenaAlloc((fileSize + 1) * sizeof(char));
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
     buffer[bytesRead] = '\0';
@@ -127,29 +131,45 @@ const char* pathSeperator =
     "/";
 #endif
 
-void iterateDirectory(const char* basePath, directoryCallback callback) {
+bool iterateDirectory(const char* basePath, directoryCallback callback) {
+    // assumes path max as 1000
     char path[1000];
+
+    // uses dirent.h
     DIR* directory = opendir(basePath);
     struct dirent *entry;
 
+    // path provided was not a directory
     if(!directory) {
-        return;
+        return false;
     }
 
+    bool result = false;
+
+    // foreach entry in the directory
     while((entry = readdir(directory)) != NULL) {
+        // ignore current and parent directory
         if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+
+            // contruct path to found file or folder
             strcpy(path, basePath);
             strcat(path, pathSeperator);
             strcat(path, entry->d_name);
             
+            // try to open it as a file. if it fails, it must be a directory
+            // so iterate it.
             FILE* file = fopen(path, "r");
             if(file == NULL) {
                 fclose(file);
-                iterateDirectory(path, callback);
+                result = result || iterateDirectory(path, callback);
             } else {
+                // otherwise file found, read it and run callback on it.
                 callback(path, readFilePtr(file));
                 fclose(file);
+                result = true;
             }
         }
     }
+
+    return result;
 }

@@ -105,7 +105,6 @@ bool vErrorAt(Parser* parser, unsigned int code, Token* token, const char* messa
     parser->panicMode = true;
     printMessage(parser, token, "Error", code, TextRed, message, args);
     parser->hadError = true;
-    parser->ast.hasError = true;
     PUSH_ARRAY(Error, parser->ast, error, ((Error){.token = *token, .id = code}));
     return true;
 }
@@ -121,7 +120,6 @@ bool vWarnAt(Parser* parser, unsigned int code, Token* token, const char* messag
     if(parser->panicMode) return false;
     printMessage(parser, token, "Warn", code, TextMagenta, message, args);
     parser->hadError = true;
-    parser->ast.hasError = true;
     PUSH_ARRAY(Error, parser->ast, error, ((Error){.token = *token, .id = code}));
     return true;
 }

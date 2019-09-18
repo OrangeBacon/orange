@@ -225,12 +225,7 @@ static OrangeTokenType identifierType(Scanner* scanner) {
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
         case 'm': return checkKeyword(scanner, 1, 4, "acro", TOKEN_MACRO);
         case 'i': return checkKeyword(scanner, 1, 4, "nput", TOKEN_INPUT);
-        case 'o': if(scanner->current - scanner->start > 1) {
-            switch(scanner->start[1]) {
-                case 'p': return checkKeyword(scanner, 2, 4, "code", TOKEN_OPCODE);
-                case 'u': return checkKeyword(scanner, 2, 4, "tput", TOKEN_OUTPUT);
-            }
-        }
+        case 'o': return checkKeyword(scanner, 1, 5, "pcode", TOKEN_OPCODE);
     }
     return TOKEN_IDENTIFIER;
 }
