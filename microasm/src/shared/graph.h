@@ -1,3 +1,6 @@
+#ifndef GRAPH_H
+#define GRAPH_H
+
 #include "shared/memory.h"
 
 typedef struct Node {
@@ -43,3 +46,5 @@ NodeArray NodesNoInput(Graph* graph);
 
 // sort the nodes
 NodeArray TopologicalSort(Graph* graph);
+
+#endif

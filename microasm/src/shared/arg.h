@@ -1,3 +1,6 @@
+#ifndef ARG_H
+#define ARG_H
+
 #include "shared/table.h"
 #include "shared/memory.h"
 
@@ -124,3 +127,5 @@ bool argSuccess(argParser* parser);
 
 // get the count'th argument of a parser as a char pointer
 #define strArg(parser, count) (parser).posArgs[count].value.as_string
+
+#endif
