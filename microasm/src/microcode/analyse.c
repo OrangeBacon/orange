@@ -105,6 +105,28 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
         warnAt(mcode, 200, opcodeName, "Unable to order microcode bits in line %u", lineNumber);
     }
 
+    for(unsigned int i = 0; i < core->componentCount; i++) {
+        Component* component = &core->components[i];
+        component->busStatus = false;
+    }
+
+    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
+        Command* command = &core->commands[nodes.nodes[i]->value];
+
+        for(unsigned int j = 0; j < command->readsLength; j++) {
+            Component* bus = &core->components[command->reads[j]];
+            if(!bus->busStatus) {
+                warnAt(mcode, 201, opcodeName, "Command reads from bus before it was written "
+                    "in line %u", lineNumber);
+            }
+        }
+
+        for(unsigned int j = 0; j < command->writesLength; j++) {
+            Component* bus = &core->components[command->writes[j]];
+            bus->busStatus = true;
+        }
+    }
+
     return nodes;
 }
 

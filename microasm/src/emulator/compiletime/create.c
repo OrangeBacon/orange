@@ -144,7 +144,8 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
         .file = "instRegSet",
         ARGUMENTS(((Argument){.name = "inst", .value = core->components[iBus].name})),
         DEPENDS(iBus),
-        CHANGES(this)
+        CHANGES(this),
+        BUS_READ(iBus)
     });
 }
 
@@ -175,7 +176,9 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
             ((Argument){.name = "data", .value = core->components[data].name}),
             ((Argument){.name = "address", .value = core->components[address].name})),
         DEPENDS(address, this),
-        CHANGES(data)
+        CHANGES(data),
+        BUS_READ(address),
+        BUS_WRITE(data)
     });
 
     addCommand(core, (Command) {
@@ -185,7 +188,8 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
             ((Argument){.name = "data", .value = core->components[data].name}),
             ((Argument){.name = "address", .value = core->components[address].name})),
         DEPENDS(address, data),
-        CHANGES(this)
+        CHANGES(this),
+        BUS_READ(address, data)
     });
 
     return (Memory){
@@ -214,7 +218,9 @@ void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
             ((Argument){.name = "data", .value = core->components[bus].name}),
             ((Argument){.name = "address", .value = core->components[mem->address].name})),
         DEPENDS(mem->address, mem->id),
-        CHANGES(bus)
+        CHANGES(bus),
+        BUS_READ(mem->address),
+        BUS_WRITE(bus)
     });
 }
 
@@ -248,7 +254,8 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
                 ((Argument){.name = "BUS", .value = core->components[bus].name}),
                 ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
             DEPENDS(bus),
-            CHANGES(reg)
+            CHANGES(reg),
+            BUS_READ(bus)
         });
     }
 
@@ -260,7 +267,8 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
                 ((Argument){.name = "BUS", .value = core->components[bus].name}),
                 ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
             DEPENDS(reg),
-            CHANGES(bus)
+            CHANGES(bus),
+            BUS_WRITE(bus)
         });
     }
 }

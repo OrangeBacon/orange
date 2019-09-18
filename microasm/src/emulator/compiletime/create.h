@@ -26,6 +26,12 @@ typedef struct Command {
     unsigned int dependsLength;
     unsigned int* changes;
     unsigned int changesLength;
+
+    unsigned int* reads;
+    unsigned int readsLength;
+
+    unsigned int* writes;
+    unsigned int writesLength;
 } Command;
 
 #define FOREACH_COMPONENT(x) \
@@ -46,6 +52,7 @@ const char* ComponentTypeNames[FOREACH_COMPONENT(ADD_COMPONENT)];
 typedef struct Component {
     const char* name;
     ComponentType type;
+
     bool busStatus;
 } Component;
 
@@ -90,16 +97,23 @@ void addCommand(VMCoreGen* core, Command command);
 unsigned int* AllocUInt(unsigned int itemCount, ...);
 Argument* AllocArgument(unsigned int itemCount, ...);
 
+#define STRUCT_ARRAY(type, name, alloc, ...) \
+    .name = alloc(sizeof((type[]){__VA_ARGS__})/sizeof(type), __VA_ARGS__), \
+    .name##Length = sizeof((type[]){__VA_ARGS__})/sizeof(type)
+
 #define DEPENDS(...) \
-    .depends = AllocUInt(sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int), __VA_ARGS__), \
-    .dependsLength = sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int)
+    STRUCT_ARRAY(unsigned int, depends, AllocUInt, __VA_ARGS__)
 
 #define CHANGES(...) \
-    .changes = AllocUInt(sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int), __VA_ARGS__), \
-    .changesLength = sizeof((unsigned int[]){__VA_ARGS__})/sizeof(unsigned int)
+    STRUCT_ARRAY(unsigned int, changes, AllocUInt, __VA_ARGS__)
 
 #define ARGUMENTS(...) \
-    .args = AllocArgument(sizeof((Argument[]){__VA_ARGS__})/sizeof(Argument), __VA_ARGS__), \
-    .argsLength = sizeof((Argument[]){__VA_ARGS__})/sizeof(Argument)
+    STRUCT_ARRAY(Argument, args, AllocArgument, __VA_ARGS__)
+
+#define BUS_READ(...) \
+    STRUCT_ARRAY(unsigned int, reads, AllocUInt, __VA_ARGS__)
+
+#define BUS_WRITE(...) \
+    STRUCT_ARRAY(unsigned int, writes, AllocUInt, __VA_ARGS__)
 
 #endif

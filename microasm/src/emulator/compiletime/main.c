@@ -31,5 +31,7 @@ int main(int argc, char** argv){
 
     if(!parse.hadError) {
         coreCodegen(&core, argv[2]);
+    } else {
+        return 1;
     }
 }

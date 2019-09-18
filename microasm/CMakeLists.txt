@@ -10,6 +10,14 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(debug)
 endif()
 
+set(MY_C_FLAGS
+    -Wall
+    -Wextra
+    -pedantic
+    -Werror
+    -Wno-missing-field-initializers
+)
+
 # list of source files
 set(MICROCODE_FILES
     src/microcode/scanner.c
@@ -61,7 +69,7 @@ add_executable(generator
     ${EMULATOR_WRITE}
 )
 target_link_libraries(generator m)
-target_compile_options(generator PRIVATE -Wall -Wextra -pedantic -Werror)
+target_compile_options(generator PRIVATE ${MY_C_FLAGS})
 set_property(TARGET generator PROPERTY C_STANDARD 11)
 
 add_custom_command(
@@ -78,7 +86,7 @@ add_executable(microasm
     ${EMULATOR_GENERATE}
 )
 target_link_libraries(microasm m)
-target_compile_options(microasm PRIVATE -Wall -Wextra -pedantic -Werror)
+target_compile_options(microasm PRIVATE ${MY_C_FLAGS})
 set_property(TARGET microasm PROPERTY C_STANDARD 11)
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")

@@ -8,8 +8,8 @@ header {
 }
 
 opcode 1 memToA(Reg, Reg, Reg) {
-    AToData; DataToA;
-    BToData; DataToB;
+    AToData, DataToB;
+    BToData, DataToA;
 }
 
 opcode 2 memToB() {
