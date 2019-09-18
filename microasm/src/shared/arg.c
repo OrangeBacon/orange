@@ -60,7 +60,7 @@ static void argUsage(argParser* parser) {
 
     // and print them out
     if(shortOpts.charCount > 0) {
-        cErrPrintf(TextWhite, "[-%*s] ", shortOpts.charCount, shortOpts.chars);
+        cErrPrintf(TextWhite, "[-%.*s] ", shortOpts.charCount, shortOpts.chars);
     }
 
     // print options without a single character identifier or that take an argument
