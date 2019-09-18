@@ -28,8 +28,24 @@ typedef struct Command {
     unsigned int changesLength;
 } Command;
 
+#define FOREACH_COMPONENT(x) \
+    x(BUS) x(REGISTER) x(OTHER)
+
+#define ENUM_COMPONENT(x) COMPONENT_##x,
+#define ADD_COMPONENT(x) +1
+
+typedef enum ComponentType {
+    FOREACH_COMPONENT(ENUM_COMPONENT)
+} ComponentType;
+
+const char* ComponentTypeNames[FOREACH_COMPONENT(ADD_COMPONENT)];
+
+#undef ENUM_COMPONENT
+#undef ADD_COMPONENT
+
 typedef struct Component {
     const char* name;
+    ComponentType type;
     bool busStatus;
 } Component;
 
