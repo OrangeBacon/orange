@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 void initCore(VMCoreGen* core) {
-    ARRAY_ALLOC(const char*, *core, compName);
+    ARRAY_ALLOC(Component, *core, component);
     ARRAY_ALLOC(const char*, *core, variable);
     ARRAY_ALLOC(const char*, *core, command);
     ARRAY_ALLOC(Command, *core, command);
@@ -73,15 +73,15 @@ void addVariable(VMCoreGen* core, const char* format, ...) {
 unsigned int addRegister(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
-    PUSH_ARRAY(const char*, *core, compName, name);
-    return core->compNameCount - 1;
+    PUSH_ARRAY(Component, *core, component, ((Component){.name = name}));
+    return core->componentCount - 1;
 }
 
 unsigned int addBus(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
-    PUSH_ARRAY(const char*, *core, compName, name);
-    return core->compNameCount - 1;
+    PUSH_ARRAY(Component, *core, component, ((Component){.name = name}));
+    return core->componentCount - 1;
 }
 
 void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
@@ -92,13 +92,13 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     addVariable(core, "uint16_t arg3");
     addVariable(core, "uint16_t arg12");
     addVariable(core, "uint16_t arg123");
-    PUSH_ARRAY(const char*, *core, compName, "IReg");
-    unsigned int this = core->compNameCount - 1;
+    PUSH_ARRAY(Component, *core, component, ((Component){.name = "IReg"}));
+    unsigned int this = core->componentCount - 1;
 
     addCommand(core, (Command) {
         .name = "iRegSet",
         .file = "instRegSet",
-        ARGUMENTS(((Argument){.name = "inst", .value = core->compNames[iBus]})),
+        ARGUMENTS(((Argument){.name = "inst", .value = core->components[iBus].name})),
         DEPENDS(iBus),
         CHANGES(this)
     });
@@ -106,15 +106,15 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
 
 Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
     addHeader(core, "<stdint.h>");
-    PUSH_ARRAY(const char*, *core, compName, "Memory64");
-    unsigned int this = core->compNameCount - 1;
+    PUSH_ARRAY(Component, *core, component, ((Component){.name = "Memory64"}));
+    unsigned int this = core->componentCount - 1;
 
     addCommand(core, (Command) {
-        .name = aprintf("memReadTo%s", core->compNames[data]),
+        .name = aprintf("memReadTo%s", core->components[data].name),
         .file = "memRead",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->compNames[data]}), 
-            ((Argument){.name = "address", .value = core->compNames[address]})),
+            ((Argument){.name = "data", .value = core->components[data].name}), 
+            ((Argument){.name = "address", .value = core->components[address].name})),
         DEPENDS(address, this),
         CHANGES(data)
     });
@@ -123,8 +123,8 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
         .name = "memWrite",
         .file = "memWrite",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->compNames[data]}), 
-            ((Argument){.name = "address", .value = core->compNames[address]})),
+            ((Argument){.name = "data", .value = core->components[data].name}), 
+            ((Argument){.name = "address", .value = core->components[address].name})),
         DEPENDS(address, data),
         CHANGES(this)
     });
@@ -137,11 +137,11 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
 
 void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
     addCommand(core, (Command) {
-        .name = aprintf("memReadTo%s", core->compNames[bus]),
+        .name = aprintf("memReadTo%s", core->components[bus].name),
         .file = "memRead",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->compNames[bus]}), 
-            ((Argument){.name = "address", .value = core->compNames[mem->address]})),
+            ((Argument){.name = "data", .value = core->components[bus].name}), 
+            ((Argument){.name = "address", .value = core->components[mem->address].name})),
         DEPENDS(mem->address, mem->id),
         CHANGES(bus)
     });
@@ -150,11 +150,11 @@ void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
 void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int reg, int state) {
     if(state == -1 || state == 0) {
         addCommand(core, (Command) {
-            .name = aprintf("%sTo%s", core->compNames[bus], core->compNames[reg]),
+            .name = aprintf("%sTo%s", core->components[bus].name, core->components[reg].name),
             .file = "busToReg",
             ARGUMENTS(
-                ((Argument){.name = "BUS", .value = core->compNames[bus]}), 
-                ((Argument){.name = "REGISTER", .value = core->compNames[reg]})),
+                ((Argument){.name = "BUS", .value = core->components[bus].name}), 
+                ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
             DEPENDS(bus),
             CHANGES(reg)
         });
@@ -162,11 +162,11 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
 
     if(state == 0 || state == 1) {
         addCommand(core, (Command) {
-            .name = aprintf("%sTo%s", core->compNames[reg], core->compNames[bus]),
+            .name = aprintf("%sTo%s", core->components[reg], core->components[bus].name),
             .file = "regToBus",
             ARGUMENTS(
-                ((Argument){.name = "BUS", .value = core->compNames[bus]}), 
-                ((Argument){.name = "REGISTER", .value = core->compNames[reg]})),
+                ((Argument){.name = "BUS", .value = core->components[bus].name}), 
+                ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
             DEPENDS(reg),
             CHANGES(bus)
         });

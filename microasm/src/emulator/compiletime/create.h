@@ -28,8 +28,13 @@ typedef struct Command {
     unsigned int changesLength;
 } Command;
 
+typedef struct Component {
+    const char* name;
+    bool busStatus;
+} Component;
+
 typedef struct VMCoreGen {
-    DEFINE_ARRAY(const char*, compName);
+    DEFINE_ARRAY(Component, component);
 
     Table headers;
     DEFINE_ARRAY(const char*, variable);
