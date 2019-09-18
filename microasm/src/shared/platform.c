@@ -51,7 +51,7 @@ void startColor() {
 #ifdef _WIN32
     HandleErr = GetStdHandle(STD_ERROR_HANDLE);
     HandleOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if(!GetConsoleScreenBufferInfo(HandleErr, &ErrReset) || 
+    if(!GetConsoleScreenBufferInfo(HandleErr, &ErrReset) ||
        !GetConsoleScreenBufferInfo(HandleOut, &OutReset)) {
         EnableColor = false;
     }
@@ -65,6 +65,8 @@ void cErrPrintf(TextColor color, const char* format, ...) {
     va_start(args, format);
 
     cErrVPrintf(color, format, args);
+
+    va_end(args);
 }
 
 void cErrVPrintf(TextColor color, const char* format, va_list args) {
@@ -84,6 +86,8 @@ void cOutPrintf(TextColor color, const char* format, ...) {
     va_start(args, format);
 
     cOutVPrintf(color, format, args);
+
+    va_end(args);
 }
 
 void cOutVPrintf(TextColor color, const char* format, va_list args) {
@@ -155,7 +159,7 @@ bool iterateDirectory(const char* basePath, directoryCallback callback) {
             strcpy(path, basePath);
             strcat(path, pathSeperator);
             strcat(path, entry->d_name);
-            
+
             // try to open it as a file. if it fails, it must be a directory
             // so iterate it.
             FILE* file = fopen(path, "r");

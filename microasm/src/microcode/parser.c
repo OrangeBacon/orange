@@ -100,9 +100,11 @@ static void consume(Parser* parser, OrangeTokenType type, unsigned int code, con
     va_start(args, message);
     if(parser->current.type == type) {
         advance(parser);
+        va_end(args);
         return;
     }
     vErrorAtCurrent(parser, code, message, args);
+    va_end(args);
 }
 
 // is the next token of type type?

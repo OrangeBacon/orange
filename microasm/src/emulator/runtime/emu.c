@@ -6,6 +6,11 @@
 void runEmulator(const char* filename, bool verbose, const char* logFileName) {
     FILE* data = fopen(filename, "rb");
 
+    if(data == NULL) {
+        cErrPrintf(TextRed, "Could not open binary file\n");
+        return;
+    }
+
     uint16_t* memory = ArenaAlloc(sizeof(uint16_t) * (1<<16));
 
     unsigned int i = 0;
@@ -16,7 +21,7 @@ void runEmulator(const char* filename, bool verbose, const char* logFileName) {
             break;
         }
         if(num2 == EOF) {
-            cErrPrintf(TextRed, "Error reading binary file");
+            cErrPrintf(TextRed, "Error reading binary file\n");
         }
         memory[i] = (num1 << 8) + num2;
         i++;

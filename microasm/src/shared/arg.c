@@ -71,7 +71,7 @@ static void argUsage(argParser* parser) {
         }
         optionArg* arg = entry->value;
         switch(arg->type) {
-            case OPT_STRING: 
+            case OPT_STRING:
                 if(arg->hasShortName) {
                     cErrPrintf(TextWhite, "[-%c", arg->shortName);
                 } else {
@@ -129,7 +129,8 @@ static void argError(argParser* parser, const char* message, ...) {
     cErrPrintf(TextWhite, "\nError: ");
     cErrVPrintf(TextRed, message, args);
     cErrPrintf(TextWhite, "\n");
-    exit(1);
+
+    va_end(args);
 }
 
 void argArguments(argParser* parser, int argc, char** argv) {
@@ -169,7 +170,7 @@ optionArg* argActionOption(argParser* parser, char shortName, const char* longNa
 }
 
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg) {
-    
+
     // error checking for the names
     if(tableHas(&parser->options, (void*)longName)) {
         argInternalError(parser, "Option already exists");
@@ -288,7 +289,7 @@ static void argParseLongArg(argParser* parser, int i) {
         switch(value->type) {
 
             // run the action
-            case OPT_ACTION: 
+            case OPT_ACTION:
                 if(!value->action(value->ctx)) {
                     exit(0);
                 }
@@ -424,7 +425,7 @@ void argParse(argParser* parser) {
         size_t argLen = strlen(parser->argv[i]);
 
         // if '--' parsed, stop parsing option arguments
-        if(parser->parseOptions && argLen == 2 
+        if(parser->parseOptions && argLen == 2
             && parser->argv[i][0] == '-' && parser->argv[i][1] == '-') {
             parser->parseOptions = false;
             continue;

@@ -32,7 +32,9 @@ bool printLine(Parser* parser, int line, int* start, int* length, int maxLineLen
 // print a message about a token to stderr
 // assumes the token is correctly formed
 // and is all on one line
-void printMessage(Parser* parser, Token* token, const char* name, unsigned int code, TextColor color, const char* message, va_list args) {
+void printMessage(Parser* parser, Token* token, const char* name, unsigned int code, TextColor color,
+    const char* message, va_list args) {
+
     setErrorState(parser);
     if(!printErrors) return;
     // error message
@@ -64,7 +66,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
 
     // line with the error token on
     printLine(parser, token->line, &start, &length, maxLineLength, lineNumberLength);
-    
+
     // how far along the line the error token starts
     int startPos = TOKEN_GET(*token) - parser->scanner->base - start;
 
@@ -128,21 +130,27 @@ bool vWarnAt(Parser* parser, unsigned int code, Token* token, const char* messag
 bool errorAt(Parser* parser, unsigned int code, Token* token, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vErrorAt(parser, code, token, message, args);
+    bool ret = vErrorAt(parser, code, token, message, args);
+    va_end(args);
+    return ret;
 }
 
 // print a note relating to an error token
 bool noteAt(Parser* parser, Token* token, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vNoteAt(parser, token, message, args);
+    bool ret = vNoteAt(parser, token, message, args);
+    va_end(args);
+    return ret;
 }
 
 // print a warning relating to a token
 bool warnAt(Parser* parser, unsigned int code, Token* token, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vWarnAt(parser, code, token, message, args);
+    bool ret =  vWarnAt(parser, code, token, message, args);
+    va_end(args);
+    return ret;
 }
 
 // issue error for token before advance() called
@@ -154,12 +162,16 @@ bool vErrorAtCurrent(Parser* parser, unsigned int code, const char* message, va_
 bool errorAtCurrent(Parser* parser, unsigned int code, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vErrorAtCurrent(parser, code, message, args);
+    bool ret = vErrorAtCurrent(parser, code, message, args);
+    va_end(args);
+    return ret;
 }
 
 // issue warning for already advanced() token
 bool warn(Parser* parser, unsigned int code, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    return vWarnAt(parser, code, &parser->previous, message, args);
+    bool ret = vWarnAt(parser, code, &parser->previous, message, args);
+    va_end(args);
+    return ret;
 }

@@ -24,8 +24,6 @@ unsigned int* AllocUInt(unsigned int itemCount, ...) {
         data[i] = va_arg(args, unsigned int);
     }
 
-    va_end(args);
-
     return data;
 }
 
@@ -39,8 +37,6 @@ Argument* AllocArgument(unsigned int itemCount, ...) {
         data[i] = va_arg(args, Argument);
     }
 
-    va_end(args);
-
     return data;
 }
 
@@ -51,16 +47,19 @@ void addCommand(VMCoreGen* core, Command command) {
 char* aprintf(char* format, ...) {
     va_list args;
     va_start(args, format);
-
+    printf("format(%s)\n", format);
     size_t len = vsnprintf(NULL, 0, format, args) + 1;
+    printf("len(%lu)\n", len);
     char* buf = ArenaAlloc(len * sizeof(char));
 
-    va_end(args);
-    va_start(args, format);
 
-    vsprintf(buf, format, args);
+    printf("pointer(%p)\n", buf);
+    fflush(stdout);
 
-    va_end(args);
+
+    printf("print(");
+    printf("%s", format);
+    printf(")\n");
 
     return buf;
 }
@@ -73,15 +72,9 @@ void addVariable(VMCoreGen* core, const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    size_t len = vsnprintf(NULL, 0, format, args) + 1;
-    char* buf = ArenaAlloc(len * sizeof(char));
-
-    va_end(args);
-    va_start(args, format);
-
-    vsprintf(buf, format, args);
-
-    va_end(args);
+    size_t len = vsnprintf(NULL, 0, format, args);
+    char* buf = ArenaAlloc(len * sizeof(char) + 1);
+    vsnprintf(buf, len + 1, format, args);
 
     PUSH_ARRAY(const char*, *core, variable, buf);
 }
@@ -129,7 +122,7 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
         .name = aprintf("memReadTo%s", core->components[data].name),
         .file = "memRead",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->components[data].name}),
+            ((Argument){.name = "data", .value = core->components[data].name}), 
             ((Argument){.name = "address", .value = core->components[address].name})),
         DEPENDS(address, this),
         CHANGES(data)
@@ -139,7 +132,7 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
         .name = "memWrite",
         .file = "memWrite",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->components[data].name}),
+            ((Argument){.name = "data", .value = core->components[data].name}), 
             ((Argument){.name = "address", .value = core->components[address].name})),
         DEPENDS(address, data),
         CHANGES(this)
@@ -156,7 +149,7 @@ void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
         .name = aprintf("memReadTo%s", core->components[bus].name),
         .file = "memRead",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->components[bus].name}),
+            ((Argument){.name = "data", .value = core->components[bus].name}), 
             ((Argument){.name = "address", .value = core->components[mem->address].name})),
         DEPENDS(mem->address, mem->id),
         CHANGES(bus)
@@ -165,11 +158,12 @@ void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
 
 void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int reg, int state) {
     if(state == -1 || state == 0) {
+        printf("%s, %s\n", core->components[bus].name, core->components[reg].name);
         addCommand(core, (Command) {
             .name = aprintf("%sTo%s", core->components[bus].name, core->components[reg].name),
             .file = "busToReg",
             ARGUMENTS(
-                ((Argument){.name = "BUS", .value = core->components[bus].name}),
+                ((Argument){.name = "BUS", .value = core->components[bus].name}), 
                 ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
             DEPENDS(bus),
             CHANGES(reg)
@@ -178,10 +172,10 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
 
     if(state == 0 || state == 1) {
         addCommand(core, (Command) {
-            .name = aprintf("%sTo%s", core->components[reg].name, core->components[bus].name),
+            .name = aprintf("%sTo%s", core->components[reg], core->components[bus].name),
             .file = "regToBus",
             ARGUMENTS(
-                ((Argument){.name = "BUS", .value = core->components[bus].name}),
+                ((Argument){.name = "BUS", .value = core->components[bus].name}), 
                 ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
             DEPENDS(reg),
             CHANGES(bus)
