@@ -96,7 +96,7 @@ struct argParser {
 // setup a new argument parser
 void argInit(argParser* parser, const char* name);
 
-void argHelp(argParser* parser);
+void argPrintMessage(argParser* parser);
 
 // create a mode for the parser (sub-command)
 // that can handle parsing for that sub-command

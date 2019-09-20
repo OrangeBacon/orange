@@ -49,7 +49,9 @@ int main(int argc, char** argv){
 
     if(vm->parsed) {
         runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);
-    } else {
+    } else if(analyse->parsed) {
         runFileName(strArg(parser, 0));
+    } else {
+        argPrintMessage(&parser);
     }
 }

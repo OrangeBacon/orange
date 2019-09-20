@@ -117,7 +117,7 @@ static void argUsage(argParser* parser) {
     }
 }
 
-void argHelp(argParser* parser) {
+static void argHelp(argParser* parser) {
     cErrPrintf(TextWhite, "\nHelp for %s:\n", parser->name);
 
     if(parser->helpMessage != NULL) {
@@ -173,6 +173,26 @@ void argHelp(argParser* parser) {
     for(unsigned int i = 0; i < parsers.parserCount; i++) {
         argHelp(parsers.parsers[i]);
     }
+}
+
+void argPrintMessage(argParser* parser) {
+    if(parser->errorRoot == NULL) {
+        parser->errorRoot = parser;
+    }
+
+    cErrPrintf(TextWhite, "Usage: \n");
+    argUsage(parser->errorRoot);
+
+    for(unsigned int i = 0; i < parser->errorMessageCount; i++) {
+        cErrPrintf(TextWhite, "\nError: ");
+        cErrPrintf(TextRed, "%s\n", parser->errorMessages[i]);
+    }
+
+    if(parser->helpOption->found) {
+        argHelp(parser->errorRoot);
+    }
+
+    parser->success = false;
 }
 
 // display error caused by incorrect command line
@@ -514,24 +534,7 @@ void argParse(argParser* parser) {
     parser->parsed = true;
 
     if(!parser->isSubParser && (parser->errorMessageCount > 0 || parser->helpOption->found)) {
-        if(parser->errorRoot == NULL) {
-            parser->errorRoot = parser;
-        }
-
-        cErrPrintf(TextWhite, "Usage: \n");
-        argUsage(parser->errorRoot);
-
-        if(parser->errorMessageCount > 0)cErrPrintf(TextWhite, "\n");
-        for(unsigned int i = 0; i < parser->errorMessageCount; i++) {
-            cErrPrintf(TextWhite, "Error: ");
-            cErrPrintf(TextRed, "%s\n", parser->errorMessages[i]);
-        }
-
-        if(parser->helpOption->found) {
-            argHelp(parser->errorRoot);
-        }
-
-        parser->success = false;
+        argPrintMessage(parser);
     }
 }
 
