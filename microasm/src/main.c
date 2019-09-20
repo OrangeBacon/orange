@@ -10,17 +10,28 @@ int main(int argc, char** argv){
 
     argParser parser;
     argInit(&parser, "microasm");
-    argString(&parser, "microcode file");
+    parser.helpMessage = "A series of tools to use ";
+
+    argParser* analyse = argMode(&parser, "analyse");
+    analyse->helpMessage = "Parse and analyse a microcode description file";
+    posArg* microcode = argString(analyse, "file");
+    microcode->helpMessage = "microcode description file to be parsed";
 
     argParser* vm = argMode(&parser, "vm");
-    argString(vm, "main memory file");
+    vm->helpMessage = "Run a microcode binary file in a virtual machine";
+    posArg* vmBinary = argString(vm, "file");
+    vmBinary->helpMessage = "file containing bytecode to execute in the vm";
     optionArg* vmVerbose = argOption(vm, 'v', "verbose", false);
+    vmVerbose->helpMessage = "enable extra debugging logging";
     optionArg* vmLogFile = argOption(vm, 'l', "log", true);
-    vmLogFile->argumentName = "path to log file";
+    vmLogFile->argumentName = "path";
+    vmLogFile->helpMessage = "log file location, default location is stdout";
 
 #ifdef debug
     argParser* test = argMode(&parser, "test");
-    argString(test, "test folder");
+    test->helpMessage = "Run the compiler's internal test suit";
+    posArg* testFolder = argString(test, "folder");
+    testFolder->helpMessage = "Folder to recursivly search for tests in";
 #endif
 
     argArguments(&parser, argc, argv);
@@ -31,12 +42,12 @@ int main(int argc, char** argv){
     }
 
 #ifdef debug
-    if(test->modeTaken) {
+    if(test->parsed) {
         runTests(strArg(*test, 0));
     } else 
 #endif
 
-    if(vm->modeTaken) {
+    if(vm->parsed) {
         runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);
     } else {
         runFileName(strArg(parser, 0));
