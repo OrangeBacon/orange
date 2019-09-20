@@ -87,10 +87,12 @@ struct argParser {
     bool isSubParser;
 
     optionArg* helpOption;
+    optionArg* versionOption;
 
     argParser* errorRoot;
 
     const char* helpMessage;
+    const char* versionString;
 };
 
 // setup a new argument parser
@@ -119,6 +121,8 @@ void argArguments(argParser* parser, int argc, char** argv);
 // add an optional argument to the parser, can be identified by "-${shortName}"
 // or "--${longName}".  The argument cannot be repeated and optionaly takes an argument
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg);
+
+void argAddExistingOption(argParser* parser, optionArg* arg);
 
 // has the parser !(encountered any errors)
 bool argSuccess(argParser* parser);

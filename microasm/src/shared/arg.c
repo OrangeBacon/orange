@@ -6,9 +6,16 @@
 // display error caused by in-correct arg-parser description
 // ony caused by errors in the executable - when raised
 // always a bug
-static void argInternalError(argParser* parser, const char* message) {
+static void argInternalError(argParser* parser, const char* message, ...) {
+    va_list args;
+    va_start(args, message);
+
     parser->success = false;
-    cErrPrintf(TextRed, "Implementation Error: %s\n", message);
+    cErrPrintf(TextWhite, "Implementation Error: ");
+    cErrVPrintf(TextRed, message, args);
+    cErrPrintf(TextWhite, "\n");
+
+    va_end(args);
     exit(1);
 }
 
@@ -180,12 +187,18 @@ void argPrintMessage(argParser* parser) {
         parser->errorRoot = parser;
     }
 
-    cErrPrintf(TextWhite, "Usage: \n");
-    argUsage(parser->errorRoot);
+    if(parser->helpOption->found || !parser->success) {
+        cErrPrintf(TextWhite, "Usage: \n");
+        argUsage(parser->errorRoot);
 
-    for(unsigned int i = 0; i < parser->errorMessageCount; i++) {
-        cErrPrintf(TextWhite, "\nError: ");
-        cErrPrintf(TextRed, "%s\n", parser->errorMessages[i]);
+        for(unsigned int i = 0; i < parser->errorMessageCount; i++) {
+            cErrPrintf(TextWhite, "\nError: ");
+            cErrPrintf(TextRed, "%s\n", parser->errorMessages[i]);
+        }
+    }
+
+    if(parser->versionOption->found) {
+        cErrPrintf(TextWhite, "\n%s", parser->versionString);
     }
 
     if(parser->helpOption->found) {
@@ -237,15 +250,19 @@ void argInit(argParser* parser, const char* name) {
     parser->helpMessage = NULL;
 
     optionArg* help = argOption(parser, 'h', "help", false);
-    help->helpMessage = "Display this help message";
+    help->helpMessage = "display this help message";
     parser->helpOption = help;
+
+    optionArg* version = argOption(parser, 'V', "version", false);
+    version->helpMessage = "display the version and build time of this program";
+    parser->versionOption = version;
 }
 
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg) {
 
     // error checking for the names
     if(tableHas(&parser->options, (void*)longName)) {
-        argInternalError(parser, "Option already exists");
+        argInternalError(parser, "Option %s already exists", longName);
     }
 
     if(strchr(longName, '=') != NULL) {
@@ -275,6 +292,16 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName, bo
     return arg;
 }
 
+void argAddExistingOption(argParser* parser, optionArg* arg) {
+    // error checking for the names
+    if(tableHas(&parser->options, (void*)arg->longName)) {
+        argInternalError(parser, "Option %s already exists", arg->longName);
+    }
+
+    // add it to the table of options
+    tableSet(&parser->options, (void*)arg->longName, arg);
+}
+
 argParser* argMode(argParser* parser, const char* name) {
     // error checking
     if(tableHas(&parser->modes, (void*)name)) {
@@ -296,6 +323,8 @@ argParser* argMode(argParser* parser, const char* name) {
     new->isSubParser = true;
     new->helpOption->shortName = parser->helpOption->shortName;
     new->helpOption->longName = parser->helpOption->longName;
+    new->versionOption->shortName = parser->versionOption->shortName;
+    new->versionOption->longName = parser->versionOption->longName;
 
     tableSet(&parser->modes, (void*)name, new);
     return new;
@@ -313,6 +342,11 @@ posArg* argString(argParser* parser, const char* name) {
 void argSetHelpMode(argParser* parser, char shortName, const char* longName) {
     parser->helpOption->shortName = shortName;
     parser->helpOption->longName = longName;
+}
+
+void argSetVersionMode(argParser* parser, char shortName, const char* longName) {
+    parser->versionOption->shortName = shortName;
+    parser->versionOption->longName = longName;
 }
 
 static optionArg* argFindShortName(argParser* parser, char name) {
@@ -480,6 +514,7 @@ void argParse(argParser* parser) {
             parser->usedSubParser = true;
 
             parser->helpOption->found |= new->helpOption->found;
+            parser->versionOption->found |= new->versionOption->found;
 
             for(unsigned int i = 0; i < new->errorMessageCount; i++) {
                 PUSH_ARRAY(const char*, *parser, errorMessage, new->errorMessages[i]);
