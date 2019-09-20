@@ -50,7 +50,7 @@ static void argUsage(argParser* parser) {
             continue;
         }
         optionArg* arg = entry->value;
-        if((arg->type == OPT_NONE || arg->type == OPT_ACTION) && arg->hasShortName) {
+        if(arg->type == OPT_NO_ARG && arg->hasShortName) {
             PUSH_ARRAY(char, shortOpts, char, arg->shortName);
         }
     }
@@ -117,6 +117,64 @@ static void argUsage(argParser* parser) {
     }
 }
 
+void argHelp(argParser* parser) {
+    cErrPrintf(TextWhite, "\nHelp for %s:\n", parser->name);
+
+    if(parser->helpMessage != NULL) {
+        cErrPrintf(TextWhite, "About: %s\n", parser->helpMessage);
+    }
+
+    for(unsigned int i = 0; i < parser->posArgCount; i++) {
+        posArg* arg = &parser->posArgs[i];
+        cErrPrintf(TextWhite, "  <%s>\n", arg->description);
+        cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+    }
+
+    // print option help
+    for(unsigned int i = 0; i < parser->options.capacity; i++) {
+        Entry* entry = &parser->options.entries[i];
+        if(entry->key.value == NULL) {
+            continue;
+        }
+        optionArg* arg = entry->value;
+        cErrPrintf(TextWhite, "  ");
+        switch(arg->type) {
+            case OPT_STRING:
+                if(arg->hasShortName) {
+                    cErrPrintf(TextWhite, "-%c, ", arg->shortName);
+                }
+                cErrPrintf(TextWhite, "--%s %s\n", arg->longName, arg->argumentName);
+                break;
+            case OPT_NO_ARG:
+                if(arg->hasShortName) {
+                    cErrPrintf(TextWhite, "-%c, ", arg->shortName);
+                }
+                cErrPrintf(TextWhite, "--%s\n", arg->longName);
+        }
+        cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+    }
+
+    argParserArr parsers;
+    ARRAY_ALLOC(argParser*, parsers, parser);
+
+    // gather all sub-parsers
+    for(unsigned int i = 0; i < parser->modes.capacity; i++) {
+        Entry* entry = &parser->modes.entries[i];
+        if(entry->key.value == NULL) {
+            continue;
+        }
+        PUSH_ARRAY(argParser*, parsers, parser, entry->value);
+    }
+
+    // sort the sub-parsers by name, alphabeticaly
+    qsort(parsers.parsers, parsers.parserCount, sizeof(argParser*), parserSort);
+
+    // print usage for all sub-parsers
+    for(unsigned int i = 0; i < parsers.parserCount; i++) {
+        argHelp(parsers.parsers[i]);
+    }
+}
+
 // display error caused by incorrect command line
 // arguments being passed by the user
 static void argError(argParser* parser, const char* message, ...) {
@@ -124,11 +182,15 @@ static void argError(argParser* parser, const char* message, ...) {
     va_start(args, message);
 
     parser->success = false;
-    cErrPrintf(TextWhite, "Usage: \n");
-    argUsage(parser);
-    cErrPrintf(TextWhite, "\nError: ");
-    cErrVPrintf(TextRed, message, args);
-    cErrPrintf(TextWhite, "\n");
+    parser->errorRoot = parser;
+    
+    int len = vsnprintf(NULL, 0, message, args) + 1;
+    va_end(args);
+    va_start(args, message);
+    char* buf = ArenaAlloc(sizeof(char) * len);
+    vsprintf(buf, message, args);
+
+    PUSH_ARRAY(const char*, *parser, errorMessage, buf);
 
     va_end(args);
 }
@@ -139,34 +201,24 @@ void argArguments(argParser* parser, int argc, char** argv) {
     parser->argv = &argv[1];
 }
 
-// initialises an argument parser with a given name and the length of that name
-static void argInitLen(argParser* parser, const char* name, unsigned int len) {
+void argInit(argParser* parser, const char* name) {
     initTable(&parser->modes, strHash, strCmp);
     initTable(&parser->options, strHash, strCmp);
     ARRAY_ALLOC(posArg, *parser, posArg);
+    ARRAY_ALLOC(const char*, *parser, errorMessage);
     parser->success = true;
     parser->parsed = false;
     parser->parseOptions = true;
     parser->usedSubParser = false;
-    parser->modeTaken = false;
     parser->currentPosArg = 0;
     parser->name = name;
-    parser->nameLength = len;
-}
+    parser->isSubParser = false;
+    parser->errorRoot = NULL;
+    parser->helpMessage = NULL;
 
-void argInit(argParser* parser, const char* name) {
-    argInitLen(parser, name, strlen(name));
-}
-
-optionArg* argActionOption(argParser* parser, char shortName, const char* longName, optionAction action, void* ctx) {
-    // initialise option normally and then modify it to work with the action
-    optionArg* arg = argOption(parser, shortName, longName, false);
-
-    arg->type = OPT_ACTION;
-    arg->action = action;
-    arg->ctx = ctx;
-
-    return arg;
+    optionArg* help = argOption(parser, 'h', "help", false);
+    help->helpMessage = "Display this help message";
+    parser->helpOption = help;
 }
 
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg) {
@@ -179,6 +231,9 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName, bo
     if(strchr(longName, '=') != NULL) {
         argInternalError(parser, "Long names cannot contain '='");
     }
+    if(strrchr(longName, ' ') != NULL) {
+        argInternalError(parser, "Long names cannot contain a space character");
+    }
 
     if(shortName == '-') {
         argInternalError(parser, "Short names cannot be '-'");
@@ -189,10 +244,11 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName, bo
     arg->hasShortName = shortName != '\0';
     arg->shortName = shortName;
     arg->longName = longName;
-    arg->type = takesArg ? OPT_STRING : OPT_NONE;
+    arg->type = takesArg ? OPT_STRING : OPT_NO_ARG;
     arg->found = false;
     arg->value.as_string = NULL;
     arg->argumentName = "string";
+    arg->helpMessage = "No help message found";
 
     // add it to the table of options
     tableSet(&parser->options, (void*)longName, arg);
@@ -212,20 +268,31 @@ argParser* argMode(argParser* parser, const char* name) {
 
     // +1 for the space
     // +1 for the null byte
-    unsigned int nameLen = parser->nameLength + 1 + strlen(name) + 1;
-    char* nameArr = ArenaAlloc(sizeof(char) * nameLen);
-    sprintf(nameArr, "%.*s %s", parser->nameLength, parser->name, name);
-    argInitLen(new, nameArr, nameLen);
+    int len = snprintf(NULL, 0, "%s %s", parser->name, name);
+    char* nameArr = ArenaAlloc(sizeof(char) * len);
+    sprintf(nameArr, "%s %s", parser->name, name);
+
+    argInit(new, nameArr);
+    new->isSubParser = true;
+    new->helpOption->shortName = parser->helpOption->shortName;
+    new->helpOption->longName = parser->helpOption->longName;
 
     tableSet(&parser->modes, (void*)name, new);
     return new;
 }
 
-void argString(argParser* parser, const char* name) {
+posArg* argString(argParser* parser, const char* name) {
     posArg arg;
     arg.description = name;
     arg.type = POS_STRING;
+    arg.helpMessage = "No help message found";
     PUSH_ARRAY(posArg, *parser, posArg, arg);
+    return &parser->posArgs[parser->posArgCount - 1];
+}
+
+void argSetHelpMode(argParser* parser, char shortName, const char* longName) {
+    parser->helpOption->shortName = shortName;
+    parser->helpOption->longName = longName;
 }
 
 static optionArg* argFindShortName(argParser* parser, char name) {
@@ -284,14 +351,6 @@ static void argParseLongArg(argParser* parser, int i) {
     // no argument to the option within this argument
     if(tableGet(&parser->options, &parser->argv[i][2], (void**)&value)) {
         switch(value->type) {
-
-            // run the action
-            case OPT_ACTION:
-                if(!value->action(value->ctx)) {
-                    exit(0);
-                }
-                break;
-
             // assume argument after the current one is an argument to the current option
             case OPT_STRING:
                 i += 1;
@@ -304,7 +363,7 @@ static void argParseLongArg(argParser* parser, int i) {
                 value->value.as_string = parser->argv[i];
                 value->found = true;
                 break;
-            case OPT_NONE:
+            case OPT_NO_ARG:
                 if(value->found == true) {
                     argError(parser, "Cannot repeat option \"%s\"", value->longName);
                 }
@@ -320,17 +379,10 @@ static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
     optionArg* first = argFindShortName(parser, parser->argv[i][1]);
     if(first == NULL) {
         argError(parser, "Undefined option \"%c\"", parser->argv[i][1]);
+        return;
     }
 
     switch(first->type) {
-        // run the action
-        case OPT_ACTION:
-            if(first->action(first->ctx)) {
-                exit(0);
-            }
-            // TODO: continue parsing compressed single character
-            // option list if it is present
-            break;
         case OPT_STRING:
             if(argLen > 2) {
                 // argument like -llog.txt
@@ -353,7 +405,7 @@ static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
                 first->found = true;
                 break;
             }
-        case OPT_NONE:
+        case OPT_NO_ARG:
             if(first->found == true) {
                 argError(parser, "Cannot repeat option \"%c\"", first->shortName);
             }
@@ -364,15 +416,10 @@ static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
                 optionArg* arg = argFindShortName(parser, parser->argv[i][j]);
                 if(arg == NULL) {
                     argError(parser, "Undefined option \"%c\"", parser->argv[i][j]);
+                    return;
                 }
+
                 switch(arg->type) {
-                    case OPT_ACTION:
-                        if(!arg->action(arg->ctx)) {
-                            exit(0);
-                        }
-                        // TODO: continue parsing compressed single character
-                        // option list if it is present
-                        break;
                     case OPT_STRING:
                         // do not want to support single character options with arguments
                         // inside compressed argument lists
@@ -380,7 +427,7 @@ static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
                             " in a multiple option argument",
                             parser->argv[i][j]);
                         break;
-                    case OPT_NONE:
+                    case OPT_NO_ARG:
                         if(arg->found == true) {
                             argError(parser, "Cannot repeat option \"%c\"", arg->shortName);
                         }
@@ -396,17 +443,12 @@ void argParse(argParser* parser) {
         return;
     }
 
-    // indicate this parser actually ran, not all modes
-    // will be taken.  TODO: is there a difference
-    // between mode taken and parsed?
-    parser->modeTaken = true;
-
     // for all command line arguments
     for(int i = 0; i < parser->argc; i++) {
 
         // is the argument one of the possible modes?
         argParser* new;
-        if(tableGet(&parser->modes, parser->argv[i], (void**)&new)) {
+        if(i == 0 && tableGet(&parser->modes, parser->argv[i], (void**)&new)) {
             // increment arguments, ignoring the mode name
             argArguments(new, parser->argc, parser->argv);
             argParse(new);
@@ -416,6 +458,16 @@ void argParse(argParser* parser) {
 
             // flag so errors are not repeated or flagged incorrectly
             parser->usedSubParser = true;
+
+            parser->helpOption->found |= new->helpOption->found;
+
+            for(unsigned int i = 0; i < new->errorMessageCount; i++) {
+                PUSH_ARRAY(const char*, *parser, errorMessage, new->errorMessages[i]);
+            }
+
+            if(parser->errorRoot == NULL || new->helpOption->found) {
+                parser->errorRoot = new->errorRoot == NULL ? new : new->errorRoot;
+            }
             break;
         }
 
@@ -450,16 +502,37 @@ void argParse(argParser* parser) {
         }
 
         // no successfull use for the argument found
-        argError(parser, "unexpected argument \"%s\"", parser->argv[i]);
-        return;
+        argError(parser, "Unexpected argument \"%s\"", parser->argv[i]);
+        break;
     }
 
     // if not all positional arguments forfilled and using this parser
     if(!parser->usedSubParser && parser->currentPosArg != parser->posArgCount) {
         posArg* arg = &parser->posArgs[parser->currentPosArg];
-        argError(parser, "missing required positional argument <%s>", arg->description);
+        argError(parser, "Missing required positional argument <%s>", arg->description);
     }
     parser->parsed = true;
+
+    if(!parser->isSubParser && (parser->errorMessageCount > 0 || parser->helpOption->found)) {
+        if(parser->errorRoot == NULL) {
+            parser->errorRoot = parser;
+        }
+
+        cErrPrintf(TextWhite, "Usage: \n");
+        argUsage(parser->errorRoot);
+
+        if(parser->errorMessageCount > 0)cErrPrintf(TextWhite, "\n");
+        for(unsigned int i = 0; i < parser->errorMessageCount; i++) {
+            cErrPrintf(TextWhite, "Error: ");
+            cErrPrintf(TextRed, "%s\n", parser->errorMessages[i]);
+        }
+
+        if(parser->helpOption->found) {
+            argHelp(parser->errorRoot);
+        }
+
+        parser->success = false;
+    }
 }
 
 bool argSuccess(argParser* parser) {

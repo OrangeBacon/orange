@@ -16,13 +16,8 @@ typedef struct posArg {
     } value;
 
     const char* description;
+    const char* helpMessage;
 } posArg;
-
-// the function run in an action option.
-// void* ctx is a user provided value from calling optActionArg
-// return true = parser should continue
-// return false = exits after calling function
-typedef bool (*optionAction)(void* ctx);
 
 // data for a optional, non-positional argument
 typedef struct optionArg {
@@ -35,8 +30,7 @@ typedef struct optionArg {
 
     enum optType {
         OPT_STRING,
-        OPT_ACTION,
-        OPT_NONE
+        OPT_NO_ARG
     } type;
     union optValue {
         char* as_string;
@@ -45,16 +39,16 @@ typedef struct optionArg {
     // name of argument to this option if string option
     const char* argumentName;
 
-    // action if the argument is an action argument
-    optionAction action;
-    void* ctx;
-
     // was the argument present
     bool found;
+
+    const char* helpMessage;
 } optionArg;
 
+typedef struct argParser argParser;
+
 // argument parser state
-typedef struct argParser {
+struct argParser {
     // arguments to be parsed
     int argc;
     char** argv;
@@ -76,9 +70,6 @@ typedef struct argParser {
     // should options be parsed
     bool parseOptions;
 
-    // has this mode been taken
-    bool modeTaken;
-
     // was another parser invoked
     bool usedSubParser;
 
@@ -91,12 +82,21 @@ typedef struct argParser {
     // the name of the current parser, including executable name (and mode name(s))
     const char* name;
 
-    // length of the name
-    unsigned int nameLength;
-} argParser;
+    DEFINE_ARRAY(const char*, errorMessage);
+
+    bool isSubParser;
+
+    optionArg* helpOption;
+
+    argParser* errorRoot;
+
+    const char* helpMessage;
+};
 
 // setup a new argument parser
 void argInit(argParser* parser, const char* name);
+
+void argHelp(argParser* parser);
 
 // create a mode for the parser (sub-command)
 // that can handle parsing for that sub-command
@@ -104,7 +104,9 @@ void argInit(argParser* parser, const char* name);
 argParser* argMode(argParser* parser, const char* name);
 
 // add a string required positional argument to a parser
-void argString(argParser* parser, const char* name);
+posArg* argString(argParser* parser, const char* name);
+
+void argSetHelpMode(argParser* parser, char shortName, const char* longName);
 
 // run the parser on the arguments prieviously set
 // can call exit() under some circumstances
@@ -117,10 +119,6 @@ void argArguments(argParser* parser, int argc, char** argv);
 // add an optional argument to the parser, can be identified by "-${shortName}"
 // or "--${longName}".  The argument cannot be repeated and optionaly takes an argument
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg);
-
-// add an optional argument that runs a function if it is found.
-// the option cannot take any arguments
-optionArg* argActionOption(argParser* parser, char shortName, const char* longName, optionAction action, void* ctx);
 
 // has the parser !(encountered any errors)
 bool argSuccess(argParser* parser);
