@@ -194,7 +194,7 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
         if(!code->isValid) {
             continue;
         }
-        
+
         if(code->id.data.value >= (unsigned int)(core->opcodeCount)) {
             warnAt(parser, 109, &code->id, "Opcode id is too large");
         }
@@ -263,6 +263,8 @@ static Analysis Analyses[] = {
 };
 
 void Analyse(Parser* parser, VMCoreGen* core) {
+    if(parser->hadError)return;
+
     initTable(&identifiers, tokenHash, tokenCmp);
 
     for(unsigned int i = 0; i < core->commandCount; i++) {

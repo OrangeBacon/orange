@@ -123,8 +123,6 @@ const char* readFilePtr(FILE* file) {
     size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
     buffer[bytesRead] = '\0';
 
-    fclose(file);
-
     return buffer;
 }
 
