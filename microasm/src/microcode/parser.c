@@ -153,6 +153,8 @@ static void block(Parser* parser) {
             parser->inputStatement = parser->previous;
             input(parser, true);
         }
+    } else if(match(parser, TOKEN_INCLUDE)) {
+        consume(parser, TOKEN_STRING, 30, "Expecting file name string");
     }
 #ifdef debug
     else if(parser->readTests && match(parser, TOKEN_IDENTIFIER)

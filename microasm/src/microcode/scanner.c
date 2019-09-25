@@ -12,6 +12,7 @@ static bool isDigit(char c);
 static bool isIdent(char c);
 static void skipWhitespace(Scanner* scanner);
 static Token number(Scanner* scanner);
+static Token string(Scanner* scanner, char end);
 static Token identifier(Scanner* scanner);
 static MicrocodeTokenType identifierType(Scanner* scanner);
 static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length, 
@@ -55,6 +56,8 @@ Token ScanToken(Scanner* scanner){
         case '=': return makeToken(scanner, TOKEN_EQUAL);
         case '*': return makeToken(scanner, TOKEN_STAR);
         case ',': return makeToken(scanner, TOKEN_COMMA);
+        case '"': return string(scanner, '"');
+        case '\'': return string(scanner, '\'');
     }
 
     return errorToken(scanner, "Unexpected character");
@@ -139,10 +142,7 @@ static bool isHexDigit(char c) {
 
 // is the character not whitespace and not part of any other token?
 static bool isIdent(char c) {
-    return !(c =='(' || c == ')' || c == '{' ||
-        c == '}' || c == ';' || c == ':' || c == '=' ||
-        c == '*' || c == ',' || c == ' ' || c == '\r' ||
-        c == '\n' || c == '#');
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
 // ignore any ' ', '\t', '\r', '\n' and comments
@@ -208,6 +208,17 @@ static Token number(Scanner* scanner) {
     return out;
 }
 
+static Token string(Scanner* scanner, char end) {
+    while(!isAtEnd(scanner)) {
+        char c = advance(scanner);
+        if(c == end) {
+            break;
+        }
+    }
+
+    return makeToken(scanner, TOKEN_STRING);
+}
+
 // scan an identifier
 static Token identifier(Scanner* scanner) {
     while(isIdent(peek(scanner))) {
@@ -224,8 +235,16 @@ static MicrocodeTokenType identifierType(Scanner* scanner) {
     switch(scanner->start[0]) {
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
         case 'm': return checkKeyword(scanner, 1, 4, "acro", TOKEN_MACRO);
-        case 'i': return checkKeyword(scanner, 1, 4, "nput", TOKEN_INPUT);
+        case 'i':
+            if(scanner->current - scanner->start > 2 && scanner->start[1] == 'n') {
+                switch(scanner->start[2]) {
+                    case 'c': return checkKeyword(scanner, 3, 4, "lude", TOKEN_INCLUDE);
+                    case 'p': return checkKeyword(scanner, 3, 2, "ut", TOKEN_INPUT);
+                }
+            }
+            break;
         case 'o': return checkKeyword(scanner, 1, 5, "pcode", TOKEN_OPCODE);
+        case 't': return checkKeyword(scanner, 1, 3, "ype", TOKEN_TYPE);
     }
     return TOKEN_IDENTIFIER;
 }
@@ -256,10 +275,11 @@ static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
 static Token errorToken(Scanner* scanner, const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
-    token.start = message;
-    token.length = (int)strlen(message);
+    token.start = scanner->start;
+    token.length = (int)(scanner->current - scanner->start);
     token.line = scanner->line;
     token.column = scanner->column;
+    token.data.string = message;
 
     return token;
 }

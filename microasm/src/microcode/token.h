@@ -11,6 +11,7 @@
     x(SEMICOLON) x(STAR) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
     x(MACRO) x(INPUT) \
+    x(INCLUDE) x(TYPE) x(STRING) \
     x(ERROR) x(EOF) x(NULL)
 
 #define ENUM_TOKEN(x) TOKEN_##x,
