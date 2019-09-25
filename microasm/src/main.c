@@ -62,6 +62,7 @@ int main(int argc, char** argv){
     } else if(analyse->parsed) {
         runFileName(strArg(*analyse, 0));
     } else {
+        parser.success = false;
         argPrintMessage(&parser);
     }
 }

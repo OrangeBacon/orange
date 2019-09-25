@@ -137,9 +137,20 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
         return;
     }
 
+    Identifier* val;
+    Token phase = createStrToken("phase");
+    tableGet(&identifiers, &phase, (void**)&val);
+    unsigned int maxLines = 1 << val->data->data.value;
+
+    if(mcode->head.lineCount > maxLines) {
+        warnAt(parser, 301, &mcode->head.errorPoint, 
+            "Number of lines in header (%u) is too high, the maximum is %u",
+            mcode->head.lineCount, maxLines);
+    }
+
     unsigned int count = 0;
-    for(unsigned int j = 0; j < parser->ast.head.lineCount; j++) {
-        BitArray* line = &parser->ast.head.lines[j];
+    for(unsigned int j = 0; j < mcode->head.lineCount; j++) {
+        BitArray* line = &mcode->head.lines[j];
         count += line->dataCount;
     }
 
@@ -167,7 +178,7 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
             }
         }
 
-        NodeArray nodes = analyseLine(core, parser, line, &parser->ast.head.errorPoint, i);
+        NodeArray nodes = analyseLine(core, parser, line, &mcode->head.errorPoint, i);
         for(unsigned int j = 0; j < nodes.nodeCount; j++) {
             core->headBits[bitCounter] = nodes.nodes[j]->value;
             bitCounter++;
@@ -177,6 +188,11 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
 
 static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
     AST* mcode = &parser->ast;
+
+    Identifier* val;
+    Token phase = createStrToken("phase");
+    tableGet(&identifiers, &phase, (void**)&val);
+    unsigned int maxLines = (1 << val->data->data.value) - mcode->head.lineCount;
 
     Table parameters;
     initTable(&parameters, tokenHash, tokenCmp);
@@ -197,6 +213,10 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
 
         if(code->id.data.value >= (unsigned int)(core->opcodeCount)) {
             warnAt(parser, 109, &code->id, "Opcode id is too large");
+        }
+
+        if(code->lineCount > maxLines) {
+            warnAt(parser, 302, &code->name, "Number of lines in opcode is too high");
         }
 
         gencode->isValid = true;
