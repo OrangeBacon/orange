@@ -68,7 +68,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     printLine(parser, token->line, &start, &length, maxLineLength, lineNumberLength);
 
     // how far along the line the error token starts
-    int startPos = TOKEN_GET(*token) - parser->scanner->base - start;
+    int startPos = token->start - parser->scanner->base - start;
 
     // min (how long the error token's line is, maximum line length)
     int lineLen = length > maxLineLength ? maxLineLength : length;

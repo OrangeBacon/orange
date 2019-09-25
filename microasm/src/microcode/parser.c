@@ -10,8 +10,8 @@
 #include "microcode/error.h"
 
 static void advance(Parser* parser);
-static bool match(Parser* parser, OrangeTokenType type);
-static bool check(Parser* parser, OrangeTokenType type);
+static bool match(Parser* parser, MicrocodeTokenType type);
+static bool check(Parser* parser, MicrocodeTokenType type);
 static void block(Parser* parser);
 static void header(Parser* parser, bool write);
 static void input(Parser* parser, bool write);
@@ -89,13 +89,13 @@ static void advance(Parser* parser) {
 }
 
 // consume a token of type type, else return false
-static bool match(Parser* parser, OrangeTokenType type) {
+static bool match(Parser* parser, MicrocodeTokenType type) {
     if(!check(parser, type)) return false;
     advance(parser);
     return true;
 }
 
-static void consume(Parser* parser, OrangeTokenType type, unsigned int code, const char* message, ...) {
+static void consume(Parser* parser, MicrocodeTokenType type, unsigned int code, const char* message, ...) {
     va_list args;
     va_start(args, message);
     if(parser->current.type == type) {
@@ -108,7 +108,7 @@ static void consume(Parser* parser, OrangeTokenType type, unsigned int code, con
 }
 
 // is the next token of type type?
-static bool check(Parser* parser, OrangeTokenType type) {
+static bool check(Parser* parser, MicrocodeTokenType type) {
     return parser->current.type == type;
 }
 
@@ -156,7 +156,7 @@ static void block(Parser* parser) {
     }
 #ifdef debug
     else if(parser->readTests && match(parser, TOKEN_IDENTIFIER)
-        && parser->previous.length == 1 && TOKEN_GET(parser->previous)[0] == 'E') {
+        && parser->previous.length == 1 && parser->previous.start[0] == 'E') {
         errorStatement(parser);
     }
 #endif

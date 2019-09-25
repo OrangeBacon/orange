@@ -15,22 +15,20 @@ const char* TokenNames[] = {
 // simple debug print 
 void TokenPrint(Token* token) {
     printf("%.4i:%.4i %.17s: %.*s", token->line, token->column,
-        TokenNames[token->type], token->length, TOKEN_GET(*token));
+        TokenNames[token->type], token->length, token->start);
 }
 
 Token createStrToken(const char* str) {
     Token t;
-    t.base = str;
+    t.start = str;
     t.length = strlen(str);
-    t.offset = 0;
     return t;
 }
 
 Token* createStrTokenPtr(const char* str) {
     Token* t = ArenaAlloc(sizeof(Token));
-    t->base = str;
+    t->start = str;
     t->length = strlen(str);
-    t->offset = 0;
     return t;
 }
 
@@ -38,9 +36,8 @@ Token* createUIntTokenPtr(unsigned int num) {
     Token* t = ArenaAlloc(sizeof(Token));
     char* str = ArenaAlloc(sizeof(char) * 6);
     sprintf(str, "%u", num);
-    t->base = str;
+    t->start = str;
     t->length = strlen(str);
-    t->offset = 0;
     t->data.value = num;
     return t;
 }
@@ -51,7 +48,7 @@ uint32_t tokenHash(void* value) {
     uint32_t hash = 2166126261u;
 
     for(int i = 0; i < token->length; i++) {
-        hash ^= TOKEN_GET(*token)[i];
+        hash ^= token->start[i];
         hash *= 16777619;
     }
 
@@ -65,5 +62,5 @@ bool tokenCmp(void* a, void* b) {
     if(tokA->length != tokB->length) {
         return false;
     }
-    return strncmp(TOKEN_GET(*tokA), TOKEN_GET(*tokB), tokA->length) == 0;
+    return strncmp(tokA->start, tokB->start, tokA->length) == 0;
 }

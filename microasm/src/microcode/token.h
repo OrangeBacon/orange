@@ -16,9 +16,9 @@
 #define ENUM_TOKEN(x) TOKEN_##x,
 #define ADD_TOKEN(x) +1
 
-typedef enum OrangeTokenType {
+typedef enum MicrocodeTokenType {
     FOREACH_TOKEN(ENUM_TOKEN)
-} OrangeTokenType;
+} MicrocodeTokenType;
 
 const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 
@@ -32,17 +32,13 @@ typedef union TokenData {
 
 // type and source location of a token
 typedef struct Token {
-    OrangeTokenType type;
-    const char* base; // source file buffer
-    int offset;
+    MicrocodeTokenType type;
+    const char* start;
     int length;
     int line;
     int column;
     TokenData data;
 } Token;
-
-#define TOKEN_GET(token) \
-    ((const char*)((token).base + (token).offset))
 
 // output the representation of a token to stdout
 void TokenPrint(Token* token);

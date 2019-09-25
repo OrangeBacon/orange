@@ -220,7 +220,7 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
         }
 
         gencode->isValid = true;
-        gencode->name = TOKEN_GET(code->name);
+        gencode->name = code->name.start;
         gencode->nameLen = code->name.length;
 
         unsigned int count = 0;

@@ -13,10 +13,10 @@ static bool isIdent(char c);
 static void skipWhitespace(Scanner* scanner);
 static Token number(Scanner* scanner);
 static Token identifier(Scanner* scanner);
-static OrangeTokenType identifierType(Scanner* scanner);
-static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length, 
-    const char* rest, OrangeTokenType type);
-static Token makeToken(Scanner* scanner, OrangeTokenType type);
+static MicrocodeTokenType identifierType(Scanner* scanner);
+static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length, 
+    const char* rest, MicrocodeTokenType type);
+static Token makeToken(Scanner* scanner, MicrocodeTokenType type);
 static Token errorToken(Scanner* scanner, const char* message);
 
 void ScannerInit(Scanner* scanner, const char* source, const char* fileName) {
@@ -218,7 +218,7 @@ static Token identifier(Scanner* scanner) {
 }
 
 // what is the token type of the last identifier scanned?
-static OrangeTokenType identifierType(Scanner* scanner) {
+static MicrocodeTokenType identifierType(Scanner* scanner) {
     // uses a trie - no keywords begin with anything other
     // than 'h' 'm' 'i' 'o', etc.
     switch(scanner->start[0]) {
@@ -231,8 +231,8 @@ static OrangeTokenType identifierType(Scanner* scanner) {
 }
 
 // is the remainder of the last scanned identifier the same as the provided string
-static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length, 
-      const char* rest, OrangeTokenType type) {
+static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length, 
+      const char* rest, MicrocodeTokenType type) {
     if(scanner->current - scanner->start == start + length && 
           memcmp(scanner->start + start, rest, length) == 0) {
         return type;
@@ -241,11 +241,10 @@ static OrangeTokenType checkKeyword(Scanner* scanner, int start, int length,
 }
 
 // create a token based on the currently advanced characters
-static Token makeToken(Scanner* scanner, OrangeTokenType type) {
+static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
     Token token;
     token.type = type;
-    token.base = scanner->base;
-    token.offset = (int)(scanner->start - scanner->base);
+    token.start = scanner->start;
     token.length = (int)(scanner->current - scanner->start);
     token.line = scanner->line;
     token.column = scanner->column;
@@ -257,8 +256,7 @@ static Token makeToken(Scanner* scanner, OrangeTokenType type) {
 static Token errorToken(Scanner* scanner, const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
-    token.base = scanner->base;
-    token.offset = (int)(scanner->start - scanner->base);
+    token.start = message;
     token.length = (int)strlen(message);
     token.line = scanner->line;
     token.column = scanner->column;
