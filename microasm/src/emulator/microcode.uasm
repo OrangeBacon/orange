@@ -5,19 +5,19 @@ input {
 
 include "types.uasm"
 
-type Reg enum {
-    A; B; C; D; E; AR; SP; IP;
-}
+#type Reg enum {
+#    A; B; C; D; E; AR; SP; IP;
+#}
 
-type u9 number(9) '#';
-type addr9 number(9) '$';
+#type u9 number(9) '#';
+#type addr9 number(9) '$';
 
-bitgroup RegToAddress(Reg reg) {
-    $(reg)ToAddress;
-}
-bitgroup AddressToReg(Reg reg) {
-    AddressTo$(reg)
-}
+#bitgroup RegToAddress(Reg reg) {
+#    $(reg)ToAddress;
+#}
+#bitgroup AddressToReg(Reg reg) {
+#    AddressTo$(reg)
+#}
 
 header {
     IPToAddress, memReadToInst, iRegSet
@@ -26,8 +26,9 @@ header {
 opcode 1 nop() {}
 
 opcode 2 jmp(Reg reg) {
-    1: RegToAddress, AddressToIP;
-    0: AddressToIP;
+    IPToAddress, memReadToInst, iRegSet;
+    1: AToAddress, AddressToIP;
+    0: BToAddress, AddressToIP;
 }
 
 opcode 3 halt() {

@@ -9,12 +9,17 @@ typedef struct Argument {
     const char* value;
 } Argument;
 
+typedef struct GenOpCodeLine {
+    bool hasCondition;
+    DEFINE_ARRAY(unsigned int, highBit);
+    DEFINE_ARRAY(unsigned int, lowBit);
+} GenOpCodeLine;
+
 typedef struct GenOpCode {
     bool isValid;
     const char* name;
     unsigned int nameLen;
-    unsigned int bitCount;
-    unsigned int* bits;
+    DEFINE_ARRAY(GenOpCodeLine*, line);
 } GenOpCode;
 
 typedef struct Command {
@@ -61,6 +66,7 @@ typedef struct VMCoreGen {
 
     Table headers;
     DEFINE_ARRAY(const char*, variable);
+    DEFINE_ARRAY(const char*, loopVariable);
 
     DEFINE_ARRAY(Command, command);
 
@@ -82,10 +88,12 @@ void initCore(VMCoreGen* core);
 
 void addHeader(VMCoreGen* core, const char* header);
 void addVariable(VMCoreGen* core, const char* format, ...);
+void addLoopVariable(VMCoreGen* core, const char* format, ...);
 
 unsigned int addBus(VMCoreGen* core, const char* name);
 unsigned int addRegister(VMCoreGen* core, const char* name);
 void addInstructionRegister(VMCoreGen* core, unsigned int iBus);
+void addConditionRegister(VMCoreGen* core);
 void addHaltInstruction(VMCoreGen* core);
 
 void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int reg, int state);

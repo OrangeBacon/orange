@@ -38,6 +38,8 @@ void createEmulator(VMCoreGen* core) {
     addInstructionRegister(core, instBus);
     Memory mem = addMemory64k(core, address, data);
     addMemoryBusOutput(core, &mem, instBus);
-
+    
+    addConditionRegister(core);
+    
     addHaltInstruction(core);
 }

@@ -14,6 +14,7 @@ const char* ComponentTypeNames[] = {
 void initCore(VMCoreGen* core) {
     ARRAY_ALLOC(Component, *core, component);
     ARRAY_ALLOC(const char*, *core, variable);
+    ARRAY_ALLOC(const char*, *core, loopVariable);
     ARRAY_ALLOC(const char*, *core, command);
     ARRAY_ALLOC(Command, *core, command);
     initTable(&core->headers, strHash, strCmp);
@@ -91,6 +92,23 @@ void addVariable(VMCoreGen* core, const char* format, ...) {
     va_end(args);
 
     PUSH_ARRAY(const char*, *core, variable, buf);
+}
+
+void addLoopVariable(VMCoreGen* core, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    size_t len = vsnprintf(NULL, 0, format, args) + 1;
+    char* buf = ArenaAlloc(len * sizeof(char));
+
+    va_end(args);
+    va_start(args, format);
+
+    vsprintf(buf, format, args);
+
+    va_end(args);
+
+    PUSH_ARRAY(const char*, *core, loopVariable, buf);
 }
 
 unsigned int addRegister(VMCoreGen* core, const char* name) {
@@ -271,6 +289,11 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
             BUS_WRITE(bus)
         });
     }
+}
+
+void addConditionRegister(VMCoreGen* core) {
+    addVariable(core, "uint16_t conditions");
+    addLoopVariable(core, "uint16_t currentCondition");
 }
 
 void addHaltInstruction(VMCoreGen* core) {

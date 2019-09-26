@@ -2,6 +2,18 @@
 
 #include <stdio.h>
 
+static void outputCommand(VMCoreGen* core, FILE* file, unsigned int command) {
+    for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
+        Argument* arg = &core->commands[command].args[k];
+        fprintf(file, "#define %s %s\n", arg->name, arg->value);
+    }
+    fprintf(file, "#include \"%s%s.c\"\n", core->codeIncludeBase, core->commands[command].file);
+    for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
+        Argument* arg = &core->commands[command].args[k];
+        fprintf(file, "#undef %s\n", arg->name);
+    }
+}
+
 static void outputLoop(VMCoreGen* core, FILE* file) {
     for(unsigned int i = 0; i < core->variableCount; i++) {
         fprintf(file, "%s = {0};\n", core->variables[i]);
@@ -9,39 +21,42 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
 
     fputs("while(true) {\n", file);
 
+    for(unsigned int i = 0; i < core->loopVariableCount; i++) {
+        fprintf(file, "%s = {0};\n", core->loopVariables[i]);
+    }
+
     for(unsigned int i = 0; i < core->headCount; i++) {
-        unsigned int command = core->headBits[i];
-        for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
-            Argument* arg = &core->commands[command].args[k];
-            fprintf(file, "#define %s %s\n", arg->name, arg->value);
-        }
-        fprintf(file, "#include \"%s%s.c\"\n", core->codeIncludeBase, core->commands[command].file);
-        for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
-            Argument* arg = &core->commands[command].args[k];
-            fprintf(file, "#undef %s\n", arg->name);
-        }
+        outputCommand(core, file, core->headBits[i]);
     }
 
     fputs("switch(opcode) {\n", file);
 
     for(unsigned int i = 0; i < core->opcodeCount; i++) {
         GenOpCode* code = &core->opcodes[i];
-        if(code->isValid) {
-            fprintf(file, "// %.*s\ncase %u: // %u commands\n", code->nameLen, code->name, i, code->bitCount);
-            for(unsigned int j = 0; j < code->bitCount; j++) {
-                unsigned int command = code->bits[j];
-                for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
-                    Argument* arg = &core->commands[command].args[k];
-                    fprintf(file, "#define %s %s\n", arg->name, arg->value);
+        if(!code->isValid) {
+            continue;
+        }
+
+        fprintf(file, "// %.*s\ncase %u:\n", code->nameLen, code->name, i);
+        for(unsigned int j = 0; j < code->lineCount; j++) {
+            GenOpCodeLine* line = code->lines[j];
+            if(line->hasCondition) {
+                fputs("if((conditions >> currentCondition)&1) {\n", file);
+                for(unsigned int k = 0; k < line->highBitCount; k++) {
+                    outputCommand(core, file, line->highBits[k]);
                 }
-                fprintf(file, "#include \"%s%s.c\"\n", core->codeIncludeBase, core->commands[command].file);
-                for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
-                    Argument* arg = &core->commands[command].args[k];
-                    fprintf(file, "#undef %s\n", arg->name);
+                fputs("} else {\n", file);
+                for(unsigned int k = 0; k < line->lowBitCount; k++) {
+                    outputCommand(core, file, line->lowBits[k]);
+                }
+                fputs("}\n", file);
+            } else {
+                for(unsigned int k = 0; k < line->lowBitCount; k++) {
+                    outputCommand(core, file, line->lowBits[k]);
                 }
             }
-            fputs("break;\n", file);
         }
+        fputs("break;\n", file);
     }
 
     fputs("default: exit(0);\n", file);

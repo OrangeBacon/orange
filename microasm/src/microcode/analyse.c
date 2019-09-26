@@ -81,7 +81,9 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 
     for(unsigned int i = 0; i < line->dataCount; i++) {
         Identifier* value;
-        tableGet(&identifiers, &line->datas[i], (void**)&value);
+        if(!tableGet(&identifiers, &line->datas[i], (void**)&value)) {
+            break;
+        }
         unsigned int command = value->data->data.value;
         AddNode(&graph, command);
         for(unsigned int j = 0; j < core->commands[command].changesLength; j++) {
@@ -206,6 +208,7 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
     for(unsigned int i = 0; i < mcode->opcodeCount; i++) {
         OpCode* code = &mcode->opcodes[i];
         GenOpCode* gencode = &core->opcodes[code->id.data.value];
+        ARRAY_ALLOC(GenOpCodeLine*, *gencode, line);
 
         if(!code->isValid) {
             continue;
@@ -223,25 +226,10 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
         gencode->name = code->name.start;
         gencode->nameLen = code->name.length;
 
-        unsigned int count = 0;
-        for(unsigned int j = 0; j < code->lineCount; j++) {
-            Line** line = &code->lines[j];
-            count += (*line)->bitsLow.dataCount;
-        }
-        gencode->bitCount = count;
-        gencode->bits = ArenaAlloc(sizeof(unsigned int) * gencode->bitCount);
-
-        unsigned int bitCounter = 0;
-
         for(unsigned int j = 0; j < code->lineCount; j++) {
             Line* line = code->lines[j];
-
-            NodeArray nodes = analyseLine(core, parser, &line->bitsLow, &code->name, j);
-
-            for(unsigned int k = 0; k < nodes.nodeCount; k++) {
-                gencode->bits[bitCounter] = nodes.nodes[k]->value;
-                bitCounter++;
-            }
+            GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
+            genline->hasCondition = line->hasCondition;
 
             for(unsigned int k = 0; k < line->bitsLow.dataCount; k++) {
                 Token* bit = &line->bitsLow.datas[k];
@@ -257,6 +245,25 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
                     warnAt(parser, 110, bit, "Identifier is undefined");
                 }
             }
+
+            NodeArray lowNodes = analyseLine(core, parser, &line->bitsLow, &code->name, j);
+            ARRAY_ALLOC(unsigned int, *genline, lowBit);
+            for(unsigned int k = 0; k < lowNodes.nodeCount; k++) {
+                PUSH_ARRAY(unsigned int, *genline, lowBit, lowNodes.nodes[k]->value);
+            }
+
+            if(line->hasCondition) {
+                NodeArray highNodes = analyseLine(core, parser, &line->bitsHigh, &code->name, j);
+                ARRAY_ALLOC(unsigned int, *genline, highBit);
+                for(unsigned int k = 0; k < highNodes.nodeCount; k++) {
+                   PUSH_ARRAY(unsigned int, *genline, highBit, highNodes.nodes[k]->value);
+                }
+            } else {
+                genline->highBitCapacity = genline->lowBitCapacity;
+                genline->highBitCount = genline->lowBitCount;
+                genline->highBits = genline->lowBits;
+            }
+            PUSH_ARRAY(GenOpCodeLine*, *gencode, line, genline);
         }
     }
 }
