@@ -119,6 +119,8 @@ static void syncronise(Parser* parser) {
         switch(parser->current.type) {
             // should mostly be able to continue parsing from these tokens
             case TOKEN_INPUT:
+            case TOKEN_INCLUDE:
+            //case TOKEN_TYPE:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
             case TOKEN_MACRO:
@@ -187,11 +189,11 @@ static void header(Parser* parser, bool write) {
             }
             Line* line = microcodeLine(parser);
 
-            if(line->conditionCount != 0 || line->anyCondition) {
+            if(line->hasCondition) {
                 errorAt(parser, 7, &line->conditionErrorToken, "Condition values not allowed in header");
             }
 
-            PUSH_ARRAY(BitArray, head, line, line->bits);
+            PUSH_ARRAY(BitArray, head, line, line->bitsLow);
             if(!match(parser, TOKEN_SEMICOLON)) {
                 break;
             }
@@ -199,11 +201,11 @@ static void header(Parser* parser, bool write) {
     } else {
         Line* line = microcodeLine(parser);
 
-        if(line->conditionCount != 0 || line->anyCondition) {
+        if(line->hasCondition) {
             errorAt(parser, 7, &line->conditionErrorToken, "Condition values not allowed in header");
         }
 
-        PUSH_ARRAY(BitArray, head, line, line->bits);
+        PUSH_ARRAY(BitArray, head, line, line->bitsLow);
     }
 
     blockEnd(parser, brace);
@@ -272,7 +274,6 @@ static void opcode(Parser* parser) {
     newErrorState(parser);
     
     OpCode code;
-    ARRAY_ALLOC(Token, code, parameter);
     ARRAY_ALLOC(Line*, code, line);
 
     consume(parser, TOKEN_NUMBER, 30, "Expected opcode number, got %s", TokenNames[parser->current.type]);
@@ -282,13 +283,9 @@ static void opcode(Parser* parser) {
 
     consume(parser, TOKEN_LEFT_PAREN, 27, "Expected left paren, got %s", TokenNames[parser->current.type]);
 
-    while(!check(parser, TOKEN_EOF)) {
-        if(match(parser, TOKEN_IDENTIFIER)) {
-            PUSH_ARRAY(Token, code, parameter, parser->previous);
-            if(!match(parser, TOKEN_COMMA)) {
-                break;
-            }
-        } else {
+    while(match(parser, TOKEN_IDENTIFIER)) {
+        match(parser, TOKEN_IDENTIFIER);
+        if(!match(parser, TOKEN_COMMA)) {
             break;
         }
     }
@@ -340,80 +337,62 @@ void expectTestStatements(Parser* parser) {
 
 #endif
 
+static BitArray parseMicrocodeBitArray(Parser* parser) {
+    BitArray result;
+    ARRAY_ALLOC(Token, result, data);
+    while(match(parser, TOKEN_IDENTIFIER)) {
+        PUSH_ARRAY(Token, result, data, parser->previous);
+        if(!match(parser, TOKEN_COMMA)) {
+            break;
+        }
+    }
+    return result;
+}
+
 // parses a line of microcode commands with conditions
 // returns the line ast representing what was parsed
 static Line* microcodeLine(Parser* parser) {
-    // are conditions being parsed?
-    bool cond = true;
-
-    // is this the first parse iteration?
-    bool first = true;
-
     Line* line = ArenaAlloc(sizeof(Line));
-    ARRAY_ALLOC(Token, line->bits, data);
-    ARRAY_ALLOC(Condition, *line, condition);
     line->conditionErrorToken = (Token){.type = TOKEN_NULL};
-    line->anyCondition = false;
 
-    if(match(parser, TOKEN_STAR)) {
-        line->conditionErrorToken = parser->previous;
-        consume(parser, TOKEN_COLON, 12, "Expected colon after star condition");
-        line->anyCondition = true;
-    }
-
-    for(;;) {
-        if(check(parser, TOKEN_SEMICOLON)) {
-            cond = false;
-            break;
-        }
-        consume(parser, TOKEN_IDENTIFIER, 13, "Expected identifier");
-        Token name = parser->previous;
-        if(first) { // in first loop iteration
-            cond = check(parser, TOKEN_EQUAL);
-        }
-        if(cond) {
-            consume(parser, TOKEN_EQUAL, 14, "Expected equals symbol");
-
-            if(first) {
-                line->conditionErrorToken = parser->previous;
-            }
-
-            consume(parser, TOKEN_NUMBER, 36, "Expected error column, got %s", TokenNames[parser->current.type]);
-            Token value = parser->previous;
-            Condition condition;
-            condition.name = name;
-            condition.value = value;
-            PUSH_ARRAY(Condition, *line, condition, condition);
+    if(check(parser, TOKEN_NUMBER)) {
+        line->hasCondition = true;
+        advance(parser);
+        bool swap;
+        if(parser->previous.data.value == 1) {
+            swap = false;
+        } else if(parser->previous.data.value == 0) {
+            swap = true;
         } else {
-            PUSH_ARRAY(Token, line->bits, data, name);
+            warnAt(parser, 49, &parser->previous, "Condition values can only be 0 or 1");
         }
-
-        // are there more values to parse?
-        if(!match(parser, TOKEN_COMMA)) {
-            break;
+        consume(parser, TOKEN_COLON, 50, "Expected colon after condition");
+        line->bitsHigh = parseMicrocodeBitArray(parser);
+        consume(parser, TOKEN_SEMICOLON, 51, "Semicolon expected between parts "
+            "of conditional microcode line");
+        consume(parser, TOKEN_NUMBER, 52, "Expected second condition value");
+        if(parser->previous.data.value == 1) {
+            if(!swap) {
+                warnAt(parser, 53, &parser->previous, "Condition value 1 repeated");
+            }
+        } else if(parser->previous.data.value == 0) {
+            if(swap) {
+                warnAt(parser, 54, &parser->previous, "Condition value 0 repeated");
+            }
+        } else {
+            warnAt(parser, 55, &parser->previous, "Condition values can only be 0 or 1");
         }
-        first = false;
-    }
+        consume(parser, TOKEN_COLON, 56, "Expected colon after condition");
+        line->bitsLow = parseMicrocodeBitArray(parser);
 
-    if(cond) {
-        // seperator between conditions and bit names required
-        consume(parser, TOKEN_COLON, 15, "Expected colon");
+        if(swap) {
+            BitArray temp = line->bitsHigh;
+            line->bitsHigh = line->bitsLow;
+            line->bitsLow = temp;
+        }
     } else {
-        // no conditions so second loop not required
-        return line;
-    }
-
-    // bits
-    for(;;) {
-        if(check(parser, TOKEN_SEMICOLON)) {
-            cond = false;
-            break;
-        }
-        consume(parser, TOKEN_IDENTIFIER, 16, "Expected bit name");
-        PUSH_ARRAY(Token, line->bits, data, parser->previous);
-        if(!match(parser, TOKEN_COMMA)) {
-            break;
-        }
+        line->hasCondition = false;
+        line->bitsHigh = line->bitsLow = parseMicrocodeBitArray(parser);
     }
 
     return line;

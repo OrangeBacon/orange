@@ -54,7 +54,6 @@ Token ScanToken(Scanner* scanner){
         case ';': return makeToken(scanner, TOKEN_SEMICOLON);
         case ':': return makeToken(scanner, TOKEN_COLON);
         case '=': return makeToken(scanner, TOKEN_EQUAL);
-        case '*': return makeToken(scanner, TOKEN_STAR);
         case ',': return makeToken(scanner, TOKEN_COMMA);
         case '"': return string(scanner, '"');
         case '\'': return string(scanner, '\'');

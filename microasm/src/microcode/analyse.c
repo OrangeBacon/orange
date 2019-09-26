@@ -226,7 +226,7 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
         unsigned int count = 0;
         for(unsigned int j = 0; j < code->lineCount; j++) {
             Line** line = &code->lines[j];
-            count += (*line)->bits.dataCount;
+            count += (*line)->bitsLow.dataCount;
         }
         gencode->bitCount = count;
         gencode->bits = ArenaAlloc(sizeof(unsigned int) * gencode->bitCount);
@@ -236,15 +236,15 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
         for(unsigned int j = 0; j < code->lineCount; j++) {
             Line* line = code->lines[j];
 
-            NodeArray nodes = analyseLine(core, parser, &line->bits, &code->name, j);
+            NodeArray nodes = analyseLine(core, parser, &line->bitsLow, &code->name, j);
 
             for(unsigned int k = 0; k < nodes.nodeCount; k++) {
                 gencode->bits[bitCounter] = nodes.nodes[k]->value;
                 bitCounter++;
             }
 
-            for(unsigned int k = 0; k < line->bits.dataCount; k++) {
-                Token* bit = &line->bits.datas[k];
+            for(unsigned int k = 0; k < line->bitsLow.dataCount; k++) {
+                Token* bit = &line->bitsLow.datas[k];
                 Identifier* bitIdentifier;
                 if(tableGet(&identifiers, bit, (void**)&bitIdentifier)) {
                     if(bitIdentifier->type != TYPE_OUTPUT) {
@@ -256,21 +256,6 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
                 } else {
                     warnAt(parser, 110, bit, "Identifier is undefined");
                 }
-            }
-
-            for(unsigned int k = 0; k < line->conditionCount; k++) {
-                Condition* cond = &line->conditions[k];
-                if(!(cond->value.data.value == 0 || cond->value.data.value == 1)) {
-                    warnAt(parser, 112, &cond->value, "Condition values must be 0 or 1");
-                }
-            }
-        }
-
-        for(unsigned int i = 0; i < code->parameterCount; i++) {
-            Token* param = &code->parameters[i];
-            void* _;
-            if(!tableGet(&parameters, param, &_)) {
-                warnAt(parser, 115, param, "Undefined parameter type");
             }
         }
     }

@@ -7,19 +7,14 @@
 struct Token;
 struct Error;
 
-typedef struct Condition {
-    struct Token name;
-    struct Token value;
-} Condition;
-
 typedef struct BitArray {
     DEFINE_ARRAY(struct Token, data);
 } BitArray;
 
 typedef struct Line {
-    DEFINE_ARRAY(Condition, condition);
-    bool anyCondition;
-    BitArray bits;
+    bool hasCondition;
+    BitArray bitsLow;
+    BitArray bitsHigh;
     struct Token conditionErrorToken;
 } Line;
 
@@ -44,7 +39,6 @@ typedef struct OpCode {
     struct Token id;
     struct Token name;
     bool isValid;
-    DEFINE_ARRAY(struct Token, parameter);
     DEFINE_ARRAY(Line*, line);
 } OpCode;
 

@@ -26,7 +26,8 @@ header {
 opcode 1 nop() {}
 
 opcode 2 jmp(Reg reg) {
-    RegToAddress(reg), AddressToIP
+    1: RegToAddress, AddressToIP;
+    0: AddressToIP;
 }
 
 opcode 3 halt() {

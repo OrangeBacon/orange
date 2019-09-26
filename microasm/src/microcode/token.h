@@ -8,7 +8,7 @@
     x(LEFT_PAREN) x(RIGHT_PAREN) \
     x(LEFT_BRACE) x(RIGHT_BRACE) \
     x(COMMA) x(DOT) x(COLON) x(NUMBER) \
-    x(SEMICOLON) x(STAR) x(EQUAL) \
+    x(SEMICOLON) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
     x(MACRO) x(INPUT) \
     x(INCLUDE) x(TYPE) x(STRING) \
