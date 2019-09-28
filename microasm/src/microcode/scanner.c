@@ -233,7 +233,6 @@ static MicrocodeTokenType identifierType(Scanner* scanner) {
     // than 'h' 'm' 'i' 'o', etc.
     switch(scanner->start[0]) {
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
-        case 'm': return checkKeyword(scanner, 1, 4, "acro", TOKEN_MACRO);
         case 'i':
             if(scanner->current - scanner->start > 2 && scanner->start[1] == 'n') {
                 switch(scanner->start[2]) {

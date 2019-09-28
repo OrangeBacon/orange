@@ -13,8 +13,8 @@ static void advance(Parser* parser);
 static bool match(Parser* parser, MicrocodeTokenType type);
 static bool check(Parser* parser, MicrocodeTokenType type);
 static void block(Parser* parser);
-static void header(Parser* parser, bool write);
-static void input(Parser* parser, bool write);
+static void header(Parser* parser);
+static void input(Parser* parser);
 static void opcode(Parser* parser);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
@@ -123,7 +123,6 @@ static void syncronise(Parser* parser) {
             //case TOKEN_TYPE:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
-            case TOKEN_MACRO:
                 return;
             default:;  // do nothing - cannot calculate a known parser state
         }
@@ -135,26 +134,10 @@ static void syncronise(Parser* parser) {
 static void block(Parser* parser) {
     if(match(parser, TOKEN_OPCODE)) {
         opcode(parser);
-    } else if(match(parser, TOKEN_MACRO)) {
-        //TODO
     } else if(match(parser, TOKEN_HEADER)) {
-        if(parser->headerStatement.line != -1){
-            bool e = warn(parser, 3, "Only one header statement allowed per microcode");
-            if(e) noteAt(parser, &parser->headerStatement, "Previously declared here");
-            header(parser, false);
-        } else {
-            parser->headerStatement = parser->previous;
-            header(parser, true);
-        }
+        header(parser);
     } else if(match(parser, TOKEN_INPUT)) {
-        if(parser->inputStatement.line != -1){
-            bool e = warn(parser, 4, "Only one input statement allowed per microcode");
-            if(e) noteAt(parser, &parser->inputStatement, "Previously declared here");
-            input(parser, false);
-        } else {
-            parser->inputStatement = parser->previous;
-            input(parser, true);
-        }
+        input(parser);
     } else if(match(parser, TOKEN_INCLUDE)) {
         consume(parser, TOKEN_STRING, 30, "Expecting file name string");
     }
@@ -173,7 +156,17 @@ static void block(Parser* parser) {
 }
 
 // parses a header statement
-static void header(Parser* parser, bool write) {
+static void header(Parser* parser) {
+    bool write;
+    if(parser->headerStatement.line != -1){
+        bool e = warn(parser, 3, "Only one header statement allowed per microcode");
+        if(e) noteAt(parser, &parser->headerStatement, "Previously declared here");
+        write = false;
+    } else {
+        parser->headerStatement = parser->previous;
+        write = true;
+    }
+
     newErrorState(parser);
 
     Header head;
@@ -217,7 +210,17 @@ static void header(Parser* parser, bool write) {
 }
 
 // parses an input statement
-static void input(Parser* parser, bool write) {
+static void input(Parser* parser) {
+    bool write;
+    if(parser->inputStatement.line != -1){
+        bool e = warn(parser, 4, "Only one input statement allowed per microcode");
+        if(e) noteAt(parser, &parser->inputStatement, "Previously declared here");
+        write = false;
+    } else {
+        parser->inputStatement = parser->previous;
+        write = true;
+    }
+
     newErrorState(parser);
 
     Token inputHeadToken = parser->previous;
