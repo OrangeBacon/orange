@@ -23,7 +23,7 @@ typedef struct Identifier {
 Table identifiers;
 
 static void AnalyseInput(Parser* parser, VMCoreGen* core) {
-    AST* mcode = &parser->ast;
+    AST* mcode = parser->ast;
 
     if(!mcode->inp.isValid) {
         return;
@@ -133,7 +133,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 }
 
 static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
-    AST* mcode = &parser->ast;
+    AST* mcode = parser->ast;
 
     if(!mcode->head.isValid) {
         return;
@@ -189,7 +189,7 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
 }
 
 static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
-    AST* mcode = &parser->ast;
+    AST* mcode = parser->ast;
 
     Identifier* val;
     Token phase = createStrToken("phase");

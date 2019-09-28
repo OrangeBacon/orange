@@ -21,7 +21,9 @@ int main(int argc, char** argv){
     ScannerInit(&scan, readFile(argv[1]), argv[1]);
 
     Parser parse;
-    ParserInit(&parse, &scan);
+    AST ast;
+    InitAST(&ast, argv[1]);
+    ParserInit(&parse, &scan, &ast);
 
     Parse(&parse);
 

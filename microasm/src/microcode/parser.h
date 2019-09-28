@@ -34,7 +34,7 @@ typedef struct Parser {
     Token inputStatement;
 
     // the ast that is being constructed currently
-    AST ast;
+    AST* ast;
 
 #ifdef debug
     bool readTests;
@@ -44,7 +44,7 @@ typedef struct Parser {
 } Parser;
 
 // initialise a new parser
-void ParserInit(Parser* parser, Scanner* scan);
+void ParserInit(Parser* parser, Scanner* scan, AST* ast);
 
 // run the parser
 bool Parse(Parser* parse);

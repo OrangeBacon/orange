@@ -47,7 +47,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     printf("\n");
 
     // file name/location
-    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->ast.fileName, token->line, token->column);
+    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->ast->fileName, token->line, token->column);
 
     // number of charcters required to print the longest line number
     int lineNumberLength = floor(log10(abs(token->line + 1))) + 1;
@@ -107,7 +107,7 @@ bool vErrorAt(Parser* parser, unsigned int code, Token* token, const char* messa
     parser->panicMode = true;
     printMessage(parser, token, "Error", code, TextRed, message, args);
     parser->hadError = true;
-    PUSH_ARRAY(Error, parser->ast, error, ((Error){.token = *token, .id = code}));
+    PUSH_ARRAY(Error, *parser->ast, error, ((Error){.token = *token, .id = code}));
     return true;
 }
 
@@ -122,7 +122,7 @@ bool vWarnAt(Parser* parser, unsigned int code, Token* token, const char* messag
     if(parser->panicMode) return false;
     printMessage(parser, token, "Warn", code, TextMagenta, message, args);
     parser->hadError = true;
-    PUSH_ARRAY(Error, parser->ast, error, ((Error){.token = *token, .id = code}));
+    PUSH_ARRAY(Error, *parser->ast, error, ((Error){.token = *token, .id = code}));
     return true;
 }
 

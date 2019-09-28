@@ -29,7 +29,7 @@ static void errorStatement(Parser* parser);
 // warn = semantic error, does not skip, fatal
 // note = infomation output, non fatal
 
-void ParserInit(Parser* parser, Scanner* scan) {
+void ParserInit(Parser* parser, Scanner* scan, AST* ast) {
     parser->scanner = scan;
     parser->hadError = false;
     parser->panicMode = false;
@@ -39,7 +39,7 @@ void ParserInit(Parser* parser, Scanner* scan) {
     parser->readTests = false;
 #endif
     ARRAY_ALLOC(bool, *parser, errorStack);
-    InitAST(&parser->ast, scan->fileName);
+    parser->ast = ast;
 }
 
 static void newErrorState(Parser* parser) {
@@ -205,7 +205,7 @@ static void header(Parser* parser) {
     head.isValid = !endErrorState(parser);
 
     if(write) {
-        parser->ast.head = head;
+        parser->ast->head = head;
     }
 }
 
@@ -267,10 +267,10 @@ static void input(Parser* parser) {
         PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
     }
     if(write) {
-        parser->ast.inp = inp;
+        parser->ast->inp = inp;
     }
     blockEnd(parser, brace);
-    parser->ast.inp.isValid = !endErrorState(parser);
+    parser->ast->inp.isValid = !endErrorState(parser);
 }
 
 static void opcode(Parser* parser) {
@@ -316,7 +316,7 @@ static void opcode(Parser* parser) {
     blockEnd(parser, brace);
 
     code.isValid = !endErrorState(parser);
-    PUSH_ARRAY(OpCode, parser->ast, opcode, code);
+    PUSH_ARRAY(OpCode, *parser->ast, opcode, code);
 }
 
 #ifdef debug
@@ -331,7 +331,7 @@ static void errorStatement(Parser* parser) {
     error.token.column = parser->previous.data.value;
     consume(parser, TOKEN_SEMICOLON, 32, "Expected semicolon");
 
-    PUSH_ARRAY(Error, parser->ast, expectedError, error);
+    PUSH_ARRAY(Error, *parser->ast, expectedError, error);
 }
 
 void expectTestStatements(Parser* parser) {

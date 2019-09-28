@@ -7,18 +7,22 @@
 #include "microcode/test.h"
 #include "microcode/error.h"
 #include "microcode/analyse.h"
+#include "microcode/scanner.h"
+#include "microcode/parser.h"
 
 inline bool runFileName(const char* fileName) {
-    Parser p;
-    return runFile(fileName, readFile(fileName), &p, false);
+    AST ast;
+    return runFile(fileName, readFile(fileName), &ast, false);
 }
 
-bool runFile(const char* fileName, const char* file, Parser* parse, bool testing) {
+bool runFile(const char* fileName, const char* file, AST* ast, bool testing) {
     const char* fullFileName = resolvePath(fileName);
 
     Scanner scan;
+    Parser parse;
     ScannerInit(&scan, file, fullFileName);
-    ParserInit(parse, &scan);
+    InitAST(ast, fileName);
+    ParserInit(&parse, &scan, ast);
 
     const char* ext = strrchr(fullFileName, '.');
     if(!ext) {
@@ -31,11 +35,11 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
 #ifdef debug
     int isTestFile = !strcmp(ext, "uasmt");
     if(isTestFile && testing) {
-        expectTestStatements(parse);
-        Parse(parse);
+        expectTestStatements(&parse);
+        Parse(&parse);
         VMCoreGen core;
         createEmulator(&core);
-        Analyse(parse, &core);
+        Analyse(&parse, &core);
         return true;
     } else if(isTestFile && !testing) {
         cErrPrintf(TextRed, "\nNot expecting microcode test file while reading \"%s\"\n", ext, fullFileName);
@@ -45,10 +49,10 @@ bool runFile(const char* fileName, const char* file, Parser* parse, bool testing
     (void)testing;
 #endif
     if(!strcmp(ext, "uasm")) {
-        Parse(parse);
+        Parse(&parse);
         VMCoreGen core;
         createEmulator(&core);
-        Analyse(parse, &core);
+        Analyse(&parse, &core);
         return true;
     }
 
@@ -61,36 +65,36 @@ static int testCount;
 static int passedCount;
 static void runTest(const char* path, const char* file) {
     testCount++;
-    Parser parser;
+    AST ast;
 
     printf("Testing: %s  ->\n", resolvePath(path));
-    bool runSuccess = runFile(path, file, &parser, true);
+    bool runSuccess = runFile(path, file, &ast, true);
 
     unsigned int currentAstError = 0;
-    while(currentAstError < parser.ast.errorCount) {
-        if(parser.ast.expectedErrorCount >= currentAstError + 1) {
-            Error expected = parser.ast.expectedErrors[currentAstError];
-            Error actual = parser.ast.errors[currentAstError];
+    while(currentAstError < ast.errorCount) {
+        if(ast.expectedErrorCount >= currentAstError + 1) {
+            Error expected = ast.expectedErrors[currentAstError];
+            Error actual = ast.errors[currentAstError];
             if(expected.id != actual.id || expected.token.line != actual.token.line || expected.token.column != actual.token.column) {
                 runSuccess = false;
-                cErrPrintf(TextRed, "  Expected Error[E%04u] at ", parser.ast.expectedErrors[currentAstError].id);
-                cErrPrintf(TextRed, "%u:%u\n", parser.ast.expectedErrors[currentAstError].token.line, parser.ast.expectedErrors[currentAstError].token.column);
-                cErrPrintf(TextRed, "  Got Error[E%04u] at ", parser.ast.errors[currentAstError].id);
-                cErrPrintf(TextRed, "%u:%u\n", parser.ast.errors[currentAstError].token.line, parser.ast.errors[currentAstError].token.column);
+                cErrPrintf(TextRed, "  Expected Error[E%04u] at ", ast.expectedErrors[currentAstError].id);
+                cErrPrintf(TextRed, "%u:%u\n", ast.expectedErrors[currentAstError].token.line, ast.expectedErrors[currentAstError].token.column);
+                cErrPrintf(TextRed, "  Got Error[E%04u] at ", ast.errors[currentAstError].id);
+                cErrPrintf(TextRed, "%u:%u\n", ast.errors[currentAstError].token.line, ast.errors[currentAstError].token.column);
             }
         } else {
             runSuccess = false;
-            cErrPrintf(TextRed, "  Error[E%04u] at ", parser.ast.errors[currentAstError].id);
-            cErrPrintf(TextRed, "%u:%u\n", parser.ast.errors[currentAstError].token.line, parser.ast.errors[currentAstError].token.column);
+            cErrPrintf(TextRed, "  Error[E%04u] at ", ast.errors[currentAstError].id);
+            cErrPrintf(TextRed, "%u:%u\n", ast.errors[currentAstError].token.line, ast.errors[currentAstError].token.column);
         }
         currentAstError++;
     }
 
-    if(parser.ast.expectedErrorCount != currentAstError) {
+    if(ast.expectedErrorCount != currentAstError) {
         runSuccess = false;
-        for(; currentAstError < parser.ast.expectedErrorCount; currentAstError++) {
-            cErrPrintf(TextRed, "  Expected Error[E%04u] at ", parser.ast.expectedErrors[currentAstError].id);
-            cErrPrintf(TextRed, "%u:%u\n", parser.ast.expectedErrors[currentAstError].token.line, parser.ast.expectedErrors[currentAstError].token.column);
+        for(; currentAstError < ast.expectedErrorCount; currentAstError++) {
+            cErrPrintf(TextRed, "  Expected Error[E%04u] at ", ast.expectedErrors[currentAstError].id);
+            cErrPrintf(TextRed, "%u:%u\n", ast.expectedErrors[currentAstError].token.line, ast.expectedErrors[currentAstError].token.column);
         }
     }
 
