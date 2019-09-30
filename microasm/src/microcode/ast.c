@@ -7,10 +7,12 @@
 #include "microcode/error.h"
 #include "microcode/token.h"
 
-void InitAST(AST* mcode, const char* fileName) {
-    mcode->fileName = fileName;
+void InitAST(AST* mcode) {
+    ARRAY_ALLOC(const char*, *mcode, fileName);
     mcode->head.isValid = false;
+    mcode->head.isPresent = false;
     mcode->inp.isValid = false;
+    mcode->inp.isPresent = false;
     ARRAY_ZERO(mcode->head, line);
     ARRAY_ZERO(mcode->inp, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);

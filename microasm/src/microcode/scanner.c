@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include "microcode/scanner.h"
+#include "shared/memory.h"
 
 static char peek(Scanner* scanner);
 static char advance(Scanner* scanner);
@@ -215,7 +216,12 @@ static Token string(Scanner* scanner, char end) {
         }
     }
 
-    return makeToken(scanner, TOKEN_STRING);
+    Token ret = makeToken(scanner, TOKEN_STRING);
+    char* buf = ArenaAlloc(sizeof(char) * (ret.length-2+1));
+    *buf = '\0';
+    strncat(buf, ret.start+1, ret.length-2);
+    ret.data.string = buf;
+    return ret;
 }
 
 // scan an identifier

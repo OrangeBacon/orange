@@ -47,7 +47,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     printf("\n");
 
     // file name/location
-    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->ast->fileName, token->line, token->column);
+    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->scanner->fileName, token->line, token->column);
 
     // number of charcters required to print the longest line number
     int lineNumberLength = floor(log10(abs(token->line + 1))) + 1;

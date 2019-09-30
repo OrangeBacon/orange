@@ -16,6 +16,7 @@ static void block(Parser* parser);
 static void header(Parser* parser);
 static void input(Parser* parser);
 static void opcode(Parser* parser);
+static void include(Parser* parser);
 static Line* microcodeLine(Parser* parser);
 static bool blockStart(Parser* parser);
 static void blockEnd(Parser* parser, bool start);
@@ -60,16 +61,18 @@ bool Parse(Parser* parser) {
     // gets first token, required so not matching garbage(causes segfault)
     advance(parser);
 
+    for(unsigned int i = 0; i < parser->ast->fileNameCount; i++) {
+        if(parser->ast->fileNames[i] == parser->scanner->fileName) {
+            errorAt(parser, 400, &parser->current, "Recursive include detected of file \"%s\"",
+                parser->scanner->fileName);
+            return false;
+        }
+    }
+    PUSH_ARRAY(const char*, *parser->ast, fileName, parser->scanner->fileName);
+
     while(!match(parser, TOKEN_EOF)){
         // all file-level constructs are blocks of some form
         block(parser);
-    }
-
-    if(parser->inputStatement.line == -1) {
-        warnAt(parser, 37, &parser->previous, "No input statement found");
-    }
-    if(parser->headerStatement.line == -1) {
-        warnAt(parser, 38, &parser->previous, "No header statement found");
     }
 
     return !parser->hadError;
@@ -139,7 +142,7 @@ static void block(Parser* parser) {
     } else if(match(parser, TOKEN_INPUT)) {
         input(parser);
     } else if(match(parser, TOKEN_INCLUDE)) {
-        consume(parser, TOKEN_STRING, 30, "Expecting file name string");
+        include(parser);
     }
 #ifdef debug
     else if(parser->readTests && match(parser, TOKEN_IDENTIFIER)
@@ -157,6 +160,7 @@ static void block(Parser* parser) {
 
 // parses a header statement
 static void header(Parser* parser) {
+    parser->ast->head.isPresent = true;
     bool write;
     if(parser->headerStatement.line != -1){
         bool e = warn(parser, 3, "Only one header statement allowed per microcode");
@@ -211,6 +215,7 @@ static void header(Parser* parser) {
 
 // parses an input statement
 static void input(Parser* parser) {
+    parser->ast->inp.isPresent = true;
     bool write;
     if(parser->inputStatement.line != -1){
         bool e = warn(parser, 4, "Only one input statement allowed per microcode");
@@ -317,6 +322,19 @@ static void opcode(Parser* parser) {
 
     code.isValid = !endErrorState(parser);
     PUSH_ARRAY(OpCode, *parser->ast, opcode, code);
+}
+
+static void include(Parser* parser) {
+    if(match(parser, TOKEN_STRING)) {
+        const char* fileName = parser->previous.data.string;
+        Scanner newScanner;
+        Parser newParser;
+        ScannerInit(&newScanner, readFile(fileName), fileName);
+        ParserInit(&newParser, &newScanner, parser->ast);
+        Parse(&newParser);
+    } else {
+        errorAt(parser, 401, &parser->current, "Expected string containing file name to include.");
+    }
 }
 
 #ifdef debug

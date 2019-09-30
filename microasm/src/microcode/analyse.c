@@ -25,6 +25,10 @@ Table identifiers;
 static void AnalyseInput(Parser* parser, VMCoreGen* core) {
     AST* mcode = parser->ast;
 
+    if(!mcode->inp.isPresent) {
+        warnAt(parser, 700, &parser->current, "Could not detect input block in microcode.");
+    }
+
     if(!mcode->inp.isValid) {
         return;
     }
@@ -134,6 +138,10 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 
 static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
     AST* mcode = parser->ast;
+
+    if(!mcode->head.isPresent) {
+        warnAt(parser, 700, &parser->current, "Could not detect header block in microcode.");
+    }
 
     if(!mcode->head.isValid) {
         return;

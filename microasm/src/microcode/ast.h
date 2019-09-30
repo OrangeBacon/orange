@@ -21,6 +21,7 @@ typedef struct Line {
 typedef struct Header {
     DEFINE_ARRAY(BitArray, line);
     bool isValid;
+    bool isPresent;
     struct Token errorPoint;
 } Header;
 
@@ -33,6 +34,7 @@ typedef struct Input {
     DEFINE_ARRAY(InputValue, value);
     struct Token inputHeadToken;
     bool isValid;
+    bool isPresent;
 } Input;
 
 typedef struct OpCode {
@@ -43,7 +45,7 @@ typedef struct OpCode {
 } OpCode;
 
 typedef struct AST {
-    const char* fileName;
+    DEFINE_ARRAY(const char*, fileName);
 
     DEFINE_ARRAY(struct Error, error);
     Header head;
@@ -56,6 +58,6 @@ typedef struct AST {
 #endif
 } AST;
 
-void InitAST(AST* mcode, const char* fileName);
+void InitAST(AST* mcode);
 
 #endif

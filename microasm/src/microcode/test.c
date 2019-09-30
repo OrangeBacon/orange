@@ -21,7 +21,7 @@ bool runFile(const char* fileName, const char* file, AST* ast, bool testing) {
     Scanner scan;
     Parser parse;
     ScannerInit(&scan, file, fullFileName);
-    InitAST(ast, fileName);
+    InitAST(ast);
     ParserInit(&parse, &scan, ast);
 
     const char* ext = strrchr(fullFileName, '.');

@@ -22,7 +22,7 @@ int main(int argc, char** argv){
 
     Parser parse;
     AST ast;
-    InitAST(&ast, argv[1]);
+    InitAST(&ast);
     ParserInit(&parse, &scan, &ast);
 
     Parse(&parse);
