@@ -35,6 +35,7 @@ set(SHARED_FILES
     src/shared/table.c
     src/shared/arg.c
     src/shared/graph.c
+    src/shared/path.c
 )
 
 set(EMULATOR_GENERATE

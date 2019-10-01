@@ -3,7 +3,7 @@ input {
     phase: 4;
 }
 
-include "types.uasm"
+include "types"
 
 #type Reg enum {
 #    A; B; C; D; E; AR; SP; IP;

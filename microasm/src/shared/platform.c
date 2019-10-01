@@ -126,11 +126,11 @@ const char* readFilePtr(FILE* file) {
     return buffer;
 }
 
-const char* pathSeperator =
+const char pathSeperator =
 #ifdef _WIN32
-    "\\";
+    '\\';
 #else
-    "/";
+    '/';
 #endif
 
 bool iterateDirectory(const char* basePath, directoryCallback callback) {
@@ -153,9 +153,11 @@ bool iterateDirectory(const char* basePath, directoryCallback callback) {
         // ignore current and parent directory
         if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
 
+            const char pathSepString[] = {pathSeperator, '\0'};
+
             // contruct path to found file or folder
             strcpy(path, basePath);
-            strcat(path, pathSeperator);
+            strcat(path, pathSepString);
             strcat(path, entry->d_name);
 
             // try to open it as a file. if it fails, it must be a directory

@@ -5,6 +5,7 @@
 #include <limits.h>
 #include "microcode/scanner.h"
 #include "shared/memory.h"
+#include "shared/platform.h"
 
 static char peek(Scanner* scanner);
 static char advance(Scanner* scanner);
@@ -27,7 +28,7 @@ void ScannerInit(Scanner* scanner, const char* source, const char* fileName) {
     scanner->current = source;
     scanner->start = source;
     scanner->base = source;
-    scanner->fileName = fileName;
+    scanner->fileName = resolvePath(fileName);
 }
 
 Token ScanToken(Scanner* scanner){

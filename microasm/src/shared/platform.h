@@ -65,6 +65,6 @@ typedef void(*directoryCallback)(const char* path, const char* file);
 bool iterateDirectory(const char* basePath, directoryCallback callback);
 
 // the character to use to seperate sections in a path
-extern const char* pathSeperator;
+extern const char pathSeperator;
 
 #endif

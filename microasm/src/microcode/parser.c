@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <limits.h>
 #include "shared/memory.h"
 #include "shared/platform.h"
+#include "shared/path.h"
 #include "microcode/token.h"
 #include "microcode/parser.h"
 #include "microcode/ast.h"
@@ -160,7 +162,6 @@ static void block(Parser* parser) {
 
 // parses a header statement
 static void header(Parser* parser) {
-    parser->ast->head.isPresent = true;
     bool write;
     if(parser->headerStatement.line != -1){
         bool e = warn(parser, 3, "Only one header statement allowed per microcode");
@@ -206,16 +207,17 @@ static void header(Parser* parser) {
     }
 
     blockEnd(parser, brace);
-    head.isValid = !endErrorState(parser);
 
     if(write) {
         parser->ast->head = head;
     }
+
+    parser->ast->head.isValid = !endErrorState(parser);
+    parser->ast->head.isPresent = true;
 }
 
 // parses an input statement
 static void input(Parser* parser) {
-    parser->ast->inp.isPresent = true;
     bool write;
     if(parser->inputStatement.line != -1){
         bool e = warn(parser, 4, "Only one input statement allowed per microcode");
@@ -271,11 +273,15 @@ static void input(Parser* parser) {
         }
         PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
     }
+
+    blockEnd(parser, brace);
+
     if(write) {
         parser->ast->inp = inp;
     }
-    blockEnd(parser, brace);
+
     parser->ast->inp.isValid = !endErrorState(parser);
+    parser->ast->inp.isPresent = true;
 }
 
 static void opcode(Parser* parser) {
@@ -326,10 +332,33 @@ static void opcode(Parser* parser) {
 
 static void include(Parser* parser) {
     if(match(parser, TOKEN_STRING)) {
-        const char* fileName = parser->previous.data.string;
+        char* fileName = (char*)parser->previous.data.string;
+        const char* ext = pathGetExtension(fileName);
+        if(ext == NULL || strcmp(ext, "uasm") != 0) {
+            char* tempBuffer = ArenaAlloc(sizeof(char) * (strlen(fileName) + 6));
+            strcpy(tempBuffer, fileName);
+            strcat(tempBuffer, ".uasm");
+            fileName = tempBuffer;
+        }
+
+        PathStack searchList;
+        pathStackInit(&searchList);
+
+        pathStackAddFolderSection(&searchList, ".");
+        for(unsigned int i = 0; i < parser->ast->fileNameCount; i++) {
+            pathStackAddFolderSection(&searchList, parser->ast->fileNames[i]);
+        }
+
+        char* foundFileName;
+        FILE* file = pathStackSearchFile(&searchList, fileName, &foundFileName);
+        if(file == NULL) {
+            errorAt(parser, 700, &parser->previous, "Could not find file \"%s\"", fileName);
+            return;
+        }
+
         Scanner newScanner;
         Parser newParser;
-        ScannerInit(&newScanner, readFile(fileName), fileName);
+        ScannerInit(&newScanner, readFilePtr(file), foundFileName);
         ParserInit(&newParser, &newScanner, parser->ast);
         Parse(&newParser);
     } else {
