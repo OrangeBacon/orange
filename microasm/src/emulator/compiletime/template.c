@@ -3,6 +3,8 @@
 void createEmulator(VMCoreGen* core) {
     initCore(core);
 
+    // TODO: Add ALU
+
     unsigned int A = addRegister(core, "A");
     unsigned int B = addRegister(core, "B");
     unsigned int C = addRegister(core, "C");

@@ -344,6 +344,8 @@ static void include(Parser* parser) {
         PathStack searchList;
         pathStackInit(&searchList);
 
+        // TODO: change from list of files to include tree
+        // TODO: move path logic to path.c
         pathStackAddFolderSection(&searchList, ".");
         for(unsigned int i = 0; i < parser->ast->fileNameCount; i++) {
             pathStackAddFolderSection(&searchList, parser->ast->fileNames[i]);

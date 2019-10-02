@@ -4,7 +4,7 @@ input {
 }
 
 include "types"
-
+# TODO: parse type syntax
 #type Reg enum {
 #    A; B; C; D; E; AR; SP; IP;
 #}

@@ -7,6 +7,9 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
+// TODO: refactor all error handling
+// TODO: add proper logging
+
 static bool printErrors = true;
 void enableErrorPrint() {
     printErrors = true;
