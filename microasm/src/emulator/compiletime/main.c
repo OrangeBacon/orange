@@ -2,6 +2,7 @@
 
 #include "shared/platform.h"
 #include "shared/memory.h"
+#include "shared/log.h"
 #include "microcode/scanner.h"
 #include "microcode/parser.h"
 #include "microcode/analyse.h"
@@ -9,6 +10,7 @@
 #include "emulator/compiletime/codegen.h"
 
 int main(int argc, char** argv){
+    logInit();
     startColor();
     ArenaInit();
 

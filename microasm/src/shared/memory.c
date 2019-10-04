@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "shared/memory.h"
+#include "shared/log.h"
 
 // global instance of arena,
 // only place memory is stored in the program
@@ -24,6 +25,8 @@ static int AlignForward(void* real_ptr, size_t align) {
 }
 
 void ArenaInit() {
+    CONTEXT("Memory Initialization");
+
     arena.pageSize = 4096 * 16;
     
     // add an initial page
@@ -32,10 +35,11 @@ void ArenaInit() {
     arena.areas[0].end = malloc(arena.pageSize);
     arena.arenaCount = 1;
     if(arena.areas == NULL || arena.areas[0].end == NULL) {
-        printf("Could not allocate memory for arena");
+        FATAL("Could not allocate memory for arena");
         exit(1);
     }
     arena.areas[0].bytesLeft = arena.pageSize;
+    TRACE("Allocated %u bytes", arena.pageSize);
 }
 
 void* ArenaAlloc(size_t size) {
@@ -43,6 +47,8 @@ void* ArenaAlloc(size_t size) {
 }
 
 void* ArenaAllocAlign(size_t size, size_t align) {
+    CONTEXT("Arena Allocation");
+
     void* ptr = NULL;
     size_t i;
 
@@ -67,14 +73,16 @@ void* ArenaAllocAlign(size_t size, size_t align) {
         arena.arenaCount++;
         arena.areas = realloc(arena.areas, sizeof(Arena)*arena.arenaCount);
         if(arena.areas == NULL) {
-            printf("Could not expand arena area list");
+            FATAL("Could not expand arena area list from %u to %u",
+                arena.arenaCount-1, arena.arenaCount);
             exit(1);
         }
 
         // allocate the area
         arena.areas[arena.arenaCount-1].end = malloc(arena.pageSize);
         if(arena.areas[arena.arenaCount-1].end == NULL) {
-            printf("Could not create new area");
+            FATAL("Could not create new area");
+            exit(1);
         }
         ptr = (void*)arena.areas[arena.arenaCount-1].end;
         arena.areas[arena.arenaCount-1].bytesLeft = arena.pageSize;
@@ -84,11 +92,14 @@ void* ArenaAllocAlign(size_t size, size_t align) {
     int alignOffset = AlignForward(ptr, align);
     arena.areas[i].end = (void*)((uintptr_t)arena.areas[i].end + size + alignOffset);
     arena.areas[i].bytesLeft -= size + alignOffset;
-    
+
+    TRACE("Assigned %u bytes from arena, %u left until reallocation", 
+        size + alignOffset, arena.areas[i].bytesLeft);
     return ptr;
 }
 
 void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size) {
+    CONTEXT("Array re-allocation");
     void* new_ptr = ArenaAlloc(new_size);
     memcpy(new_ptr, old_ptr, old_size);
     return new_ptr;

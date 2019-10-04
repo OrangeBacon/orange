@@ -1,10 +1,12 @@
 #include "shared/platform.h"
 #include "shared/memory.h"
 #include "shared/arg.h"
+#include "shared/log.h"
 #include "microcode/test.h"
 #include "emulator/runtime/emu.h"
 
 int main(int argc, char** argv){
+    logInit();
     startColor();
     ArenaInit();
 

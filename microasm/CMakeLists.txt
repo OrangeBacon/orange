@@ -10,6 +10,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(debug)
 endif()
 
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
+add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+
 set(MY_C_FLAGS
     -Wall
     -Wextra
@@ -36,6 +39,7 @@ set(SHARED_FILES
     src/shared/arg.c
     src/shared/graph.c
     src/shared/path.c
+    src/shared/log.c
 )
 
 set(EMULATOR_GENERATE
