@@ -19,12 +19,13 @@ struct LogContext {
 extern LogContext* _log_current_context_;
 extern int _log_current_context_depth_;
 
-#define CONTEXT(fmt, ...) \
+#define CONTEXT(logger, fmt, ...) \
     LogContext _log_context_ __attribute__((cleanup(logContextEnd))) \
     = {_log_current_context_, __FILE__ + SOURCE_PATH_SIZE, \
         STRINGIFY(__LINE__), __func__}; \
     _log_current_context_depth_ += 1; \
-    _log_current_context_ = &_log_context_
+    _log_current_context_ = &_log_context_;\
+    logger(fmt, ##__VA_ARGS__)
 
 #define TRACE(fmt, ...) logLog(0, __LINE__, fmt, ##__VA_ARGS__)
 #define DEBUG(fmt, ...) logLog(200, __LINE__, fmt, ##__VA_ARGS__)

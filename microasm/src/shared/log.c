@@ -6,6 +6,11 @@
 
 FILE* logFile = NULL;
 
+// TODO: Add log tags based on fmt hash
+// TODO: Add tag based filtering
+// TODO: Add command-line arguments to control logging
+// TODO: Prevent trace and debug log calls in release mode
+
 bool logInit() {
     logFile = tmpfile();
     if(logFile == NULL) {
@@ -58,7 +63,7 @@ void logContextEnd(LogContext* ctx){
 static int minumumLevel = 0;
 
 void logLog(int level, int line, const char* fmt, ...) {
-    if(level < minumumLevel) {
+    if(level < minumumLevel || fmt[0] == '\0') {
         return;
     }
     va_list args;

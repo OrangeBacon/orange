@@ -25,7 +25,7 @@ static int AlignForward(void* real_ptr, size_t align) {
 }
 
 void ArenaInit() {
-    CONTEXT("Memory Initialization");
+    CONTEXT(DEBUG, "Memory Initialization");
 
     arena.pageSize = 4096 * 16;
     
@@ -39,7 +39,7 @@ void ArenaInit() {
         exit(1);
     }
     arena.areas[0].bytesLeft = arena.pageSize;
-    TRACE("Allocated %u bytes", arena.pageSize);
+    DEBUG("Allocated %u bytes", arena.pageSize);
 }
 
 void* ArenaAlloc(size_t size) {
@@ -47,7 +47,7 @@ void* ArenaAlloc(size_t size) {
 }
 
 void* ArenaAllocAlign(size_t size, size_t align) {
-    CONTEXT("Arena Allocation");
+    CONTEXT(TRACE, "Arena Allocation");
 
     void* ptr = NULL;
     size_t i;
@@ -99,7 +99,7 @@ void* ArenaAllocAlign(size_t size, size_t align) {
 }
 
 void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size) {
-    CONTEXT("Array re-allocation");
+    CONTEXT(TRACE, "Array re-allocation");
     void* new_ptr = ArenaAlloc(new_size);
     memcpy(new_ptr, old_ptr, old_size);
     return new_ptr;

@@ -3,6 +3,9 @@
 #include "shared/arg.h"
 #include "shared/platform.h"
 
+// TODO: Add repeated arguments
+// TODO: Add numeric arguments
+
 // display error caused by in-correct arg-parser description
 // ony caused by errors in the executable - when raised
 // always a bug
