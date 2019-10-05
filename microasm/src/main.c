@@ -6,7 +6,8 @@
 #include "emulator/runtime/emu.h"
 
 int main(int argc, char** argv){
-    logInit();
+    if(!logInit()) return -1;
+    if(!logSetFile(fopen("log.txt", "w"))) return -1;
     startColor();
     ArenaInit();
 
