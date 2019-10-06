@@ -150,7 +150,7 @@ static Line* microcodeLine(Parser* parser) {
         INFO("Microcode line has a condition");
         line->hasCondition = true;
         advance(parser);
-        bool swap;
+        bool swap = false;
         if(parser->previous.data.value == 1) {
             swap = false;
         } else if(parser->previous.data.value == 0) {
