@@ -52,10 +52,6 @@ typedef struct AST {
     Input inp;
 
     DEFINE_ARRAY(OpCode, opcode);
-    
-#ifdef debug
-    DEFINE_ARRAY(struct Error, expectedError);
-#endif
 } AST;
 
 void InitAST(AST* mcode);

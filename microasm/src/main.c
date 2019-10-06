@@ -35,14 +35,6 @@ int main(int argc, char** argv){
     vmLogFile->helpMessage = "log file location, default location is stdout";
     argAddExistingOption(vm, disableColor);
 
-#ifdef debug
-    argParser* test = argMode(&parser, "test");
-    test->helpMessage = "Run the compiler's internal test suit";
-    posArg* testFolder = argString(test, "folder");
-    testFolder->helpMessage = "folder to recursivly search for tests in";
-    argAddExistingOption(test, disableColor);
-#endif
-
     argArguments(&parser, argc, argv);
     argParse(&parser);
 
@@ -53,12 +45,6 @@ int main(int argc, char** argv){
     if(disableColor->found) {
         EnableColor = false;
     }
-
-#ifdef debug
-    if(test->parsed) {
-        runTests(strArg(*test, 0));
-    } else 
-#endif
 
     if(vm->parsed) {
         runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);

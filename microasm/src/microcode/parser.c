@@ -415,27 +415,6 @@ static void include(Parser* parser) {
     }
 }
 
-#ifdef debug
-static void errorStatement(Parser* parser) {
-    Error error;
-    consume(parser, TOKEN_NUMBER, 33, "Expected error id, got %s", TokenNames[parser->current.type]);
-    error.id = parser->previous.data.value;
-    consume(parser, TOKEN_NUMBER, 34, "Expected error line, got %s", TokenNames[parser->current.type]);
-    error.token.line = parser->previous.data.value;
-    consume(parser, TOKEN_COLON, 31, "Expected colon");
-    consume(parser, TOKEN_NUMBER, 35, "Expected error column, got %s", TokenNames[parser->current.type]);
-    error.token.column = parser->previous.data.value;
-    consume(parser, TOKEN_SEMICOLON, 32, "Expected semicolon");
-
-    PUSH_ARRAY(Error, *parser->ast, expectedError, error);
-}
-
-void expectTestStatements(Parser* parser) {
-    parser->readTests = true;
-}
-
-#endif
-
 // dispatch the parser for a block level statement
 static void block(Parser* parser) {
     CONTEXT(INFO, "Parsing block statement");
@@ -447,14 +426,7 @@ static void block(Parser* parser) {
         input(parser);
     } else if(match(parser, TOKEN_INCLUDE)) {
         include(parser);
-    }
-#ifdef debug
-    else if(parser->readTests && match(parser, TOKEN_IDENTIFIER)
-        && parser->previous.length == 1 && parser->previous.start[0] == 'E') {
-        errorStatement(parser);
-    }
-#endif
-    else {
+    } else {
         INFO("Could not find valid block statement");
         errorAtCurrent(parser, 6, "Expected a block statement, got %s", TokenNames[parser->current.type]);
     }

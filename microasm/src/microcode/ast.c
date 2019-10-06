@@ -17,7 +17,4 @@ void InitAST(AST* mcode) {
     ARRAY_ZERO(mcode->inp, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);
     ARRAY_ALLOC(Error, *mcode, error);
-#ifdef debug
-    ARRAY_ALLOC(Error, *mcode, expectedError);
-#endif
 }
