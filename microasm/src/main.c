@@ -95,8 +95,7 @@ int main(int argc, char** argv){
 #endif
 
     if(analyse->parsed) {
-        runFileName(strArg(*analyse, 0));
-        return 0;
+        return !runFileName(strArg(*analyse, 0));
     }
 
     parser.success = false;

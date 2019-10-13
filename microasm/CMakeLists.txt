@@ -93,8 +93,9 @@ set(STAGE_1_BUILD
     "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
 )
 
-set(MICROCODE_COMPILE_FILES
+set(MICROCODE_COMPILE_SOURCES
     src/emulator/microcode.uasm
+    src/emulator/types.uasm
     src/emulator/runtime/busToReg.c
     src/emulator/runtime/halt.c
     src/emulator/runtime/instRegSet.c

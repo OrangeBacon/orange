@@ -98,34 +98,6 @@ static void syncronise(Parser* parser) {
     INFO("Could not detect valid parser state");
 }
 
-// parse a single or multi-line block start and return the type parsed
-// true = multi-line, false = single-line
-static bool blockStart(Parser* parser) {
-    CONTEXT(INFO, "Parsing block statement");
-    if(match(parser, TOKEN_LEFT_BRACE)) {
-        DEBUG("Detected multi-line block");
-        return true;  // multiline block
-    } else if(match(parser, TOKEN_EQUAL)) {
-        DEBUG("Detected single-statement block");
-        return false; // single line block
-    }
-    INFO("Could not detect block statement");
-    errorAtCurrent(parser, 10, "Expected the start of a block");
-    return false; // value does not matter
-}
-
-// expect the ending of a block based on the start type
-static void blockEnd(Parser* parser, bool start) {
-    CONTEXT(INFO, "Finishing block statement");
-    if(start) {
-        // optional semicolon
-        match(parser, TOKEN_SEMICOLON);
-        consume(parser, TOKEN_RIGHT_BRACE, 17, "Expected a right brace at end of block");
-    } else {
-        consume(parser, TOKEN_SEMICOLON, 18, "Expected a semi-colon at end of block");
-    }
-}
-
 static BitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
     BitArray result;
@@ -213,7 +185,7 @@ static void header(Parser* parser) {
     ARRAY_ALLOC(BitArray, head, line);
     head.errorPoint = parser->previous;
 
-    bool brace = blockStart(parser);
+    consume(parser, TOKEN_LEFT_BRACE, 305, "Expected \"{\" at start of block");
 
     while(!check(parser, TOKEN_EOF)) {
         if(check(parser, TOKEN_RIGHT_BRACE)) {
@@ -227,12 +199,12 @@ static void header(Parser* parser) {
         }
 
         PUSH_ARRAY(BitArray, head, line, line->bitsLow);
-        if(!match(parser, TOKEN_SEMICOLON) ||!brace) {
+        if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
     }
 
-    blockEnd(parser, brace);
+    consume(parser, TOKEN_RIGHT_BRACE, 305, "Expected \"}\" at end of block");
 
     if(write) {
         parser->ast->head = head;
@@ -262,54 +234,37 @@ static void input(Parser* parser) {
     newErrorState(parser);
 
     Token inputHeadToken = parser->previous;
-    bool brace = blockStart(parser);
+    consume(parser, TOKEN_LEFT_BRACE, 305, "Expected \"{\" at start of block");
 
     Input inp;
     inp.inputHeadToken = inputHeadToken;
     ARRAY_ALLOC(InputValue, inp, value);
 
-    if(brace) {
-        INFO("Parsing multiple statement input statement");
-        while(!check(parser, TOKEN_EOF)) {
-            if(match(parser, TOKEN_IDENTIFIER)) {
-                Token name = parser->previous;
+    INFO("Parsing multiple statement input statement");
+    while(!check(parser, TOKEN_EOF)) {
+        if(match(parser, TOKEN_IDENTIFIER)) {
+            Token name = parser->previous;
 
-                Token value = name;
-                value.type = TOKEN_NUMBER;
-                value.data.value = 1;
+            Token value = name;
+            value.type = TOKEN_NUMBER;
+            value.data.value = 1;
 
-                if(match(parser, TOKEN_COLON)) {
-                    consume(parser, TOKEN_NUMBER, 8, "Expected input flag width, got %s", TokenNames[parser->current.type]);
-                    value = parser->previous;
-                }
-                PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
-                DEBUG("Pushed input value struct to input statement");
-                if(!match(parser, TOKEN_SEMICOLON)){
-                    break;
-                }
-                while(match(parser, TOKEN_SEMICOLON)){}
-            } else {
+            if(match(parser, TOKEN_COLON)) {
+                consume(parser, TOKEN_NUMBER, 8, "Expected input flag width, got %s", TokenNames[parser->current.type]);
+                value = parser->previous;
+            }
+            PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
+            DEBUG("Pushed input value struct to input statement");
+            if(!match(parser, TOKEN_SEMICOLON)){
                 break;
             }
+            while(match(parser, TOKEN_SEMICOLON)){}
+        } else {
+            break;
         }
-    } else {
-        INFO("Parsing single identifier input statement");
-        consume(parser, TOKEN_IDENTIFIER, 11, "Expected input name");
-        Token name = parser->previous;
-
-        Token value = name;
-        value.type = TOKEN_NUMBER;
-        value.data.value = 1;
-
-        if(match(parser, TOKEN_COLON)) {
-            consume(parser, TOKEN_NUMBER, 9, "Expected input flag width, got %s", TokenNames[parser->current.type]);
-            value = parser->previous;
-        }
-        PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
-        DEBUG("Pushed input value struct to input statement");
     }
 
-    blockEnd(parser, brace);
+    consume(parser, TOKEN_RIGHT_BRACE, 305, "Expected \"}\" at end of block");
 
     if(write) {
         parser->ast->inp = inp;
@@ -345,27 +300,21 @@ static void opcode(Parser* parser) {
 
     INFO("Parsed opcode statement header");
 
-    bool brace = blockStart(parser);
+    consume(parser, TOKEN_LEFT_BRACE, 305, "Expected \"{\" at start of block");
 
-    if(brace) {
-        DEBUG("Parsing long opcode statement");
-        while(!check(parser, TOKEN_EOF)) {
-            if(check(parser, TOKEN_RIGHT_BRACE)) {
-                break;
-            }
-            Line* line = microcodeLine(parser);
-            PUSH_ARRAY(Line, code, line, line);
-            if(!match(parser, TOKEN_SEMICOLON)) {
-                break;
-            }
+    DEBUG("Parsing long opcode statement");
+    while(!check(parser, TOKEN_EOF)) {
+        if(check(parser, TOKEN_RIGHT_BRACE)) {
+            break;
         }
-    } else {
-        DEBUG("Parsing short opcode statement");
         Line* line = microcodeLine(parser);
         PUSH_ARRAY(Line, code, line, line);
+        if(!match(parser, TOKEN_SEMICOLON)) {
+            break;
+        }
     }
 
-    blockEnd(parser, brace);
+    consume(parser, TOKEN_RIGHT_BRACE, 305, "Expected \"}\" at end of block");
 
     code.isValid = !endErrorState(parser);
     PUSH_ARRAY(OpCode, *parser->ast, opcode, code);
@@ -469,9 +418,6 @@ void ParserInit(Parser* parser, Scanner* scan, AST* ast) {
     parser->panicMode = false;
     parser->headerStatement.line = -1;
     parser->inputStatement.line = -1;
-#ifdef debug
-    parser->readTests = false;
-#endif
     ARRAY_ALLOC(bool, *parser, errorStack);
     parser->ast = ast;
 }

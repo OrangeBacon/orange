@@ -36,10 +36,6 @@ typedef struct Parser {
     // the ast that is being constructed currently
     AST* ast;
 
-#ifdef debug
-    bool readTests;
-#endif
-
     DEFINE_ARRAY(bool, errorStack);
 } Parser;
 

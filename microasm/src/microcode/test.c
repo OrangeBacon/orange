@@ -15,10 +15,10 @@
 
 inline bool runFileName(const char* fileName) {
     AST ast;
-    return runFile(fileName, readFile(fileName), &ast, false);
+    return runFile(fileName, readFile(fileName), &ast);
 }
 
-bool runFile(const char* fileName, const char* file, AST* ast, bool testing) {
+bool runFile(const char* fileName, const char* file, AST* ast) {
     const char* fullFileName = resolvePath(fileName);
 
     Scanner scan;
@@ -35,7 +35,6 @@ bool runFile(const char* fileName, const char* file, AST* ast, bool testing) {
         ext = ext + 1;
     }
 
-    (void)testing;
     if(!strcmp(ext, "uasm")) {
         Parse(&parse);
         VMCoreGen core;
