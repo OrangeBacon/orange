@@ -49,6 +49,9 @@ void cOutPrintf(TextColor color, const char* format, ...);
 // printf a forat string and arguments with a given color to stdout
 void cOutVPrintf(TextColor color, const char* format, va_list args);
 
+void cErrPuts(TextColor color, const char* string);
+void cOutPuts(TextColor color, const char* string);
+
 // get a buffer containing the string contents of the filename provided
 const char* readFile(const char* fileName);
 

@@ -8,6 +8,8 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
+// TODO: Improve error messages
+
 typedef void(*Analysis)(Parser* parser, VMCoreGen* core);
 
 typedef enum IdentifierType {
@@ -22,11 +24,27 @@ typedef struct Identifier {
 
 Table identifiers;
 
+static Error errNoInput = {0};
+static Error errInputWidth = {0};
+static Error errInputRedeclare = {0};
+static Error errRequiredInputType = {0};
+static Error errMissingOpsize = {0};
+static Error errMissingPhase = {0};
+static void AnalyseInputErrors() {
+    newErrEnd(&errNoInput, ERROR_SEMANTIC, "Could not detect input block in microcode.");
+    newErrAt(&errInputWidth, ERROR_SEMANTIC, "Input width has to be one or greater");
+    newErrAt(&errInputRedeclare, ERROR_SEMANTIC, "Cannot re-declare identifier as input value");
+    newErrNoteAt(&errInputRedeclare, "Previously declared here");
+    newErrAt(&errRequiredInputType, ERROR_SEMANTIC, "The '%s' identifier must be an input");
+    newErrAt(&errMissingOpsize, ERROR_SEMANTIC, "Input statements require an 'opsize' parameter");
+    newErrAt(&errMissingPhase, ERROR_SEMANTIC, "Input statements require a 'phase' parameter");
+}
+
 static void AnalyseInput(Parser* parser, VMCoreGen* core) {
     AST* mcode = parser->ast;
 
     if(!mcode->inp.isPresent) {
-        warnAt(parser, 700, &parser->current, "Could not detect input block in microcode.");
+        error(parser, &errNoInput);
     }
 
     if(!mcode->inp.isValid) {
@@ -37,15 +55,14 @@ static void AnalyseInput(Parser* parser, VMCoreGen* core) {
     for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
         InputValue* val = &mcode->inp.values[i];
         if(val->value.data.value < 1) {
-            errorAt(parser, 101, &val->value, "Input width has to be one or greater");
+            error(parser, &errInputWidth, &val->value);
         }
         totalWidth += val->value.data.value;
 
         void* v;
         if(tableGetKey(&identifiers, &val->name, &v)) {
             // existing key
-            warnAt(parser, 102, &val->name, "Cannot re-declare identifier as input value");
-            noteAt(parser, v, "Previously declared here");
+            error(parser, &errInputRedeclare, &val->name, v);
         } else {
             Identifier* id = ArenaAlloc(sizeof(Identifier));
             id->type = TYPE_INPUT;
@@ -60,11 +77,11 @@ static void AnalyseInput(Parser* parser, VMCoreGen* core) {
         if(val->type != TYPE_INPUT) {
             void* v;
             tableGetKey(&identifiers, &opsize, &v);
-            warnAt(parser, 107, v, "The 'opsize' identifier must be an input");
+            error(parser, &errRequiredInputType, v, "opsize");
         }
         core->opcodeCount = 1 << val->data->data.value;
     } else {
-        warnAt(parser, 108, &mcode->inp.inputHeadToken, "Input statements require an 'opsize' parameter");
+        error(parser, &errMissingOpsize, &mcode->inp.inputHeadToken);
     }
 
     Token phase = createStrToken("phase");
@@ -72,11 +89,18 @@ static void AnalyseInput(Parser* parser, VMCoreGen* core) {
         if(val->type != TYPE_INPUT) {
             void* v;
             tableGetKey(&identifiers, &phase, &v);
-            warnAt(parser, 113, v, "The 'phase' identifier must be an input");
+            error(parser, &errRequiredInputType, v, "opsize");
         }
     } else {
-        warnAt(parser, 114, &mcode->inp.inputHeadToken, "Input statements require a 'phase' parameter");
+        error(parser, &errMissingPhase, &mcode->inp.inputHeadToken);
     }
+}
+
+static Error errNoOrdering = {0};
+static Error errBusRead = {0};
+static void analyseLineErrors() {
+    newErrAt(&errNoOrdering, ERROR_SEMANTIC, "Unable to order microcode bits in line %u");
+    newErrAt(&errBusRead, ERROR_SEMANTIC, "Command reads from bus before it was written in line %u");
 }
 
 static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Token* opcodeName, unsigned int lineNumber) {
@@ -108,7 +132,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
-        warnAt(mcode, 200, opcodeName, "Unable to order microcode bits in line %u", lineNumber);
+        error(mcode, &errNoOrdering, opcodeName, lineNumber);
     }
 
     for(unsigned int i = 0; i < core->componentCount; i++) {
@@ -122,8 +146,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
         for(unsigned int j = 0; j < command->readsLength; j++) {
             Component* bus = &core->components[command->reads[j]];
             if(!bus->busStatus) {
-                warnAt(mcode, 201, opcodeName, "Command reads from bus before it was written "
-                    "in line %u", lineNumber);
+                error(mcode, &errBusRead, opcodeName, lineNumber);
             }
         }
 
@@ -136,11 +159,23 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
     return nodes;
 }
 
+static Error errNoHeader = {0};
+static Error errHeaderLineCount = {0};
+static Error errHeaderWrongType = {0};
+static Error errIdentifierNotDefined = {0};
+static void AnalyseHeaderErrors() {
+    newErrEnd(&errNoHeader, ERROR_SEMANTIC, "Could not detect header block in microcode.");
+    newErrAt(&errHeaderLineCount, ERROR_SEMANTIC, "Number of lines in header (%u) is too high, the maximum is %u");
+    newErrAt(&errHeaderWrongType, ERROR_SEMANTIC, "Cannot use non output bit in header statement");
+    newErrNoteAt(&errHeaderWrongType, "Previously declared here");
+    newErrAt(&errIdentifierNotDefined, ERROR_SEMANTIC, "Identifier was not defined");
+}
+
 static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
     AST* mcode = parser->ast;
 
     if(!mcode->head.isPresent) {
-        warnAt(parser, 700, &parser->current, "Could not detect header block in microcode.");
+        error(parser, &errNoHeader);
     }
 
     if(!mcode->head.isValid) {
@@ -149,12 +184,13 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
 
     Identifier* val;
     Token phase = createStrToken("phase");
-    tableGet(&identifiers, &phase, (void**)&val);
+    if(!tableGet(&identifiers, &phase, (void**)&val)) {
+        return;
+    }
     unsigned int maxLines = 1 << val->data->data.value;
 
     if(mcode->head.lineCount > maxLines) {
-        warnAt(parser, 301, &mcode->head.errorPoint, 
-            "Number of lines in header (%u) is too high, the maximum is %u",
+        error(parser, &errHeaderLineCount, &mcode->head.errorPoint,
             mcode->head.lineCount, maxLines);
     }
 
@@ -180,11 +216,10 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
                 if(val->type != TYPE_OUTPUT) {
                     void* v;
                     tableGetKey(&identifiers, bit, &v);
-                    warnAt(parser, 106, bit, "Cannot use non output bit in header statement");
-                    noteAt(parser, v, "Previously declared here");
+                    error(parser, &errHeaderWrongType, bit, v);
                 }
             } else {
-                warnAt(parser, 105, bit, "Identifier was not defined");
+                error(parser, &errIdentifierNotDefined, bit);
             }
         }
 
@@ -194,6 +229,16 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
             bitCounter++;
         }
     }
+}
+
+static Error errOpcodeIdSize = {0};
+static Error errOpcodeLineCount = {0};
+static Error errOpcodeWrongType = {0};
+static void AnalyseOpcodeErrors() {
+    newErrAt(&errOpcodeIdSize, ERROR_SEMANTIC, "Opcode id is too large");
+    newErrAt(&errOpcodeLineCount, ERROR_SEMANTIC, "Number of lines in opcode is too high");
+    newErrAt(&errOpcodeWrongType, ERROR_SEMANTIC, "Opcode bits must be outputs");
+    newErrNoteAt(&errOpcodeWrongType, "Previously declared here");
 }
 
 static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
@@ -223,11 +268,11 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
         }
 
         if(code->id.data.value >= (unsigned int)(core->opcodeCount)) {
-            warnAt(parser, 109, &code->id, "Opcode id is too large");
+            error(parser, &errOpcodeIdSize, &code->id);
         }
 
         if(code->lineCount > maxLines) {
-            warnAt(parser, 302, &code->name, "Number of lines in opcode is too high");
+            error(parser, &errOpcodeLineCount, &code->name);
         }
 
         gencode->isValid = true;
@@ -246,11 +291,10 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
                     if(bitIdentifier->type != TYPE_OUTPUT) {
                         void* v;
                         tableGetKey(&identifiers, bit, &v);
-                        warnAt(parser, 111, bit, "Opcode bits must be outputs");
-                        noteAt(parser, v, "Previously declared here");
+                        error(parser, &errOpcodeWrongType, bit, v);
                     }
                 } else {
-                    warnAt(parser, 110, bit, "Identifier is undefined");
+                    error(parser, &errIdentifierNotDefined, bit);
                 }
             }
 
@@ -276,14 +320,32 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
     }
 }
 
+static bool errorsInitialised;
+typedef void (*errorInitialiser)();
+static errorInitialiser errorInitialisers[] = {
+    AnalyseInputErrors,
+    analyseLineErrors,
+    AnalyseHeaderErrors,
+    AnalyseOpcodeErrors
+};
+
+void InitAnalysis() {
+    if(!errorsInitialised) {
+        for(unsigned int i = 0; i < sizeof(errorInitialisers)/sizeof(errorInitialiser); i++) {
+            errorInitialisers[i]();
+        }
+    }
+}
+
 static Analysis Analyses[] = {
     AnalyseInput,
     AnalyseHeader,
-    AnalyseOpcode
+    AnalyseOpcode,
 };
 
 void Analyse(Parser* parser, VMCoreGen* core) {
     if(parser->hadError)return;
+    if(!errorsInitialised)InitAnalysis();
 
     initTable(&identifiers, tokenHash, tokenCmp);
 

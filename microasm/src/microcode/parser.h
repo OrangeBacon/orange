@@ -37,13 +37,15 @@ typedef struct Parser {
     AST* ast;
 
     DEFINE_ARRAY(bool, errorStack);
+
+    DEFINE_ARRAY(struct EmittedError, error);
 } Parser;
 
 // initialise a new parser
-void ParserInit(Parser* parser, Scanner* scan, AST* ast);
+void InitParser();
 
 // run the parser
-bool Parse(Parser* parse);
+bool Parse(Parser* parse, Scanner* scan, AST* ast);
 
 void setErrorState(Parser* parser);
 

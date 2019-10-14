@@ -25,7 +25,6 @@ bool runFile(const char* fileName, const char* file, AST* ast) {
     Parser parse;
     ScannerInit(&scan, file, fullFileName);
     InitAST(ast);
-    ParserInit(&parse, &scan, ast);
 
     const char* ext = strrchr(fullFileName, '.');
     if(!ext) {
@@ -36,10 +35,11 @@ bool runFile(const char* fileName, const char* file, AST* ast) {
     }
 
     if(!strcmp(ext, "uasm")) {
-        Parse(&parse);
+        Parse(&parse, &scan, ast);
         VMCoreGen core;
         createEmulator(&core);
         Analyse(&parse, &core);
+        printErrors(&parse);
         return true;
     }
 

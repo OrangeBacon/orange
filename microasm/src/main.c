@@ -6,6 +6,7 @@
 #include "microcode/scanner.h"
 #include "microcode/parser.h"
 #include "microcode/analyse.h"
+#include "microcode/error.h"
 #include "emulator/compiletime/codegen.h"
 #include "emulator/compiletime/template.h"
 #include "emulator/runtime/emu.h"
@@ -78,19 +79,20 @@ int main(int argc, char** argv){
         Parser parse;
         AST ast;
         InitAST(&ast);
-        ParserInit(&parse, &scan, &ast);
 
-        Parse(&parse);
+        Parse(&parse, &scan, &ast);
 
         VMCoreGen core;
         createEmulator(&core);
         Analyse(&parse, &core);
 
-        if(!parse.hadError) {
+        if(parse.hadError) {
+            printErrors(&parse);
+            return 1;
+        } else {
             coreCodegen(&core, strArg(*codegen, 1));
             return 0;
         }
-        return 1;
     }
 #endif
 

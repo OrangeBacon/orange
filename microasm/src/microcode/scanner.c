@@ -64,6 +64,18 @@ Token ScanToken(Scanner* scanner){
     return errorToken(scanner, "Unexpected character");
 }
 
+int getLineCount(const char* string) {
+    int lineCount = 1;
+
+    for(int i = 0; string[i] != '\0'; i++) {
+        if(string[i] == '\n') {
+            lineCount++;
+        }
+    }
+
+    return lineCount;
+}
+
 bool getLine(const char* string, int line, int* start, int* length) {
     // line that is being iterated over
     int currentLine = 1;

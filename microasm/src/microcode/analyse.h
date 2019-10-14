@@ -4,6 +4,7 @@
 struct Parser;
 struct VMCoreGen;
 
+void InitAnalysis();
 void Analyse(struct Parser* parser, struct VMCoreGen* core);
 
 #endif

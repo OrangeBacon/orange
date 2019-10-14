@@ -4,8 +4,9 @@
 #include <stdbool.h>
 #include "shared/memory.h"
 
+// TODO: re-write to use list of union based AST
+
 struct Token;
-struct Error;
 
 typedef struct BitArray {
     DEFINE_ARRAY(struct Token, data);
@@ -47,7 +48,6 @@ typedef struct OpCode {
 typedef struct AST {
     DEFINE_ARRAY(const char*, fileName);
 
-    DEFINE_ARRAY(struct Error, error);
     Header head;
     Input inp;
 

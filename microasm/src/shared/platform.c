@@ -102,6 +102,30 @@ void cOutVPrintf(TextColor color, const char* format, va_list args) {
 #endif
 }
 
+void cErrPuts(TextColor color, const char* string) {
+#ifdef _WIN32
+    if(EnableColor) SetConsoleTextAttribute(HandleOut, color | FOREGROUND_INTENSITY);
+    fputs(string, stderr);
+    if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
+#else
+    if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
+    fputs(stdout, string);
+    if(EnableColor) fprintf(stdout, "\x1B[0m");
+#endif
+}
+
+void cOutPuts(TextColor color, const char* string) {
+#ifdef _WIN32
+    if(EnableColor) SetConsoleTextAttribute(HandleOut, color | FOREGROUND_INTENSITY);
+    fputs(string, stdout);
+    if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
+#else
+    if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
+    fputs(stdout, string);
+    if(EnableColor) fprintf(stdout, "\x1B[0m");
+#endif
+}
+
 // get a buffer containing the string contents of the file provided
 const char* readFile(const char* fileName) {
     FILE* file = fopen(fileName, "r");
