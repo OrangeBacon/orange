@@ -26,18 +26,6 @@ typedef struct Header {
     struct Token errorPoint;
 } Header;
 
-typedef struct InputValue {
-    struct Token name;
-    struct Token value;
-} InputValue;
-
-typedef struct Input {
-    DEFINE_ARRAY(InputValue, value);
-    struct Token inputHeadToken;
-    bool isValid;
-    bool isPresent;
-} Input;
-
 typedef struct OpCode {
     struct Token id;
     struct Token name;
@@ -49,7 +37,8 @@ typedef struct AST {
     DEFINE_ARRAY(const char*, fileName);
 
     Header head;
-    Input inp;
+    struct Token opsize;
+    struct Token phase;
 
     DEFINE_ARRAY(OpCode, opcode);
 } AST;

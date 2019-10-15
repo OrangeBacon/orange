@@ -11,9 +11,8 @@ void InitAST(AST* mcode) {
     ARRAY_ALLOC(const char*, *mcode, fileName);
     mcode->head.isValid = false;
     mcode->head.isPresent = false;
-    mcode->inp.isValid = false;
-    mcode->inp.isPresent = false;
     ARRAY_ZERO(mcode->head, line);
-    ARRAY_ZERO(mcode->inp, value);
     ARRAY_ALLOC(OpCode, *mcode, opcode);
+    mcode->opsize.start = NULL;
+    mcode->phase.start = NULL;
 }

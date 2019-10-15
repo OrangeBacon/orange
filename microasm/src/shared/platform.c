@@ -109,7 +109,7 @@ void cErrPuts(TextColor color, const char* string) {
     if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
 #else
     if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
-    fputs(stdout, string);
+    fputs(string, stderr);
     if(EnableColor) fprintf(stdout, "\x1B[0m");
 #endif
 }
@@ -121,7 +121,7 @@ void cOutPuts(TextColor color, const char* string) {
     if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
 #else
     if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
-    fputs(stdout, string);
+    fputs(string, stdout);
     if(EnableColor) fprintf(stdout, "\x1B[0m");
 #endif
 }

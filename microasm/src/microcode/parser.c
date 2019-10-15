@@ -89,8 +89,9 @@ static void syncronise(Parser* parser) {
     while(parser->current.type != TOKEN_EOF) {
         switch(parser->current.type) {
             // should mostly be able to continue parsing from these tokens
-            case TOKEN_INPUT:
             case TOKEN_INCLUDE:
+            case TOKEN_OPSIZE:
+            case TOKEN_PHASE:
             //case TOKEN_TYPE:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
@@ -184,6 +185,27 @@ static Line* microcodeLine(Parser* parser) {
     return line;
 }
 
+static Error errParameterColon;
+static Error errParameterNumber;
+static void parameterErrors() {
+    newErrConsume(&errParameterColon, ERROR_SYNTAX,
+        TOKEN_COLON, "Missing colon seperating %s from its value");
+    newErrConsume(&errParameterNumber, ERROR_SYNTAX,
+        TOKEN_NUMBER, "Missing value of %s parameter");
+}
+
+static void parameter(Parser* parser, const char* type) {
+    consume(parser, &errParameterColon, type);
+    consume(parser, &errParameterNumber, type);
+
+    // works for now
+    if(type[0] == 'o') {
+        parser->ast->opsize = parser->previous;
+    } else {
+        parser->ast->phase = parser->previous;
+    }
+}
+
 static Error errMultipleHeaders = {0};
 static Error errHeaderCondition = {0};
 static Error errBlockStart = {0};
@@ -247,74 +269,6 @@ static void header(Parser* parser) {
     parser->ast->head.isValid = !endErrorState(parser);
     parser->ast->head.isPresent = true;
     INFO("Header statement parsed");
-}
-
-static Error errMultipleInputs = {0};
-static Error errInputFlagWidth = {0};
-static void inputErrors() {
-    newErrPrevious(&errMultipleInputs, ERROR_SEMANTIC,
-        "Only one input statement allowed per microcode");
-    newErrNoteAt(&errMultipleInputs, "Previously declared here");
-    newErrConsume(&errInputFlagWidth, ERROR_SYNTAX,
-        TOKEN_NUMBER, "Expected input flag width, got %s");
-}
-
-// parses an input statement
-static void input(Parser* parser) {
-    CONTEXT(INFO, "Parsing input statement");
-
-    bool write;
-    if(parser->inputStatement.line != -1){
-        error(parser, &errMultipleInputs, &parser->inputStatement);
-        write = false;
-        INFO("Input statement duplication error");
-    } else {
-        parser->inputStatement = parser->previous;
-        write = true;
-    }
-
-    newErrorState(parser);
-
-    Token inputHeadToken = parser->previous;
-    consume(parser, &errBlockStart);
-
-    Input inp;
-    inp.inputHeadToken = inputHeadToken;
-    ARRAY_ALLOC(InputValue, inp, value);
-
-    INFO("Parsing multiple statement input statement");
-    while(!check(parser, TOKEN_EOF)) {
-        if(match(parser, TOKEN_IDENTIFIER)) {
-            Token name = parser->previous;
-
-            Token value = name;
-            value.type = TOKEN_NUMBER;
-            value.data.value = 1;
-
-            if(match(parser, TOKEN_COLON)) {
-                consume(parser, &errInputFlagWidth, TokenNames[parser->current.type]);
-                value = parser->previous;
-            }
-            PUSH_ARRAY(InputValue, inp, value, ((InputValue){.name = name, .value = value}));
-            DEBUG("Pushed input value struct to input statement");
-            if(!match(parser, TOKEN_SEMICOLON)){
-                break;
-            }
-            while(match(parser, TOKEN_SEMICOLON)){}
-        } else {
-            break;
-        }
-    }
-
-    consume(parser, &errBlockEnd);
-
-    if(write) {
-        parser->ast->inp = inp;
-    }
-
-    parser->ast->inp.isValid = !endErrorState(parser);
-    parser->ast->inp.isPresent = true;
-    INFO("Parsed input statment");
 }
 
 static Error errOpcodeID = {0};
@@ -438,23 +392,23 @@ static void include(Parser* parser) {
 
 static Error errExpectedBlock = {0};
 static void blockErrors() {
-    newErrCurrent(&errExpectedBlock, ERROR_SYNTAX, "Expected a block statement, got %s");
+    newErrPrevious(&errExpectedBlock, ERROR_SYNTAX, "Expected a block statement, got %s");
 }
 
 // dispatch the parser for a block level statement
 static void block(Parser* parser) {
     CONTEXT(INFO, "Parsing block statement");
-    if(match(parser, TOKEN_OPCODE)) {
-        opcode(parser);
-    } else if(match(parser, TOKEN_HEADER)) {
-        header(parser);
-    } else if(match(parser, TOKEN_INPUT)) {
-        input(parser);
-    } else if(match(parser, TOKEN_INCLUDE)) {
-        include(parser);
-    } else {
-        INFO("Could not find valid block statement");
-        error(parser, &errExpectedBlock, TokenNames[parser->current.type]);
+    advance(parser);
+
+    switch(parser->previous.type) {
+        case TOKEN_OPCODE: opcode(parser); break;
+        case TOKEN_HEADER: header(parser); break;
+        case TOKEN_INCLUDE: include(parser); break;
+        case TOKEN_OPSIZE: parameter(parser, "opsize"); break;
+        case TOKEN_PHASE: parameter(parser, "phase"); break;
+        default:
+            INFO("Could not find valid block statement");
+            error(parser, &errExpectedBlock, TokenNames[parser->previous.type]);
     }
 
     // if error occured reset parser state to known value
@@ -498,8 +452,8 @@ typedef void (*errorInitialiser)();
 static errorInitialiser errorInitialisers[] = {
     advanceErrors,
     microcodeLineErrors,
+    parameterErrors,
     headerErrors,
-    inputErrors,
     opcodeErrors,
     includeErrors,
     blockErrors,

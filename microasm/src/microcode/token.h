@@ -10,7 +10,7 @@
     x(COMMA) x(DOT) x(COLON) x(NUMBER) \
     x(SEMICOLON) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
-    x(INPUT) \
+    x(OPSIZE) x(PHASE) \
     x(INCLUDE) x(TYPE) x(STRING) \
     x(ERROR) x(EOF) x(NULL)
 

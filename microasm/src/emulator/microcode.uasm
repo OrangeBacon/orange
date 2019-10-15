@@ -1,7 +1,5 @@
-input {
-    opsize: 16;
-    phase: 4;
-}
+opsize: 16
+phase: 4
 
 include "types"
 # TODO: parse type syntax

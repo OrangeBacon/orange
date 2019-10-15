@@ -24,78 +24,6 @@ typedef struct Identifier {
 
 Table identifiers;
 
-static Error errNoInput = {0};
-static Error errInputWidth = {0};
-static Error errInputRedeclare = {0};
-static Error errRequiredInputType = {0};
-static Error errMissingOpsize = {0};
-static Error errMissingPhase = {0};
-static void AnalyseInputErrors() {
-    newErrEnd(&errNoInput, ERROR_SEMANTIC, "Could not detect input block in microcode.");
-    newErrAt(&errInputWidth, ERROR_SEMANTIC, "Input width has to be one or greater");
-    newErrAt(&errInputRedeclare, ERROR_SEMANTIC, "Cannot re-declare identifier as input value");
-    newErrNoteAt(&errInputRedeclare, "Previously declared here");
-    newErrAt(&errRequiredInputType, ERROR_SEMANTIC, "The '%s' identifier must be an input");
-    newErrAt(&errMissingOpsize, ERROR_SEMANTIC, "Input statements require an 'opsize' parameter");
-    newErrAt(&errMissingPhase, ERROR_SEMANTIC, "Input statements require a 'phase' parameter");
-}
-
-static void AnalyseInput(Parser* parser, VMCoreGen* core) {
-    AST* mcode = parser->ast;
-
-    if(!mcode->inp.isPresent) {
-        error(parser, &errNoInput);
-    }
-
-    if(!mcode->inp.isValid) {
-        return;
-    }
-
-    int totalWidth = 0;
-    for(unsigned int i = 0; i < mcode->inp.valueCount; i++) {
-        InputValue* val = &mcode->inp.values[i];
-        if(val->value.data.value < 1) {
-            error(parser, &errInputWidth, &val->value);
-        }
-        totalWidth += val->value.data.value;
-
-        void* v;
-        if(tableGetKey(&identifiers, &val->name, &v)) {
-            // existing key
-            error(parser, &errInputRedeclare, &val->name, v);
-        } else {
-            Identifier* id = ArenaAlloc(sizeof(Identifier));
-            id->type = TYPE_INPUT;
-            id->data = &val->value;
-            tableSet(&identifiers, &val->name, id);
-        }
-    }
-
-    Identifier* val;
-    Token opsize = createStrToken("opsize");
-    if(tableGet(&identifiers, &opsize, (void**)&val)) {
-        if(val->type != TYPE_INPUT) {
-            void* v;
-            tableGetKey(&identifiers, &opsize, &v);
-            error(parser, &errRequiredInputType, v, "opsize");
-        }
-        core->opcodeCount = 1 << val->data->data.value;
-    } else {
-        error(parser, &errMissingOpsize, &mcode->inp.inputHeadToken);
-    }
-
-    Token phase = createStrToken("phase");
-    if(tableGet(&identifiers, &phase, (void**)&val)) {
-        if(val->type != TYPE_INPUT) {
-            void* v;
-            tableGetKey(&identifiers, &phase, &v);
-            error(parser, &errRequiredInputType, v, "opsize");
-        }
-    } else {
-        error(parser, &errMissingPhase, &mcode->inp.inputHeadToken);
-    }
-}
-
 static Error errNoOrdering = {0};
 static Error errBusRead = {0};
 static void analyseLineErrors() {
@@ -182,12 +110,10 @@ static void AnalyseHeader(Parser* parser, VMCoreGen* core) {
         return;
     }
 
-    Identifier* val;
-    Token phase = createStrToken("phase");
-    if(!tableGet(&identifiers, &phase, (void**)&val)) {
+    if(mcode->phase.start == NULL) {
         return;
     }
-    unsigned int maxLines = 1 << val->data->data.value;
+    unsigned int maxLines = (1 << mcode->phase.data.value);
 
     if(mcode->head.lineCount > maxLines) {
         error(parser, &errHeaderLineCount, &mcode->head.errorPoint,
@@ -244,15 +170,21 @@ static void AnalyseOpcodeErrors() {
 static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
     AST* mcode = parser->ast;
 
-    Identifier* val;
-    Token phase = createStrToken("phase");
-    tableGet(&identifiers, &phase, (void**)&val);
-    unsigned int maxLines = (1 << val->data->data.value) - mcode->head.lineCount;
+    if(mcode->phase.start == NULL) {
+        return;
+    }
+    unsigned int maxLines = (1 << mcode->phase.data.value) - mcode->head.lineCount;
+
+    if(mcode->opsize.start == NULL) {
+        return;
+    }
+    unsigned int maxOpCodes = (1 << mcode->opsize.data.value);
 
     Table parameters;
     initTable(&parameters, tokenHash, tokenCmp);
     tableSet(&parameters, (void*)createStrTokenPtr("Reg"), (void*)true);
 
+    core->opcodeCount = mcode->opcodeCount;
     core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
     for(unsigned int i = 0; i < core->opcodeCount; i++) {
         core->opcodes[i].isValid = false;
@@ -267,7 +199,7 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
             continue;
         }
 
-        if(code->id.data.value >= (unsigned int)(core->opcodeCount)) {
+        if(code->id.data.value >= maxOpCodes) {
             error(parser, &errOpcodeIdSize, &code->id);
         }
 
@@ -323,7 +255,6 @@ static void AnalyseOpcode(Parser* parser, VMCoreGen* core) {
 static bool errorsInitialised;
 typedef void (*errorInitialiser)();
 static errorInitialiser errorInitialisers[] = {
-    AnalyseInputErrors,
     analyseLineErrors,
     AnalyseHeaderErrors,
     AnalyseOpcodeErrors
@@ -338,7 +269,6 @@ void InitAnalysis() {
 }
 
 static Analysis Analyses[] = {
-    AnalyseInput,
     AnalyseHeader,
     AnalyseOpcode,
 };

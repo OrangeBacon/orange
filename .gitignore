@@ -16,3 +16,4 @@ build/
 fp-info-cache
 *.uasmb
 log.txt
+buildwsl/
