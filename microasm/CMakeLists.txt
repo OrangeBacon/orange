@@ -79,6 +79,7 @@ set(STAGE_0_BUILD
     src/emulator/compiletime/template.c
     src/emulator/compiletime/create.c
     src/emulator/compiletime/codegen.c
+    src/emulator/compiletime/runCodegen.c
 )
 
 add_executable(generator ${STAGE_0_BUILD})

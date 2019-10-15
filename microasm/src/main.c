@@ -3,13 +3,8 @@
 #include "shared/arg.h"
 #include "shared/log.h"
 #include "microcode/test.h"
-#include "microcode/scanner.h"
-#include "microcode/parser.h"
-#include "microcode/analyse.h"
-#include "microcode/error.h"
-#include "emulator/compiletime/codegen.h"
-#include "emulator/compiletime/template.h"
 #include "emulator/runtime/emu.h"
+#include "emulator/compiletime/runCodegen.h"
 
 int main(int argc, char** argv){
     if(!logInit()) return -1;
@@ -73,26 +68,7 @@ int main(int argc, char** argv){
 
 #if BUILD_STAGE == 0 || DEBUG_BUILD
     if(codegen->parsed) {
-        Scanner scan;
-        ScannerInit(&scan, readFile(strArg(*codegen, 0)), strArg(*codegen, 0));
-
-        Parser parse;
-        AST ast;
-        InitAST(&ast);
-
-        Parse(&parse, &scan, &ast);
-
-        VMCoreGen core;
-        createEmulator(&core);
-        Analyse(&parse, &core);
-
-        if(parse.hadError) {
-            printErrors(&parse);
-            return 1;
-        } else {
-            coreCodegen(&core, strArg(*codegen, 1));
-            return 0;
-        }
+        return runCodegen(strArg(*codegen, 0), strArg(*codegen, 1));
     }
 #endif
 

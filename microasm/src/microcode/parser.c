@@ -344,29 +344,17 @@ static void include(Parser* parser) {
     CONTEXT(INFO, "Parsing include statement");
     if(match(parser, TOKEN_STRING)) {
         DEBUG("Searching for file in include paths");
-        char* fileName = (char*)parser->previous.data.string;
-        const char* ext = pathGetExtension(fileName);
-        if(ext == NULL || strcmp(ext, "uasm") != 0) {
-            char* tempBuffer = ArenaAlloc(sizeof(char) * (strlen(fileName) + 6));
-            strcpy(tempBuffer, fileName);
-            strcat(tempBuffer, ".uasm");
-            fileName = tempBuffer;
-        }
-
-        PathStack searchList;
-        pathStackInit(&searchList);
 
         // TODO: change from list of files to include tree
-        // TODO: move path logic to path.c
-        pathStackAddFolderSection(&searchList, ".");
-        for(unsigned int i = 0; i < parser->ast->fileNameCount; i++) {
-            pathStackAddFolderSection(&searchList, parser->ast->fileNames[i]);
-        }
-
         char* foundFileName;
-        FILE* file = pathStackSearchFile(&searchList, fileName, &foundFileName);
+        FILE* file = pathStackSearchFileList(
+            parser->previous.data.string,
+            "uasm",
+            parser->ast->fileNameCount,
+            parser->ast->fileNames,
+            &foundFileName);
         if(file == NULL) {
-            error(parser, &errCouldNotFindFile, fileName);
+            error(parser, &errCouldNotFindFile, parser->previous.data.string);
             return;
         }
 

@@ -15,5 +15,7 @@ FILE* pathStackSearchFile(PathStack* stack, const char* fileName, char** foundNa
 
 const char* pathGetExtension(const char* path);
 size_t pathGetFolderLength(const char* path);
+FILE* pathStackSearchFileList(const char* filename, const char* requestedExt,
+    unsigned int filenameCount, const char** filenames, char** foundFilename);
 
 #endif

@@ -62,3 +62,25 @@ size_t pathGetFolderLength(const char* path) {
 
     return lastSlash - path;
 }
+
+FILE* pathStackSearchFileList(const char* filename, const char* requestedExt,
+    unsigned int filenameCount, const char** filenames, char** foundFilename) {
+    const char* ext = pathGetExtension(filename);
+    if(ext == NULL || strcmp(ext, filename) != 0) {
+        char* tempBuffer = ArenaAlloc(sizeof(char) * (strlen(filename) + strlen(requestedExt) + 2));
+        strcpy(tempBuffer, filename);
+        strcat(tempBuffer, ".");
+        strcat(tempBuffer, requestedExt);
+        filename = tempBuffer;
+    }
+
+    PathStack searchList;
+    pathStackInit(&searchList);
+
+    pathStackAddFolderSection(&searchList, ".");
+    for(unsigned int i = 0; i < filenameCount; i++) {
+        pathStackAddFolderSection(&searchList, filenames[i]);
+    }
+
+    return pathStackSearchFile(&searchList, filename, foundFilename);
+}
