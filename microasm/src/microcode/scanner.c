@@ -253,16 +253,8 @@ static MicrocodeTokenType identifierType(Scanner* scanner) {
     switch(scanner->start[0]) {
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
         case 'i': return checkKeyword(scanner, 1, 6, "nclude", TOKEN_INCLUDE);
-        case 'o': 
-            if(scanner->current - scanner->start > 2 && scanner->start[1] == 'p') {
-                switch(scanner->start[2]) {
-                    case 'c': return checkKeyword(scanner, 3, 3, "ode", TOKEN_OPCODE);
-                    case 's': return checkKeyword(scanner, 3, 3, "ize", TOKEN_OPSIZE);
-                }
-            }
-            break;
+        case 'o': return checkKeyword(scanner, 1, 5, "pcode", TOKEN_OPCODE);
         case 't': return checkKeyword(scanner, 1, 3, "ype", TOKEN_TYPE);
-        case 'p': return checkKeyword(scanner, 1, 4, "hase", TOKEN_PHASE);
     }
     return TOKEN_IDENTIFIER;
 }
@@ -285,6 +277,9 @@ static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
     token.length = (int)(scanner->current - scanner->start);
     token.line = scanner->line;
     token.column = scanner->column;
+    if(type == TOKEN_IDENTIFIER) {
+        token.data.string = tokenAllocName(&token);
+    }
 
     return token;
 }

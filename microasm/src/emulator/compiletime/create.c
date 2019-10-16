@@ -17,6 +17,9 @@ void initCore(VMCoreGen* core) {
     ARRAY_ALLOC(const char*, *core, loopVariable);
     ARRAY_ALLOC(const char*, *core, command);
     ARRAY_ALLOC(Command, *core, command);
+    ARRAY_ALLOC(GenOpCode, *core, opcode);
+    ARRAY_ALLOC(unsigned int, *core, headBit);
+
     initTable(&core->headers, strHash, strCmp);
     core->codeIncludeBase = "emulator/runtime/";
     addHeader(core, "<stdbool.h>");

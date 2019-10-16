@@ -64,3 +64,10 @@ bool tokenCmp(void* a, void* b) {
     }
     return strncmp(tokA->start, tokB->start, tokA->length) == 0;
 }
+
+const char* tokenAllocName(Token* tok) {
+    char* ret = ArenaAlloc(sizeof(char) * tok->length + 1);
+    strncpy(ret, tok->start, tok->length);
+    ret[tok->length] = '\0';
+    return ret;
+}

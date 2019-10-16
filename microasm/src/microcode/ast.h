@@ -4,9 +4,8 @@
 #include <stdbool.h>
 #include "shared/memory.h"
 
-// TODO: re-write to use list of union based AST
-
 struct Token;
+struct Parser;
 
 typedef struct BitArray {
     DEFINE_ARRAY(struct Token, data);
@@ -19,30 +18,48 @@ typedef struct Line {
     struct Token conditionErrorToken;
 } Line;
 
-typedef struct Header {
+typedef struct ASTHeader {
     DEFINE_ARRAY(BitArray, line);
-    bool isValid;
-    bool isPresent;
     struct Token errorPoint;
-} Header;
+} ASTHeader;
 
-typedef struct OpCode {
+typedef struct ASTOpcode {
     struct Token id;
     struct Token name;
-    bool isValid;
     DEFINE_ARRAY(Line*, line);
-} OpCode;
+} ASTOpcode;
+
+typedef struct ASTParameter {
+    struct Token name;
+    struct Token value;
+} ASTParameter;
+
+typedef enum ASTStatementType {
+    AST_BLOCK_HEADER,
+    AST_BLOCK_OPCODE,
+    AST_BLOCK_PARAMETER
+} ASTStatementType;
+
+typedef struct ASTStatement {
+    ASTStatementType type;
+
+    union {
+        ASTHeader header;
+        ASTOpcode opcode;
+        ASTParameter parameter;
+    } as;
+
+    bool isValid;
+} ASTStatement;
 
 typedef struct AST {
     DEFINE_ARRAY(const char*, fileName);
 
-    Header head;
-    struct Token opsize;
-    struct Token phase;
-
-    DEFINE_ARRAY(OpCode, opcode);
+    DEFINE_ARRAY(ASTStatement, statement);
 } AST;
 
 void InitAST(AST* mcode);
+
+ASTStatement* newStatement(struct Parser* parser, ASTStatementType type);
 
 #endif

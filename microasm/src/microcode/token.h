@@ -10,7 +10,6 @@
     x(COMMA) x(DOT) x(COLON) x(NUMBER) \
     x(SEMICOLON) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
-    x(OPSIZE) x(PHASE) \
     x(INCLUDE) x(TYPE) x(STRING) \
     x(ERROR) x(EOF) x(NULL)
 
@@ -50,5 +49,6 @@ Token* createUIntTokenPtr(unsigned int num);
 
 uint32_t tokenHash(void* value);
 bool tokenCmp(void* a, void* b);
+const char* tokenAllocName(Token* tok);
 
 #endif

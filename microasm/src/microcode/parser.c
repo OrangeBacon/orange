@@ -90,8 +90,6 @@ static void syncronise(Parser* parser) {
         switch(parser->current.type) {
             // should mostly be able to continue parsing from these tokens
             case TOKEN_INCLUDE:
-            case TOKEN_OPSIZE:
-            case TOKEN_PHASE:
             //case TOKEN_TYPE:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
@@ -185,8 +183,8 @@ static Line* microcodeLine(Parser* parser) {
     return line;
 }
 
-static Error errParameterColon;
-static Error errParameterNumber;
+static Error errParameterColon = {0};
+static Error errParameterNumber = {0};
 static void parameterErrors() {
     newErrConsume(&errParameterColon, ERROR_SYNTAX,
         TOKEN_COLON, "Missing colon seperating %s from its value");
@@ -194,26 +192,25 @@ static void parameterErrors() {
         TOKEN_NUMBER, "Missing value of %s parameter");
 }
 
-static void parameter(Parser* parser, const char* type) {
-    consume(parser, &errParameterColon, type);
-    consume(parser, &errParameterNumber, type);
+static void parameter(Parser* parser) {
+    CONTEXT(INFO, "Parsing new parameter");
+    newErrorState(parser);
 
-    // works for now
-    if(type[0] == 'o') {
-        parser->ast->opsize = parser->previous;
-    } else {
-        parser->ast->phase = parser->previous;
-    }
+    ASTStatement* s = newStatement(parser, AST_BLOCK_PARAMETER);
+    Token* name = &parser->previous;
+    s->as.parameter.name = *name;
+
+    consume(parser, &errParameterColon, name->data.string);
+    consume(parser, &errParameterNumber, name->data.string);
+    s->as.parameter.value = parser->previous;
+
+    s->isValid = !endErrorState(parser);
 }
 
-static Error errMultipleHeaders = {0};
 static Error errHeaderCondition = {0};
 static Error errBlockStart = {0};
 static Error errBlockEnd = {0};
 static void headerErrors() {
-    newErrPrevious(&errMultipleHeaders, ERROR_SEMANTIC,
-        "Only one header statement allowed per microcode");
-    newErrNoteAt(&errMultipleHeaders, "Previously declared here");
     newErrAt(&errHeaderCondition, ERROR_SEMANTIC, "Condition values not allowed in header");
     newErrConsume(&errBlockStart, ERROR_SYNTAX,
         TOKEN_LEFT_BRACE, "Expected \"{\" at start of block");
@@ -224,22 +221,11 @@ static void headerErrors() {
 // parses a header statement
 static void header(Parser* parser) {
     CONTEXT(INFO, "Parsing header statement");
-
-    bool write;
-    if(parser->headerStatement.line != -1){
-        error(parser, &errMultipleHeaders, &parser->headerStatement);
-        write = false;
-        INFO("Header statement duplication error");
-    } else {
-        parser->headerStatement = parser->previous;
-        write = true;
-    }
-
     newErrorState(parser);
 
-    Header head;
-    ARRAY_ALLOC(BitArray, head, line);
-    head.errorPoint = parser->previous;
+    ASTStatement* s = newStatement(parser, AST_BLOCK_HEADER);
+    ARRAY_ALLOC(BitArray, s->as.header, line);
+    s->as.header.errorPoint = parser->previous;
 
     consume(parser, &errBlockStart);
 
@@ -254,7 +240,7 @@ static void header(Parser* parser) {
             error(parser, &errHeaderCondition, &line->conditionErrorToken);
         }
 
-        PUSH_ARRAY(BitArray, head, line, line->bitsLow);
+        PUSH_ARRAY(BitArray, s->as.header, line, line->bitsLow);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
@@ -262,13 +248,7 @@ static void header(Parser* parser) {
 
     consume(parser, &errBlockEnd);
 
-    if(write) {
-        parser->ast->head = head;
-    }
-
-    parser->ast->head.isValid = !endErrorState(parser);
-    parser->ast->head.isPresent = true;
-    INFO("Header statement parsed");
+    s->isValid = !endErrorState(parser);
 }
 
 static Error errOpcodeID = {0};
@@ -290,13 +270,13 @@ static void opcode(Parser* parser) {
     CONTEXT(INFO, "Parsing opcode statement");
     newErrorState(parser);
 
-    OpCode code;
-    ARRAY_ALLOC(Line*, code, line);
+    ASTStatement* s = newStatement(parser, AST_BLOCK_OPCODE);
+    ARRAY_ALLOC(Line*, s->as.opcode, line);
 
     consume(parser, &errOpcodeID, TokenNames[parser->current.type]);
-    code.id = parser->previous;
+    s->as.opcode.id = parser->previous;
     consume(parser, &errOpcodeName, TokenNames[parser->current.type]);
-    code.name = parser->previous;
+    s->as.opcode.name = parser->previous;
 
     consume(parser, &errOpcodeParamStart, TokenNames[parser->current.type]);
 
@@ -319,7 +299,7 @@ static void opcode(Parser* parser) {
             break;
         }
         Line* line = microcodeLine(parser);
-        PUSH_ARRAY(Line, code, line, line);
+        PUSH_ARRAY(Line, s->as.opcode, line, line);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
@@ -327,9 +307,7 @@ static void opcode(Parser* parser) {
 
     consume(parser, &errBlockEnd);
 
-    code.isValid = !endErrorState(parser);
-    PUSH_ARRAY(OpCode, *parser->ast, opcode, code);
-    INFO("Parsed opcode statement");
+    s->isValid = !endErrorState(parser);
 }
 
 static Error errCouldNotFindFile = {0};
@@ -392,8 +370,7 @@ static void block(Parser* parser) {
         case TOKEN_OPCODE: opcode(parser); break;
         case TOKEN_HEADER: header(parser); break;
         case TOKEN_INCLUDE: include(parser); break;
-        case TOKEN_OPSIZE: parameter(parser, "opsize"); break;
-        case TOKEN_PHASE: parameter(parser, "phase"); break;
+        case TOKEN_IDENTIFIER: parameter(parser); break;
         default:
             INFO("Could not find valid block statement");
             error(parser, &errExpectedBlock, TokenNames[parser->previous.type]);
