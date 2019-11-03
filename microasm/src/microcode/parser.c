@@ -98,7 +98,7 @@ static void syncronise(Parser* parser) {
     INFO("Could not detect valid parser state");
 }
 
-static Error errParameterRightParen;
+static Error errParameterRightParen = {0};
 static Error errConditionValue = {0};
 static Error errConditionValueRepeated = {0};
 static Error errConditionColon = {0};

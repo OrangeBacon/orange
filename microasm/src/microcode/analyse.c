@@ -4,6 +4,7 @@
 #include "shared/table.h"
 #include "shared/memory.h"
 #include "shared/graph.h"
+#include "shared/log.h"
 #include "emulator/compiletime/create.h"
 #include "microcode/token.h"
 #include "microcode/ast.h"
@@ -11,7 +12,8 @@
 #include "microcode/error.h"
 
 // TODO fix opcode ids so they are correct between ast and vmcoregen
-// TODO add analysis for types, bitgroups, parameterised microcode bits
+// TODO add bitgroup analysis
+// TODO finish opcode analysis, parameters, paramatised bits
 
 typedef struct IdentifierParameter {
     unsigned int value;
@@ -22,9 +24,19 @@ typedef struct IdentifierControlBit {
     unsigned int value;
 } IdentifierControlBit;
 
+typedef struct IdentifierEnum {
+    Token* definition;
+} IdentifierEnum;
+
+typedef struct IdentifierBitGroup {
+    Token* definition;
+} IdentifierBitGroup;
+
 typedef enum IdentifierType {
     TYPE_PARAMETER,
-    TYPE_VM_CONTROL_BIT
+    TYPE_VM_CONTROL_BIT,
+    TYPE_ENUM,
+    TYPE_BITGROUP
 } IdentifierType;
 
 typedef struct Identifier {
@@ -32,6 +44,8 @@ typedef struct Identifier {
     union {
         IdentifierParameter parameter;
         IdentifierControlBit control;
+        IdentifierEnum enumType;
+        IdentifierBitGroup bitgroup;
     } as;
 } Identifier;
 
@@ -46,17 +60,25 @@ static Identifier* getIdentifier(char* name) {
 }
 
 static Error errDuplicateParameter = {0};
-static Error errParameterIsControl;
+static Error errParameterIsControl = {0};
+static Error errParameterIsEnum = {0};
+static Error errParameterIsBitgroup = {0};
 static void analyseParameterErrors() {
     newErrAt(&errDuplicateParameter, ERROR_SEMANTIC, "Duplicate value for parameter found");
     newErrNoteAt(&errDuplicateParameter, "Originally defined here");
     newErrAt(&errParameterIsControl, ERROR_SEMANTIC,
         "Parameter name is defined as the name for a control bit");
+    newErrAt(&errParameterIsEnum, ERROR_SEMANTIC, "Parameter name is an enum");
+    newErrNoteAt(&errParameterIsEnum, "Originally defined here");
+    newErrAt(&errParameterIsBitgroup, ERROR_SEMANTIC, "Parameter name is a bitgroup");
+    newErrNoteAt(&errParameterIsBitgroup, "Originally defined here");
 }
 
 static bool foundPhase = false;
 static bool foundOpsize = false;
 static void analyseParameter(Parser* parser, ASTStatement* s) {
+    CONTEXT(INFO, "Analysing parameter");
+
     char* key = (char*)s->as.parameter.name.data.string;
 
     Identifier* current;
@@ -68,6 +90,14 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
                 break;
             case TYPE_VM_CONTROL_BIT:
                 error(parser, &errParameterIsControl, &s->as.parameter.name);
+                break;
+            case TYPE_ENUM:
+                error(parser, &errParameterIsEnum, &s->as.parameter.name,
+                    current->as.enumType.definition);
+                break;
+            case TYPE_BITGROUP:
+                error(parser, &errParameterIsBitgroup, &s->as.parameter.name,
+                    current->as.bitgroup.definition);
         }
     }
 
@@ -95,6 +125,8 @@ static void analyseLineErrors() {
 }
 
 static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Token* opcodeName, unsigned int lineNumber) {
+    CONTEXT(INFO, "Analysing line");
+
     Graph graph;
     InitGraph(&graph);
 
@@ -150,14 +182,24 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 
 static Error errIdentifierNotDefined = {0};
 static Error errMCodeBitIsParameter = {0};
+static Error errMCodeBitIsEnum = {0};
+static Error errMCodeBitIsBitgroup = {0};
 static void mcodeBitArrayCheckErrors() {
     newErrAt(&errIdentifierNotDefined, ERROR_SEMANTIC, "Identifier was not defined");
     newErrAt(&errMCodeBitIsParameter, ERROR_SEMANTIC, 
         "Identifier previously defined as a parameter, control bit required");
     newErrNoteAt(&errMCodeBitIsParameter, "Defined here");
+    newErrAt(&errMCodeBitIsEnum, ERROR_SEMANTIC, 
+        "Identifier previously defined as an enum, control bit required");
+    newErrNoteAt(&errMCodeBitIsEnum, "Defined here");
+    newErrAt(&errMCodeBitIsBitgroup, ERROR_SEMANTIC, 
+        "Identifier previously defined as a bit group, control bit required");
+    newErrNoteAt(&errMCodeBitIsBitgroup, "Defined here");
 }
 
 static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
+    CONTEXT(INFO, "Checking bit array");
+
     bool passed = true;
 
     for(unsigned int j = 0; j < arr->dataCount; j++) {
@@ -175,6 +217,17 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
                 error(parser, &errMCodeBitIsParameter, 
                     bit, val->as.parameter.definition);
                 passed = false;
+                break;
+            case TYPE_ENUM:
+                error(parser, &errMCodeBitIsEnum,
+                    bit, val->as.enumType.definition);
+                passed = false;
+                break;
+            case TYPE_BITGROUP:
+                error(parser, &errMCodeBitIsBitgroup,
+                    bit, val->as.bitgroup.definition);
+                passed = false;
+                break;
         }
     }
 
@@ -197,6 +250,8 @@ static void analyseHeaderErrors() {
 static bool parsedHeader = false;
 static ASTStatement* firstHeader = NULL;
 static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
+    CONTEXT(INFO, "Analysing header");
+
     if(parsedHeader) {
         error(parser, &errDuplicateHeader, &s->as.header.errorPoint,
             firstHeader->as.header.errorPoint);
@@ -238,6 +293,8 @@ static void analyseOpcodeErrors() {
 }
 
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
+    CONTEXT(INFO, "Analysing opcode statement");
+
     if(!foundPhase) return;
     if(!parsedHeader) return;
     Identifier* phase = getIdentifier("phase");
@@ -297,6 +354,78 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     PUSH_ARRAY(GenOpCode, *core, opcode, gencode);
 }
 
+static Error errEnumMoreMembers = {0};
+static Error errEnumLessMembers = {0};
+static Error errEnumDuplicate = {0};
+static void analyseTypeErrors() {
+    newErrAt(&errEnumMoreMembers, ERROR_SEMANTIC, "Enum statement requires %u members, got %u");
+    newErrAt(&errEnumLessMembers, ERROR_SEMANTIC, "Enum statement requires %u members, got %u");
+    newErrAt(&errEnumDuplicate, ERROR_SEMANTIC, "Duplicated enum member");
+    newErrNoteAt(&errEnumDuplicate, "Originaly defined here");
+}
+
+static void analyseEnum(Parser* parser, ASTStatement* s) {
+    CONTEXT(INFO, "Analysing enum statement");
+
+    ASTType* typeStatement = &s->as.type;
+    ASTTypeEnum* enumStatement = &typeStatement->as.enumType;
+
+    Identifier* value = ArenaAlloc(sizeof(Identifier));
+    value->type = TYPE_ENUM;
+    value->as.enumType.definition = &s->as.type.name;
+    tableSet(&identifiers, (char*)s->as.type.name.data.string, (void*)value);
+
+    unsigned int requiredMemberCount = 1 << enumStatement->width.data.value;
+    if(enumStatement->memberCount != requiredMemberCount) {
+        if(enumStatement->memberCount < requiredMemberCount) {
+            error(parser, &errEnumMoreMembers, &typeStatement->name, 
+                requiredMemberCount, enumStatement->memberCount);
+        } else {
+            error(parser, &errEnumLessMembers, &enumStatement->members[requiredMemberCount], 
+                requiredMemberCount, enumStatement->memberCount);
+        }
+    }
+
+    // as enums cannot be used directly, no issues if
+    // enum values collide with other identifiers
+
+    Table members;
+    initTable(&members, tokenHash, tokenCmp);
+
+    for(unsigned int i = 0; i < enumStatement->memberCount; i++) {
+        Token* tok = &enumStatement->members[i];
+        if(tableHas(&members, tok)) {
+            Token* original;
+            tableGetKey(&members, tok, (void**)&original);
+            error(parser, &errEnumDuplicate, tok, original);
+        } else {
+            tableSet(&members, tok, (void*)1);
+        }
+    }
+}
+
+static void analyseType(Parser* parser, ASTStatement* s) {
+    CONTEXT(INFO, "Analysing type statement");
+
+    switch(s->as.type.type) {
+        case AST_BLOCK_TYPE_ENUM: analyseEnum(parser, s); break;
+    }
+}
+
+static void analyseBitgroupErrors() {
+
+}
+
+static void analyseBitgroup(Parser* parser, ASTStatement* s) {
+    CONTEXT(INFO, "Analysing type statement");
+
+    (void) parser;
+    Identifier* value = ArenaAlloc(sizeof(Identifier));
+    value->type = TYPE_BITGROUP;
+    value->as.bitgroup.definition = &s->as.type.name;
+    tableSet(&identifiers, (char*)s->as.type.name.data.string, (void*)value);
+}
+
 static Error errNoHeader = {0};
 static Error errNoOpsize = {0};
 static Error errNoPhase = {0};
@@ -307,6 +436,8 @@ static void analyseCheckParsedErrors() {
 }
 
 static void analyseCheckParsed(Parser* parser) {
+    CONTEXT(INFO, "Checking required statements");
+
     if(!parsedHeader) {
         error(parser, &errNoHeader);
     }
@@ -326,6 +457,8 @@ static errorInitialiser errorInitialisers[] = {
     mcodeBitArrayCheckErrors,
     analyseHeaderErrors,
     analyseOpcodeErrors,
+    analyseTypeErrors,
+    analyseBitgroupErrors,
     analyseCheckParsedErrors
 };
 
@@ -338,6 +471,8 @@ void InitAnalysis() {
 }
 
 void Analyse(Parser* parser, VMCoreGen* core) {
+    CONTEXT(INFO, "Running analysis");
+
     if(parser->hadError)return;
     if(!errorsInitialised)InitAnalysis();
 
@@ -358,8 +493,8 @@ void Analyse(Parser* parser, VMCoreGen* core) {
             case AST_BLOCK_PARAMETER: analyseParameter(parser, s); break;
             case AST_BLOCK_HEADER: analyseHeader(parser, s, core); break;
             case AST_BLOCK_OPCODE: analyseOpcode(parser, s, core); break;
-            case AST_BLOCK_TYPE: break;
-            case AST_BLOCK_BITGROUP: break;
+            case AST_BLOCK_TYPE: analyseType(parser, s); break;
+            case AST_BLOCK_BITGROUP: analyseBitgroup(parser, s); break;
         }
     }
 
