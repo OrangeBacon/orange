@@ -10,6 +10,9 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
+// TODO fix opcode ids so they are correct between ast and vmcoregen
+// TODO add analysis for types, bitgroups, parameterised microcode bits
+
 typedef struct IdentifierParameter {
     unsigned int value;
     Token* definition;
@@ -97,14 +100,14 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 
     for(unsigned int i = 0; i < line->dataCount; i++) {
         Identifier* value;
-        tableGet(&identifiers, (char*)line->datas[i].data.string, (void**)&value);
+        tableGet(&identifiers, (char*)line->datas[i].data.data.string, (void**)&value);
         unsigned int command = value->as.control.value;
         AddNode(&graph, command);
         for(unsigned int j = 0; j < core->commands[command].changesLength; j++) {
             unsigned int changed = core->commands[command].changes[j];
             for(unsigned int k = 0; k < line->dataCount; k++) {
                 Identifier* value;
-                tableGet(&identifiers, (char*)line->datas[k].data.string, (void**)&value);
+                tableGet(&identifiers, (char*)line->datas[k].data.data.string, (void**)&value);
                 unsigned int comm = value->as.control.value;
                 for(unsigned int l = 0; l < core->commands[comm].dependsLength; l++) {
                     unsigned int depended = core->commands[comm].depends[l];
@@ -158,7 +161,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
     bool passed = true;
 
     for(unsigned int j = 0; j < arr->dataCount; j++) {
-        Token* bit = &arr->datas[j];
+        Token* bit = &arr->datas[j].data;
 
         Identifier* val;
         if(!tableGet(&identifiers, (char*)bit->data.string, (void**)&val)) {
@@ -355,6 +358,8 @@ void Analyse(Parser* parser, VMCoreGen* core) {
             case AST_BLOCK_PARAMETER: analyseParameter(parser, s); break;
             case AST_BLOCK_HEADER: analyseHeader(parser, s, core); break;
             case AST_BLOCK_OPCODE: analyseOpcode(parser, s, core); break;
+            case AST_BLOCK_TYPE: break;
+            case AST_BLOCK_BITGROUP: break;
         }
     }
 

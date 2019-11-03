@@ -2,33 +2,29 @@ opsize: 16
 phase: 4
 
 include "types"
-# TODO: parse type syntax
-#type Reg enum {
-#    A; B; C; D; E; AR; SP; IP;
-#}
 
-#type u9 number(9) '#';
-#type addr9 number(9) '$';
+type Reg = enum(3) {
+    A; B; C; D; E; AR; SP; IP;
+}
 
-#bitgroup RegToAddress(Reg reg) {
-#    $(reg)ToAddress;
-#}
-#bitgroup AddressToReg(Reg reg) {
-#    AddressTo$(reg)
-#}
+bitgroup RegToAddress(Reg reg) {
+    $(reg)ToAddress
+}
+bitgroup AddressToReg(Reg reg) {
+    AddressTo$(reg)
+}
 
 header {
     IPToAddress, memReadToInst, iRegSet
 }
 
-opcode 1 nop() {}
+opcode nop 0b1() {}
 
-opcode 2 jmp(Reg reg) {
+opcode jmp 0b0110010110(Reg reg) {
     IPToAddress, memReadToInst, iRegSet;
-    1: AToAddress, AddressToIP;
-    0: BToAddress, AddressToIP;
+    RegToAddress(reg), AddressToIP;
 }
 
-opcode 3 halt() {
+opcode halt 0b11() {
     halt
 }

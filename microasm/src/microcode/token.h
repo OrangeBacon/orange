@@ -8,9 +8,10 @@
     x(LEFT_PAREN) x(RIGHT_PAREN) \
     x(LEFT_BRACE) x(RIGHT_BRACE) \
     x(COMMA) x(DOT) x(COLON) x(NUMBER) \
-    x(SEMICOLON) x(EQUAL) \
+    x(SEMICOLON) x(BINARY) x(EQUAL) \
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
     x(INCLUDE) x(TYPE) x(STRING) \
+    x(ENUM) x(BITGROUP) x(DOLLAR) \
     x(ERROR) x(EOF) x(NULL)
 
 #define ENUM_TOKEN(x) TOKEN_##x,

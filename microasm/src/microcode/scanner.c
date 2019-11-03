@@ -55,8 +55,9 @@ Token ScanToken(Scanner* scanner){
         case '}': return makeToken(scanner, TOKEN_RIGHT_BRACE);
         case ';': return makeToken(scanner, TOKEN_SEMICOLON);
         case ':': return makeToken(scanner, TOKEN_COLON);
-        case '=': return makeToken(scanner, TOKEN_EQUAL);
         case ',': return makeToken(scanner, TOKEN_COMMA);
+        case '=': return makeToken(scanner, TOKEN_EQUAL);
+        case '$': return makeToken(scanner, TOKEN_DOLLAR);
         case '"': return string(scanner, '"');
         case '\'': return string(scanner, '\'');
     }
@@ -149,8 +150,8 @@ static bool isDigit(char c) {
 }
 
 // is the character a hexadecimal character
-static bool isHexDigit(char c) {
-    return (c >='0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+static bool isBinaryDigit(char c) {
+    return (c == '0') || (c == '1');
 }
 
 // is the character not whitespace and not part of any other token?
@@ -187,36 +188,36 @@ static void skipWhitespace(Scanner* scanner) {
 
 // scan a number
 static Token number(Scanner* scanner) {
-    bool hex = false;
+    bool bin = false;
     while(!isAtEnd(scanner)) {
         if(!isDigit(peek(scanner))) {
             break;
         }
         advance(scanner);
     }
-    if(scanner->current == scanner->start + 1 && scanner->current[-1] == '0' && peek(scanner) =='x') {
-        hex = true;
+    if(scanner->current == scanner->start + 1 && scanner->current[-1] == '0' && peek(scanner) =='b') {
+        bin = true;
         advance(scanner);
         while(!isAtEnd(scanner)) {
-            if(!isHexDigit(peek(scanner))) {
+            if(!isBinaryDigit(peek(scanner))) {
                 break;
             }
             advance(scanner);
         }
     }
 
-    Token out = makeToken(scanner, TOKEN_NUMBER);
-
     char* endPtr;
     long val;
-    if(hex) {
-        val = strtol(scanner->start + 2, &endPtr, 16);
+    if(bin) {
+        val = strtol(scanner->start + 2, &endPtr, 2);
     } else {
         val = strtol(scanner->start, &endPtr, 10);
     }
     if(val > INT_MAX) {
         return errorToken(scanner, "Number too large for integer type");
     }
+
+    Token out = makeToken(scanner, bin ? TOKEN_BINARY : TOKEN_NUMBER);
     out.data.value = val;
     return out;
 }
@@ -248,9 +249,10 @@ static Token identifier(Scanner* scanner) {
 
 // what is the token type of the last identifier scanned?
 static MicrocodeTokenType identifierType(Scanner* scanner) {
-    // uses a trie - no keywords begin with anything other
-    // than 'h' 'm' 'i' 'o', etc.
+    // uses a trie
     switch(scanner->start[0]) {
+        case 'b': return checkKeyword(scanner, 1, 7, "itgroup", TOKEN_BITGROUP);
+        case 'e': return checkKeyword(scanner, 1, 3, "num", TOKEN_ENUM);
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
         case 'i': return checkKeyword(scanner, 1, 6, "nclude", TOKEN_INCLUDE);
         case 'o': return checkKeyword(scanner, 1, 5, "pcode", TOKEN_OPCODE);

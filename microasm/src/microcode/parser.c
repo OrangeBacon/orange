@@ -10,11 +10,6 @@
 #include "microcode/ast.h"
 #include "microcode/error.h"
 
-// error messages:
-// error = cannot deal with the syntax, skip until knows what is going on, fatal
-// warn = semantic error, does not skip, fatal
-// note = infomation output, non fatal
-
 static void newErrorState(Parser* parser) {
     CONTEXT(DEBUG, "New error state");
     PUSH_ARRAY(bool, *parser, errorStack, false);
@@ -90,7 +85,8 @@ static void syncronise(Parser* parser) {
         switch(parser->current.type) {
             // should mostly be able to continue parsing from these tokens
             case TOKEN_INCLUDE:
-            //case TOKEN_TYPE:
+            case TOKEN_TYPE:
+            case TOKEN_BITGROUP:
             case TOKEN_OPCODE:
             case TOKEN_HEADER:
                 INFO("Found valid parser state");
@@ -102,25 +98,15 @@ static void syncronise(Parser* parser) {
     INFO("Could not detect valid parser state");
 }
 
-static BitArray parseMicrocodeBitArray(Parser* parser) {
-    CONTEXT(INFO, "Parsing microcode bit array");
-    BitArray result;
-    ARRAY_ALLOC(Token, result, data);
-    while(match(parser, TOKEN_IDENTIFIER)) {
-        PUSH_ARRAY(Token, result, data, parser->previous);
-        if(!match(parser, TOKEN_COMMA)) {
-            break;
-        }
-    }
-    return result;
-}
-
+static Error errParameterRightParen;
 static Error errConditionValue = {0};
 static Error errConditionValueRepeated = {0};
 static Error errConditionColon = {0};
 static Error errConditionSemicolon = {0};
 static Error errNoSecondConditionLine = {0};
 static void microcodeLineErrors() {
+    newErrConsume(&errParameterRightParen, ERROR_SYNTAX,
+        TOKEN_RIGHT_PAREN, "Expected )");
     newErrPrevious(&errConditionValue, ERROR_SEMANTIC, "Condition values can only be 0 or 1");
     newErrPrevious(&errConditionValueRepeated, ERROR_SEMANTIC, "Condition value %u repeated");
     newErrConsume(&errConditionColon, ERROR_SYNTAX,
@@ -129,6 +115,32 @@ static void microcodeLineErrors() {
         TOKEN_SEMICOLON, "Semicolon expected between parts of conditional microcode line");
     newErrConsume(&errNoSecondConditionLine, ERROR_SYNTAX,
         TOKEN_NUMBER, "Expected second condition value");
+}
+
+static BitArray parseMicrocodeBitArray(Parser* parser) {
+    CONTEXT(INFO, "Parsing microcode bit array");
+    BitArray result;
+    ARRAY_ALLOC(Token, result, data);
+    while(match(parser, TOKEN_IDENTIFIER)) {
+        Bit bit;
+        bit.data = parser->previous;
+        ARRAY_ZERO(bit, param);
+        if(match(parser, TOKEN_LEFT_PAREN)) {
+            ARRAY_ALLOC(Token, bit, param);
+            while(match(parser, TOKEN_IDENTIFIER)) {
+                PUSH_ARRAY(Token, bit, param, parser->previous);
+                if(!match(parser, TOKEN_COMMA)) {
+                    break;
+                }
+            }
+            consume(parser, &errParameterRightParen);
+        }
+        PUSH_ARRAY(Token, result, data, bit);
+        if(!match(parser, TOKEN_COMMA)) {
+            break;
+        }
+    }
+    return result;
 }
 
 // parses a line of microcode commands with conditions
@@ -183,11 +195,85 @@ static Line* microcodeLine(Parser* parser) {
     return line;
 }
 
+static Error errEnumSizeOpen = {0};
+static Error errEnumSizeNumber = {0};
+static Error errEnumSizeClose = {0};
+static Error errBlockStart = {0};
+static Error errBlockEnd = {0};
+static void typeEnumErrors() {
+    newErrConsume(&errEnumSizeOpen, ERROR_SYNTAX,
+        TOKEN_LEFT_PAREN, "Expected \"(\" before width of enum");
+    newErrConsume(&errEnumSizeNumber, ERROR_SYNTAX,
+        TOKEN_NUMBER, "Expected enum width to be a number");
+    newErrConsume(&errEnumSizeClose, ERROR_SYNTAX,
+        TOKEN_RIGHT_PAREN, "Expected \")\" after enum width");
+    newErrConsume(&errBlockStart, ERROR_SYNTAX,
+        TOKEN_LEFT_BRACE, "Expected \"{\" at start of block");
+    newErrConsume(&errBlockEnd, ERROR_SYNTAX,
+        TOKEN_RIGHT_BRACE, "Expected \"}\" at end of block");
+}
+
+static void typeEnum(Parser* parser, ASTStatement* s) {
+    CONTEXT(INFO, "Parsing enum type expression");
+
+    s->as.type.type = AST_BLOCK_TYPE_ENUM;
+
+    consume(parser, &errEnumSizeOpen);
+    consume(parser, &errEnumSizeNumber);
+    s->as.type.as.enumType.width = parser->previous;
+
+    consume(parser, &errEnumSizeClose);
+    consume(parser, &errBlockStart);
+
+    ARRAY_ALLOC(Token, s->as.type.as.enumType, member);
+    while(match(parser, TOKEN_IDENTIFIER)) {
+        PUSH_ARRAY(Token, s->as.type.as.enumType, member, parser->previous);
+        if(!match(parser, TOKEN_SEMICOLON)) {
+            break;
+        }
+    }
+
+    consume(parser, &errBlockEnd);
+}
+
+static Error errMissingTypeName = {0};
+static Error errMissingTypeEquals = {0};
+static Error errTypeTypeWrong = {0};
+static void typeErrors() {
+    newErrConsume(&errMissingTypeName, ERROR_SYNTAX, 
+        TOKEN_IDENTIFIER, "Expected name of type being parsed");
+    newErrConsume(&errMissingTypeEquals, ERROR_SYNTAX,
+        TOKEN_EQUAL, "Expected \"=\" to assign value in type declaration");
+    newErrPrevious(&errTypeTypeWrong, ERROR_SYNTAX,
+        "Expected type name (e.g. \"enum\"), got %s");
+}
+
+static void type(Parser* parser) {
+    CONTEXT(INFO, "Parsing new type declaration");
+    newErrorState(parser);
+
+    ASTStatement* s = newStatement(parser, AST_BLOCK_TYPE);
+
+    consume(parser, &errMissingTypeName);
+    s->as.type.name = parser->previous;
+
+    consume(parser, &errMissingTypeEquals);
+
+    advance(parser);
+    switch(parser->previous.type) {
+        case TOKEN_ENUM: typeEnum(parser, s); break;
+        default:
+            error(parser, &errTypeTypeWrong, TokenNames[parser->previous.type]);
+    }
+
+    s->isValid = !endErrorState(parser);
+}
+
 static Error errParameterColon = {0};
 static Error errParameterNumber = {0};
 static void parameterErrors() {
     newErrConsume(&errParameterColon, ERROR_SYNTAX,
-        TOKEN_COLON, "Missing colon seperating %s from its value");
+        TOKEN_COLON, "Missing colon seperating property %s from its value");
     newErrConsume(&errParameterNumber, ERROR_SYNTAX,
         TOKEN_NUMBER, "Missing value of %s parameter");
 }
@@ -208,14 +294,8 @@ static void parameter(Parser* parser) {
 }
 
 static Error errHeaderCondition = {0};
-static Error errBlockStart = {0};
-static Error errBlockEnd = {0};
 static void headerErrors() {
     newErrAt(&errHeaderCondition, ERROR_SEMANTIC, "Condition values not allowed in header");
-    newErrConsume(&errBlockStart, ERROR_SYNTAX,
-        TOKEN_LEFT_BRACE, "Expected \"{\" at start of block");
-    newErrConsume(&errBlockEnd, ERROR_SYNTAX,
-        TOKEN_RIGHT_BRACE, "Expected \"}\" at end of block");
 }
 
 // parses a header statement
@@ -255,15 +335,18 @@ static Error errOpcodeID = {0};
 static Error errOpcodeName = {0};
 static Error errOpcodeParamStart = {0};
 static Error errOpcodeParamEnd = {0};
+static Error errMissingTypeParameterName = {0};
 static void opcodeErrors() {
     newErrConsume(&errOpcodeID, ERROR_SYNTAX,
-        TOKEN_NUMBER, "Expected opcode number, got %s");
+        TOKEN_BINARY, "Expected opcode number, got %s");
     newErrConsume(&errOpcodeName, ERROR_SYNTAX,
         TOKEN_IDENTIFIER, "Expected opcode name, got %s");
     newErrConsume(&errOpcodeParamStart, ERROR_SYNTAX,
         TOKEN_LEFT_PAREN, "Expected left paren, got %s");
     newErrConsume(&errOpcodeParamEnd, ERROR_SYNTAX,
         TOKEN_RIGHT_PAREN, "Expected right paren, got %s");
+    newErrConsume(&errMissingTypeParameterName, ERROR_SYNTAX,
+        TOKEN_IDENTIFIER, "Expecting the name of a parameter after its type");
 }
 
 static void opcode(Parser* parser) {
@@ -273,21 +356,28 @@ static void opcode(Parser* parser) {
     ASTStatement* s = newStatement(parser, AST_BLOCK_OPCODE);
     ARRAY_ALLOC(Line*, s->as.opcode, line);
 
-    consume(parser, &errOpcodeID, TokenNames[parser->current.type]);
-    s->as.opcode.id = parser->previous;
     consume(parser, &errOpcodeName, TokenNames[parser->current.type]);
     s->as.opcode.name = parser->previous;
+    consume(parser, &errOpcodeID, TokenNames[parser->current.type]);
+    s->as.opcode.id = parser->previous;
 
+    ARRAY_ALLOC(ASTParameter, s->as.opcode, param);
     consume(parser, &errOpcodeParamStart, TokenNames[parser->current.type]);
-
     while(match(parser, TOKEN_IDENTIFIER)) {
-        match(parser, TOKEN_IDENTIFIER);
+        ASTParameter param = {0};
+        param.name = parser->previous;
+
+        consume(parser, &errMissingTypeParameterName);
+        param.value = parser->previous;
+
+        PUSH_ARRAY(ASTParameter, s->as.opcode, param, param);
+
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }
     }
-
     consume(parser, &errOpcodeParamEnd, TokenNames[parser->current.type]);
+
 
     INFO("Parsed opcode statement header");
 
@@ -356,6 +446,69 @@ static void include(Parser* parser) {
     }
 }
 
+
+static Error errMissingBitGroupName = {0};
+static Error errBitGroupUnExpected = {0};
+static void bitgroupErrors() {
+    newErrConsume(&errMissingBitGroupName, ERROR_SYNTAX,
+        TOKEN_IDENTIFIER, "A bitgroup statement requires a name");
+    newErrPrevious(&errBitGroupUnExpected, ERROR_SYNTAX,
+        "Unexpected token of type %s while parsing bitgroup. Expecting identifier or '$'");
+}
+
+static void bitgroup(Parser* parser) {
+    CONTEXT(INFO, "Parsing bitgroup statement");
+    newErrorState(parser);
+
+    ASTStatement* s = newStatement(parser, AST_BLOCK_BITGROUP);
+
+    consume(parser, &errMissingBitGroupName);
+    s->as.bitGroup.name = parser->previous;
+
+    ARRAY_ALLOC(ASTParameter, s->as.bitGroup, param);
+    consume(parser, &errOpcodeParamStart, TokenNames[parser->current.type]);
+    while(match(parser, TOKEN_IDENTIFIER)) {
+        ASTParameter param = {0};
+        param.name = parser->previous;
+
+        consume(parser, &errMissingTypeParameterName);
+        param.value = parser->previous;
+
+        PUSH_ARRAY(ASTParameter, s->as.bitGroup, param, param);
+
+        if(!match(parser, TOKEN_COMMA)) {
+            break;
+        }
+    }
+    consume(parser, &errOpcodeParamEnd, TokenNames[parser->current.type]);
+
+    ARRAY_ALLOC(ASTBitGroupIdentifier, s->as.bitGroup, segment);
+    consume(parser, &errBlockStart);
+    while(!match(parser, TOKEN_EOF)) {
+        ASTBitGroupIdentifier id;
+
+        if(match(parser, TOKEN_RIGHT_BRACE)) {
+            break;
+        } else if(match(parser, TOKEN_DOLLAR)) {
+            id.type = AST_BIT_GROUP_IDENTIFIER_SUBST;
+            consume(parser, &errOpcodeParamStart);
+            consume(parser, &errMissingBitGroupName);
+            id.identifier = parser->previous;
+            consume(parser, &errOpcodeParamEnd);
+        } else if(match(parser, TOKEN_IDENTIFIER)) {
+            id.type = AST_BIT_GROUP_IDENTIFIER_LITERAL;
+            id.identifier = parser->previous;
+        } else {
+            advance(parser);
+            error(parser, &errBitGroupUnExpected, TokenNames[parser->previous.type]);
+            break;
+        }
+        PUSH_ARRAY(ASTBitGroupIdentifier, s->as.bitGroup, segment, id);
+    }
+
+    s->isValid = !endErrorState(parser);
+}
+
 static Error errExpectedBlock = {0};
 static void blockErrors() {
     newErrPrevious(&errExpectedBlock, ERROR_SYNTAX, "Expected a block statement, got %s");
@@ -367,9 +520,11 @@ static void block(Parser* parser) {
     advance(parser);
 
     switch(parser->previous.type) {
+        case TOKEN_TYPE: type(parser); break;
         case TOKEN_OPCODE: opcode(parser); break;
         case TOKEN_HEADER: header(parser); break;
         case TOKEN_INCLUDE: include(parser); break;
+        case TOKEN_BITGROUP: bitgroup(parser); break;
         case TOKEN_IDENTIFIER: parameter(parser); break;
         default:
             INFO("Could not find valid block statement");
@@ -417,10 +572,13 @@ typedef void (*errorInitialiser)();
 static errorInitialiser errorInitialisers[] = {
     advanceErrors,
     microcodeLineErrors,
+    typeEnumErrors,
+    typeErrors,
     parameterErrors,
     headerErrors,
     opcodeErrors,
     includeErrors,
+    bitgroupErrors,
     blockErrors,
     runParserErrors
 };
