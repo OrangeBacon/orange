@@ -30,20 +30,33 @@ typedef struct IdentifierEnum {
 
 typedef struct IdentifierBitGroup {
     Token* definition;
+    DEFINE_ARRAY(char*, bit);
 } IdentifierBitGroup;
 
 typedef enum IdentifierType {
     TYPE_PARAMETER,
     TYPE_VM_CONTROL_BIT,
-    TYPE_ENUM,
+    TYPE_USER_TYPE,
     TYPE_BITGROUP
 } IdentifierType;
 
 char *IdentifierTypeNames[] = {
     "parameter",
     "vm control bit",
-    "enum",
+    "user type",
     "bitgroup"
+};
+
+typedef struct IdentifierUserType {
+    UserType type;
+    union {
+        IdentifierEnum enumType;
+    } as;
+} IdentifierUserType;
+
+char* UserTypeNames[] = {
+    [USER_TYPE_ANY] = "any",
+    [USER_TYPE_ENUM] = "enum"
 };
 
 typedef struct Identifier {
@@ -51,7 +64,7 @@ typedef struct Identifier {
     union {
         IdentifierParameter parameter;
         IdentifierControlBit control;
-        IdentifierEnum enumType;
+        IdentifierUserType userType;
         IdentifierBitGroup bitgroup;
     } as;
 } Identifier;
@@ -104,39 +117,53 @@ static void alreadyDefined(Parser* parser, char* name, Identifier* current, ASTS
         case AST_BLOCK_TYPE: errLoc = &s->as.type.name; break;
     }
 
-    switch(current->type) {
-        case TYPE_PARAMETER:
-            error(parser, &errDuplicateDefine, errLoc, 
-                name, IdentifierTypeNames[current->type]);
-            break;
-        case TYPE_VM_CONTROL_BIT:
-            error(parser, &errDuplicateDefine, errLoc,
-                name, IdentifierTypeNames[current->type]);
-            break;
-        case TYPE_ENUM:
-            error(parser, &errDuplicateDefine, errLoc,
-                name, IdentifierTypeNames[current->type]);
-            break;
-        case TYPE_BITGROUP:
-            error(parser, &errDuplicateDefine, errLoc,
-                name, IdentifierTypeNames[current->type]);
-            break;
-    }
+    error(parser, &errDuplicateDefine, errLoc, name, IdentifierTypeNames[current->type]);
 }
 
-static Error errDuplicateParameter = {0};
-static Error errParameterIsControl = {0};
-static Error errParameterIsEnum = {0};
-static Error errParameterIsBitgroup = {0};
-static void analyseParameterErrors() {
-    newErrAt(&errDuplicateParameter, ERROR_SEMANTIC, "Duplicate value for parameter found");
-    newErrNoteAt(&errDuplicateParameter, "Originally defined here");
-    newErrAt(&errParameterIsControl, ERROR_SEMANTIC,
-        "Parameter name is defined as the name for a control bit");
-    newErrAt(&errParameterIsEnum, ERROR_SEMANTIC, "Parameter name already defined as an enum");
-    newErrNoteAt(&errParameterIsEnum, "Originally defined here");
-    newErrAt(&errParameterIsBitgroup, ERROR_SEMANTIC, "Parameter name is a bitgroup");
-    newErrNoteAt(&errParameterIsBitgroup, "Originally defined here");
+static Error errWrongType = {0};
+static void wrongTypeErrors() {
+    newErrAt(&errWrongType, ERROR_SEMANTIC, "Expecting identifier '%s' to have type '%s', got type '%s'");
+}
+
+static void wrongType(Parser* parser, Token* errLoc, IdentifierType expected, Identifier* val) {
+    error(parser, &errWrongType, errLoc, errLoc->data.string, IdentifierTypeNames[expected], 
+        IdentifierTypeNames[val->type]);
+}
+
+static Error errUndefinedType = {0};
+static Error errNotType = {0};
+static Error errWrongUserType = {0};
+static void userTypeCheckErrors() {
+    newErrAt(&errUndefinedType, ERROR_SEMANTIC, "Identifier '%s' is not defined, "
+        "%s type expected");
+    newErrAt(&errNotType, ERROR_SEMANTIC, "Expected identifier to be a type, but got %s");
+    newErrAt(&errWrongUserType, ERROR_SEMANTIC, "Expected identifier to have user type of '%s' "
+        "however, it has type '%s'");
+}
+
+static bool userTypeCheck(Parser* parser, UserType typeRequired, ASTParameter *typePair) {
+    Identifier* ident;
+    if(!tableGet(&identifiers, (char*)typePair->name.data.string, (void**)&ident)) {
+        error(parser, &errUndefinedType, &typePair->name, 
+            typePair->name.data.string, UserTypeNames[typeRequired]);
+        return false;
+    }
+
+    if(ident->type != TYPE_USER_TYPE) {
+        wrongType(parser, &typePair->name, TYPE_USER_TYPE, ident);
+        return false;
+    }
+
+    if(typeRequired == USER_TYPE_ANY) {
+        return true;
+    }
+
+    if(ident->as.userType.type != typeRequired) {
+        error(parser, &errWrongUserType, UserTypeNames[typeRequired],
+            UserTypeNames[ident->as.userType.type]);
+    }
+
+    return true;
 }
 
 static void analyseParameter(Parser* parser, ASTStatement* s) {
@@ -221,20 +248,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line, Tok
 }
 
 static Error errIdentifierNotDefined = {0};
-static Error errMCodeBitIsParameter = {0};
-static Error errMCodeBitIsEnum = {0};
-static Error errMCodeBitIsBitgroup = {0};
 static void mcodeBitArrayCheckErrors() {
     newErrAt(&errIdentifierNotDefined, ERROR_SEMANTIC, "Identifier was not defined");
-    newErrAt(&errMCodeBitIsParameter, ERROR_SEMANTIC, 
-        "Identifier previously defined as a parameter, control bit required");
-    newErrNoteAt(&errMCodeBitIsParameter, "Defined here");
-    newErrAt(&errMCodeBitIsEnum, ERROR_SEMANTIC, 
-        "Identifier previously defined as an enum, control bit required");
-    newErrNoteAt(&errMCodeBitIsEnum, "Defined here");
-    newErrAt(&errMCodeBitIsBitgroup, ERROR_SEMANTIC, 
-        "Identifier previously defined as a bit group, control bit required");
-    newErrNoteAt(&errMCodeBitIsBitgroup, "Defined here");
 }
 
 static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
@@ -251,23 +266,9 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
             passed = false;
             continue;
         }
-        switch(val->type) {
-            case TYPE_VM_CONTROL_BIT: break;
-            case TYPE_PARAMETER:
-                error(parser, &errMCodeBitIsParameter, 
-                    bit, val->as.parameter.definition);
-                passed = false;
-                break;
-            case TYPE_ENUM:
-                error(parser, &errMCodeBitIsEnum,
-                    bit, val->as.enumType.definition);
-                passed = false;
-                break;
-            case TYPE_BITGROUP:
-                error(parser, &errMCodeBitIsBitgroup,
-                    bit, val->as.bitgroup.definition);
-                passed = false;
-                break;
+        if(val->type != TYPE_VM_CONTROL_BIT) {
+            wrongType(parser, bit, TYPE_VM_CONTROL_BIT, val);
+            passed = false;
         }
     }
 
@@ -276,15 +277,12 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
 
 static Error errDuplicateHeader = {0};
 static Error errHeaderLineCount = {0};
-static Error errHeaderWrongType = {0};
 static void analyseHeaderErrors() {
     newErrAt(&errDuplicateHeader, ERROR_SEMANTIC, 
         "Cannot have more than one header statement in a microcode");
     newErrNoteAt(&errDuplicateHeader, "Header first included here");
     newErrAt(&errHeaderLineCount, ERROR_SEMANTIC, 
         "Number of lines in header (%u) is too high, the maximum is %u");
-    newErrAt(&errHeaderWrongType, ERROR_SEMANTIC, "Cannot use non output bit in header statement");
-    newErrNoteAt(&errHeaderWrongType, "Previously declared here");
 }
 
 static bool parsedHeader = false;
@@ -324,12 +322,9 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
 static Error errOpcodeIdSize = {0};
 static Error errOpcodeLineCount = {0};
-static Error errOpcodeWrongType = {0};
 static void analyseOpcodeErrors() {
     newErrAt(&errOpcodeIdSize, ERROR_SEMANTIC, "Opcode id is too large");
     newErrAt(&errOpcodeLineCount, ERROR_SEMANTIC, "Number of lines in opcode is too high");
-    newErrAt(&errOpcodeWrongType, ERROR_SEMANTIC, "Opcode bits must be outputs");
-    newErrNoteAt(&errOpcodeWrongType, "Previously declared here");
 }
 
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
@@ -418,8 +413,8 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     }
 
     value = ArenaAlloc(sizeof(Identifier));
-    value->type = TYPE_ENUM;
-    value->as.enumType.definition = type;
+    value->type = TYPE_USER_TYPE;
+    value->as.userType.type = USER_TYPE_ENUM;
     tableSet(&identifiers, (char*)type->data.string, (void*)value);
 
     unsigned int size = enumStatement->width.data.value;
@@ -456,31 +451,65 @@ static void analyseType(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Analysing type statement");
 
     switch(s->as.type.type) {
-        case AST_BLOCK_TYPE_ENUM: analyseEnum(parser, s); break;
+        case USER_TYPE_ENUM: analyseEnum(parser, s); break;
+        case USER_TYPE_ANY: 
+            // Unreachable - should not be able to construct an any type
+            // in the parser, only used for analysis
+            break;
     }
 }
 
+static Error errBitgroupParamSelfShadow = {0};
+static Error errBitgroupSubsUndefined = {0};
 static void analyseBitgroupErrors() {
-
+    newErrAt(&errBitgroupParamSelfShadow, ERROR_SEMANTIC, "Parameter name '%s' collides with "
+        "another parameter of the same name");
+    newErrAt(&errBitgroupSubsUndefined, ERROR_SEMANTIC, "Variable to substitute is not defined");
 }
 
 static void analyseBitgroup(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Analysing type statement");
 
-    (void) parser;
-    Identifier* value = ArenaAlloc(sizeof(Identifier));
+    Identifier* value;
+    if(tableGet(&identifiers, (char*)s->as.bitGroup.name.data.string, (void**)&value)) {
+        alreadyDefined(parser, (char*)s->as.bitGroup.name.data.string, value, s);
+        return;
+    }
+
+
+    value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_BITGROUP;
     value->as.bitgroup.definition = &s->as.type.name;
     tableSet(&identifiers, (char*)s->as.type.name.data.string, (void*)value);
-}
 
-static Error errNoHeader = {0};
-static Error errNoOpsize = {0};
-static Error errNoPhase = {0};
-static void analyseCheckParsedErrors() {
-    newErrEnd(&errNoHeader, ERROR_SEMANTIC, "A header statement is required, but not found");
-    newErrEnd(&errNoOpsize, ERROR_SEMANTIC, "An opsize parameter is required, but not found");
-    newErrEnd(&errNoPhase, ERROR_SEMANTIC, "A phase parameter is required, but not found");
+    Table paramNames;
+    initTable(&paramNames, tokenHash, tokenCmp);
+    
+    bool passed = true;
+    for(unsigned int i = 0; i < s->as.bitGroup.paramCount; i++) {
+        ASTParameter* pair = &s->as.bitGroup.params[i];
+        passed &= userTypeCheck(parser, USER_TYPE_ENUM, pair);
+
+        if(tableHas(&paramNames, &pair->value)) {
+            error(parser, &errBitgroupParamSelfShadow, &pair->value, pair->value.data.string);
+        }
+        tableSet(&paramNames, &pair->value, (void*)1);
+    }
+    if(!passed) {
+        return;
+    }
+
+    for(unsigned int i = 0; i < s->as.bitGroup.segmentCount; i++) {
+        ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[i];
+        if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST
+            && !tableHas(&paramNames, &seg->identifier)) {
+                error(parser, &errBitgroupSubsUndefined, &seg->identifier);
+                passed = false;
+            }
+    }
+    if(!passed) {
+        return;
+    }
 }
 
 static bool errorsInitialised;
@@ -488,14 +517,14 @@ typedef void (*errorInitialiser)();
 static errorInitialiser errorInitialisers[] = {
     getParameterErrors,
     alreadyDefinedErrors,
-    analyseParameterErrors,
+    wrongTypeErrors,
+    userTypeCheckErrors,
     analyseLineErrors,
     mcodeBitArrayCheckErrors,
     analyseHeaderErrors,
     analyseOpcodeErrors,
     analyseTypeErrors,
-    analyseBitgroupErrors,
-    analyseCheckParsedErrors
+    analyseBitgroupErrors
 };
 
 void InitAnalysis() {

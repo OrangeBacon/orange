@@ -45,12 +45,15 @@ typedef struct ASTTypeEnum {
     DEFINE_ARRAY(struct Token, member);
 } ASTTypeEnum;
 
+typedef enum UserType {
+    USER_TYPE_ANY,
+    USER_TYPE_ENUM
+} UserType;
+
 typedef struct ASTType {
     struct Token name;
 
-    enum {
-        AST_BLOCK_TYPE_ENUM
-    } type;
+    UserType type;
 
     union {
         ASTTypeEnum enumType;

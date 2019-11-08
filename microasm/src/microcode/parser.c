@@ -216,7 +216,7 @@ static void typeEnumErrors() {
 static void typeEnum(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Parsing enum type expression");
 
-    s->as.type.type = AST_BLOCK_TYPE_ENUM;
+    s->as.type.type = USER_TYPE_ENUM;
 
     consume(parser, &errEnumSizeOpen);
     consume(parser, &errEnumSizeNumber);
