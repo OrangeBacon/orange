@@ -39,6 +39,13 @@ typedef enum IdentifierType {
     TYPE_BITGROUP
 } IdentifierType;
 
+char *IdentifierTypeNames[] = {
+    "parameter",
+    "vm control bit",
+    "enum",
+    "bitgroup"
+};
+
 typedef struct Identifier {
     IdentifierType type;
     union {
@@ -51,12 +58,70 @@ typedef struct Identifier {
 
 Table identifiers;
 
-static Identifier* getIdentifier(char* name) {
-    Identifier* value;
-    if(!tableGet(&identifiers, name, (void**)&value)) {
+Table erroredParameters;
+static Error errParamMissing = {0};
+static Error errParameterWrongType = {0};
+static void getParameterErrors() {
+    initTable(&erroredParameters, strHash, strCmp);
+    newErrAt(&errParamMissing, ERROR_SEMANTIC, "Parameter '%s' required to parse %s not found");
+    newErrAt(&errParameterWrongType, ERROR_SEMANTIC, "To parse %s, '%s' is required as a "
+        "parameter, but it is defined as a %s");
+}
+
+static Identifier* getParameter(Parser* parser, Token* errPoint, char* name, char* usage) {
+    if(tableHas(&erroredParameters, name)) {
         return NULL;
     }
-    return value;
+
+    Identifier* value;
+    if(!tableGet(&identifiers, name, (void**)&value)) {
+        error(parser, &errParamMissing, errPoint, name, usage);
+        tableSet(&erroredParameters, name, (void*)1);
+        return NULL;
+    }
+
+    if(value->type == TYPE_PARAMETER) {
+        return value;
+    }
+    error(parser, &errParameterWrongType, errPoint, usage, name, IdentifierTypeNames[value->type]);
+    tableSet(&erroredParameters, name, (void*)1);
+    return NULL;
+}
+
+static Error errDuplicateDefine = {0};
+static void alreadyDefinedErrors() {
+    newErrAt(&errDuplicateDefine, ERROR_SEMANTIC, "One or more prior definitions for '%s' found, "
+        "currently declared as being of type %s");
+}
+
+static void alreadyDefined(Parser* parser, char* name, Identifier* current, ASTStatement* s) {
+    Token* errLoc;
+    switch(s->type) {
+        case AST_BLOCK_BITGROUP: errLoc = &s->as.bitGroup.name; break;
+        case AST_BLOCK_HEADER: errLoc = &s->as.header.errorPoint; break;
+        case AST_BLOCK_OPCODE: errLoc = &s->as.opcode.name; break;
+        case AST_BLOCK_PARAMETER: errLoc = &s->as.parameter.name; break;
+        case AST_BLOCK_TYPE: errLoc = &s->as.type.name; break;
+    }
+
+    switch(current->type) {
+        case TYPE_PARAMETER:
+            error(parser, &errDuplicateDefine, errLoc, 
+                name, IdentifierTypeNames[current->type]);
+            break;
+        case TYPE_VM_CONTROL_BIT:
+            error(parser, &errDuplicateDefine, errLoc,
+                name, IdentifierTypeNames[current->type]);
+            break;
+        case TYPE_ENUM:
+            error(parser, &errDuplicateDefine, errLoc,
+                name, IdentifierTypeNames[current->type]);
+            break;
+        case TYPE_BITGROUP:
+            error(parser, &errDuplicateDefine, errLoc,
+                name, IdentifierTypeNames[current->type]);
+            break;
+    }
 }
 
 static Error errDuplicateParameter = {0};
@@ -68,14 +133,12 @@ static void analyseParameterErrors() {
     newErrNoteAt(&errDuplicateParameter, "Originally defined here");
     newErrAt(&errParameterIsControl, ERROR_SEMANTIC,
         "Parameter name is defined as the name for a control bit");
-    newErrAt(&errParameterIsEnum, ERROR_SEMANTIC, "Parameter name is an enum");
+    newErrAt(&errParameterIsEnum, ERROR_SEMANTIC, "Parameter name already defined as an enum");
     newErrNoteAt(&errParameterIsEnum, "Originally defined here");
     newErrAt(&errParameterIsBitgroup, ERROR_SEMANTIC, "Parameter name is a bitgroup");
     newErrNoteAt(&errParameterIsBitgroup, "Originally defined here");
 }
 
-static bool foundPhase = false;
-static bool foundOpsize = false;
 static void analyseParameter(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Analysing parameter");
 
@@ -83,22 +146,8 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
 
     Identifier* current;
     if(tableGet(&identifiers, key, (void**)&current)) {
-        switch(current->type) {
-            case TYPE_PARAMETER:
-                error(parser, &errDuplicateParameter, 
-                    &s->as.parameter.name, current->as.parameter.definition);
-                break;
-            case TYPE_VM_CONTROL_BIT:
-                error(parser, &errParameterIsControl, &s->as.parameter.name);
-                break;
-            case TYPE_ENUM:
-                error(parser, &errParameterIsEnum, &s->as.parameter.name,
-                    current->as.enumType.definition);
-                break;
-            case TYPE_BITGROUP:
-                error(parser, &errParameterIsBitgroup, &s->as.parameter.name,
-                    current->as.bitgroup.definition);
-        }
+        alreadyDefined(parser, key, current, s);
+        return;
     }
 
     Identifier* value = ArenaAlloc(sizeof(Identifier));
@@ -106,15 +155,6 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
     value->as.parameter.definition = &s->as.parameter.name;
     value->as.parameter.value = s->as.parameter.value.data.value;
     tableSet(&identifiers, key, (void*)value);
-
-    if(strcmp(key, "phase") == 0) {
-        foundPhase = true;
-        return;
-    }
-
-    if(strcmp(key, "opsize") == 0) {
-        foundOpsize = true;
-    }
 }
 
 static Error errNoOrdering = {0};
@@ -259,8 +299,8 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     parsedHeader = true;
     firstHeader = s;
 
-    if(!foundPhase) return;
-    Identifier* phase = getIdentifier("phase");
+    Identifier* phase = getParameter(parser, &s->as.header.errorPoint, "phase", "header");
+    if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value);
 
     if(s->as.header.lineCount > maxLines) {
@@ -295,14 +335,14 @@ static void analyseOpcodeErrors() {
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing opcode statement");
 
-    if(!foundPhase) return;
     if(!parsedHeader) return;
-    Identifier* phase = getIdentifier("phase");
+    Identifier* phase = getParameter(parser, &s->as.opcode.name, "phase", "opcode");
+    if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value) - 
         firstHeader->as.parameter.value.data.value;
 
-    if(!foundOpsize) return;
-    Identifier* opsize = getIdentifier("opsize");
+    Identifier* opsize = getParameter(parser, &s->as.opcode.name, "opsize", "opcode");
+    if(opsize == NULL) return;
     unsigned int maxOpCodes = (1 << opsize->as.parameter.value);
 
     GenOpCode gencode;
@@ -370,12 +410,20 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     ASTType* typeStatement = &s->as.type;
     ASTTypeEnum* enumStatement = &typeStatement->as.enumType;
 
-    Identifier* value = ArenaAlloc(sizeof(Identifier));
-    value->type = TYPE_ENUM;
-    value->as.enumType.definition = &s->as.type.name;
-    tableSet(&identifiers, (char*)s->as.type.name.data.string, (void*)value);
+    Token* type = &s->as.type.name;
+    Identifier* value;
+    if(tableGet(&identifiers, (char*)type->data.string, (void**)&value)) {
+        alreadyDefined(parser, (char*)type->data.string, value, s);
+        return;
+    }
 
-    unsigned int requiredMemberCount = 1 << enumStatement->width.data.value;
+    value = ArenaAlloc(sizeof(Identifier));
+    value->type = TYPE_ENUM;
+    value->as.enumType.definition = type;
+    tableSet(&identifiers, (char*)type->data.string, (void*)value);
+
+    unsigned int size = enumStatement->width.data.value;
+    unsigned int requiredMemberCount = size == 1 ? 2 : 1 << size;
     if(enumStatement->memberCount != requiredMemberCount) {
         if(enumStatement->memberCount < requiredMemberCount) {
             error(parser, &errEnumMoreMembers, &typeStatement->name, 
@@ -435,23 +483,11 @@ static void analyseCheckParsedErrors() {
     newErrEnd(&errNoPhase, ERROR_SEMANTIC, "A phase parameter is required, but not found");
 }
 
-static void analyseCheckParsed(Parser* parser) {
-    CONTEXT(INFO, "Checking required statements");
-
-    if(!parsedHeader) {
-        error(parser, &errNoHeader);
-    }
-    if(!foundOpsize) {
-        error(parser, &errNoOpsize);
-    }
-    if(!foundPhase) {
-        error(parser, &errNoPhase);
-    }
-}
-
 static bool errorsInitialised;
 typedef void (*errorInitialiser)();
 static errorInitialiser errorInitialisers[] = {
+    getParameterErrors,
+    alreadyDefinedErrors,
     analyseParameterErrors,
     analyseLineErrors,
     mcodeBitArrayCheckErrors,
@@ -497,6 +533,4 @@ void Analyse(Parser* parser, VMCoreGen* core) {
             case AST_BLOCK_BITGROUP: analyseBitgroup(parser, s); break;
         }
     }
-
-    analyseCheckParsed(parser);
 }
