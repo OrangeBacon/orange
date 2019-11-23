@@ -1,5 +1,6 @@
 #include "microcode/analyse.h"
 
+#include <math.h>
 #include <string.h>
 #include "shared/table.h"
 #include "shared/memory.h"
@@ -12,7 +13,6 @@
 #include "microcode/error.h"
 
 // TODO fix opcode ids so they are correct between ast and vmcoregen
-// TODO add bitgroup analysis
 // TODO finish opcode analysis, parameters, paramatised bits
 
 typedef struct IdentifierParameter {
@@ -26,11 +26,16 @@ typedef struct IdentifierControlBit {
 
 typedef struct IdentifierEnum {
     Token* definition;
+    DEFINE_ARRAY(char*, member);
+    unsigned int identifierLength;
+    Table membersTable;
 } IdentifierEnum;
 
 typedef struct IdentifierBitGroup {
     Token* definition;
     DEFINE_ARRAY(char*, bit);
+    char* substitutedIdentifiers;
+    unsigned int lineLength;
 } IdentifierBitGroup;
 
 typedef enum IdentifierType {
@@ -68,6 +73,10 @@ typedef struct Identifier {
         IdentifierBitGroup bitgroup;
     } as;
 } Identifier;
+
+static int max(int a, int b) {
+    return a > b ? a : b;
+}
 
 Table identifiers;
 
@@ -415,6 +424,8 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_USER_TYPE;
     value->as.userType.type = USER_TYPE_ENUM;
+    IdentifierEnum* enumIdent = &value->as.userType.as.enumType;
+    enumIdent->definition = &s->as.type.name;
     tableSet(&identifiers, (char*)type->data.string, (void*)value);
 
     unsigned int size = enumStatement->width.data.value;
@@ -432,19 +443,25 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     // as enums cannot be used directly, no issues if
     // enum values collide with other identifiers
 
-    Table members;
-    initTable(&members, tokenHash, tokenCmp);
+    Table membersTable;
+    initTable(&membersTable, tokenHash, tokenCmp);
+    ARRAY_ALLOC(char*, *enumIdent, member);
+    enumIdent->identifierLength = 0;
 
     for(unsigned int i = 0; i < enumStatement->memberCount; i++) {
         Token* tok = &enumStatement->members[i];
-        if(tableHas(&members, tok)) {
+        if(tableHas(&membersTable, tok)) {
             Token* original;
-            tableGetKey(&members, tok, (void**)&original);
+            tableGetKey(&membersTable, tok, (void**)&original);
             error(parser, &errEnumDuplicate, tok, original);
         } else {
-            tableSet(&members, tok, (void*)1);
+            tableSet(&membersTable, tok, (void*)1);
+            PUSH_ARRAY(char*, *enumIdent, member, (char*)tok->data.string);
+            enumIdent->identifierLength = max(enumIdent->identifierLength, tok->length);
         }
     }
+
+    enumIdent->membersTable = membersTable;
 }
 
 static void analyseType(Parser* parser, ASTStatement* s) {
@@ -461,10 +478,15 @@ static void analyseType(Parser* parser, ASTStatement* s) {
 
 static Error errBitgroupParamSelfShadow = {0};
 static Error errBitgroupSubsUndefined = {0};
+static Error errSubstitutionError = {0};
+static Error errSubstitutionType = {0};
 static void analyseBitgroupErrors() {
     newErrAt(&errBitgroupParamSelfShadow, ERROR_SEMANTIC, "Parameter name '%s' collides with "
         "another parameter of the same name");
     newErrAt(&errBitgroupSubsUndefined, ERROR_SEMANTIC, "Variable to substitute is not defined");
+    newErrAt(&errSubstitutionError, ERROR_SEMANTIC, "Found undefined resultant identifier while substituting into bitgroup");
+    newErrAt(&errSubstitutionType, ERROR_SEMANTIC, "Found resultant identifier to have type %s, "
+        "expecting VM_CONTROL_BIT while substituting into bitgroup");
 }
 
 static void analyseBitgroup(Parser* parser, ASTStatement* s) {
@@ -475,7 +497,6 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         alreadyDefined(parser, (char*)s->as.bitGroup.name.data.string, value, s);
         return;
     }
-
 
     value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_BITGROUP;
@@ -493,23 +514,96 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         if(tableHas(&paramNames, &pair->value)) {
             error(parser, &errBitgroupParamSelfShadow, &pair->value, pair->value.data.string);
         }
-        tableSet(&paramNames, &pair->value, (void*)1);
+        tableSet(&paramNames, &pair->value, &pair->name);
     }
     if(!passed) {
         return;
     }
 
+    unsigned int lineLength = 1;
+    unsigned int possibilities = 1;
+    unsigned int substitutions = 0;
     for(unsigned int i = 0; i < s->as.bitGroup.segmentCount; i++) {
         ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[i];
-        if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST
-            && !tableHas(&paramNames, &seg->identifier)) {
+        if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
+            Token* typeName;
+            if(!tableGet(&paramNames, &seg->identifier, (void**)&typeName)) {
                 error(parser, &errBitgroupSubsUndefined, &seg->identifier);
                 passed = false;
+            } else {
+                Identifier* type;
+                tableGet(&identifiers, (char*)typeName->data.string, (void**)&type);
+                IdentifierEnum* enumType = &type->as.userType.as.enumType;
+                lineLength += enumType->identifierLength;
+                possibilities *= enumType->memberCount;
+                substitutions++;
             }
+        } else {
+            lineLength += seg->identifier.length;
+        }
     }
     if(!passed) {
         return;
     }
+
+    unsigned int* nreps = ArenaAlloc(sizeof(unsigned int)*substitutions);
+    unsigned int* ncycles = ArenaAlloc(sizeof(unsigned int)*substitutions);
+    unsigned int count = 0;
+    for(unsigned int i = 0; i < s->as.bitGroup.segmentCount; i++){
+        ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[i];
+        if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
+            Token* typeName;
+            tableGet(&paramNames, &seg->identifier, (void**)&typeName);
+            Identifier* type;
+            tableGet(&identifiers, (char*)typeName->data.string, (void**)&type);
+            unsigned int memberCount = type->as.userType.as.enumType.memberCount;
+            if(count == 0) {
+                nreps[count] = 1;
+                ncycles[count] = possibilities/memberCount;
+            } else {
+                nreps[count] = possibilities/ncycles[count-1];
+                ncycles[count] = ncycles[count-1]/memberCount;
+            }
+            count += 1;
+        }
+    }
+
+    char* substitutedList = ArenaAlloc(sizeof(char) * lineLength * possibilities);
+    for(unsigned int i = 0; i < possibilities; i++) {
+        char* currentIdent = &substitutedList[i*lineLength];
+        currentIdent[0] = '\0';
+        for(unsigned int j = 0; j < s->as.bitGroup.segmentCount; j++){
+            ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[j];
+            if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
+                Token* typeName;
+                tableGet(&paramNames, &seg->identifier, (void**)&typeName);
+                Identifier* type;
+                tableGet(&identifiers, (char*)typeName->data.string, (void**)&type);
+                IdentifierEnum* enumIdent = &type->as.userType.as.enumType;
+
+                strcat(currentIdent, enumIdent->members[(int)floor(((double)i - floor((double)i/((double)enumIdent->memberCount * (double)nreps[i])) * (double)enumIdent->memberCount * (double)nreps[i])/(double)nreps[i])]);
+            } else {
+                strncat(currentIdent, seg->identifier.data.string, seg->identifier.length);
+            }
+        }
+
+        Identifier* val;
+        if(!tableGet(&identifiers, currentIdent, (void**)&val)) {
+            error(parser, &errSubstitutionError, value->as.bitgroup.definition);
+            passed = false;
+        }
+        if(val->type != TYPE_VM_CONTROL_BIT) {
+            error(parser, &errSubstitutionType, value->as.bitgroup.definition, IdentifierTypeNames[val->type]);
+            passed = false;
+        }
+
+        if(!passed) {
+            return;
+        }
+    }
+
+    value->as.bitgroup.substitutedIdentifiers = substitutedList;
+    value->as.bitgroup.lineLength = lineLength;
 }
 
 static bool errorsInitialised;
