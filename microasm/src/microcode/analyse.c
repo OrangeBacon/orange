@@ -28,6 +28,9 @@ typedef struct IdentifierEnum {
 
     // those names, but in a hash map
     Table membersTable;
+
+    // number of bits this enum takes
+    unsigned int bitWidth;
 } IdentifierEnum;
 
 // for error formatting
@@ -184,7 +187,7 @@ static Error errUndefinedType = {0};
 static Error errNotType = {0};
 static Error errWrongUserType = {0};
 static void userTypeCheckErrors() {
-    newErrAt(&errUndefinedType, ERROR_SEMANTIC, "Identifier '%s' is not"
+    newErrAt(&errUndefinedType, ERROR_SEMANTIC, "Identifier '%s' is not "
     "defined, %s type expected");
     newErrAt(&errNotType, ERROR_SEMANTIC, "Expected identifier to be a type, "
         "but got %s");
@@ -406,48 +409,88 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 }
 
-static Error errOpcodeIdSize = {0};
+static Error errOpcodeHeaderSmall = {0};
+static Error errOpcodeHeaderLarge = {0};
 static Error errOpcodeLineCount = {0};
+static Error errOpcodeParamShadow = {0};
 static void analyseOpcodeErrors() {
-    newErrAt(&errOpcodeIdSize, ERROR_SEMANTIC, "Opcode id is too large");
-    newErrAt(&errOpcodeLineCount, ERROR_SEMANTIC, "Number of lines in opcode "
-        "is too high");
+    newErrAt(&errOpcodeHeaderSmall, ERROR_SEMANTIC,
+        "Opcode header does not contain enough bits, found %u, expected %u");
+    newErrAt(&errOpcodeHeaderLarge, ERROR_SEMANTIC,
+        "Opcode header contains too many bits, found %u, expected %u");
+    newErrAt(&errOpcodeLineCount, ERROR_SEMANTIC,
+        "Number of lines in opcode is too high");
+    newErrAt(&errOpcodeParamShadow, ERROR_SEMANTIC,
+        "Parameter name \"%s\" is used multiple times");
 }
 
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing opcode statement");
 
+    ASTOpcode *opcode = &s->as.opcode;
+
     if(!parsedHeader) return;
-    Identifier* phase = getParameter(parser, &s->as.opcode.name,
+    Identifier* phase = getParameter(parser, &opcode->name,
         "phase", "opcode");
     if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value) -
         firstHeader->as.parameter.value.data.value;
 
-    Identifier* opsize = getParameter(parser, &s->as.opcode.name,
+    Identifier* opsize = getParameter(parser, &opcode->name,
         "opsize", "opcode");
     if(opsize == NULL) return;
-    unsigned int maxOpCodes = (1 << opsize->as.parameter.value);
+    unsigned int maxHeaderBitLength = opsize->as.parameter.value;
 
     GenOpCode gencode;
     ARRAY_ALLOC(GenOpCodeLine*, gencode, line);
 
     // basic header checking
-    // TODO: needs improving, check parameters
-    if(s->as.opcode.id.data.value >= maxOpCodes) {
-        error(parser, &errOpcodeIdSize, &s->as.opcode.id);
+    Table paramNames;
+    initTable(&paramNames, tokenHash, tokenCmp);
+
+    unsigned int headerBitLength = 0;
+    bool passed = true;
+
+    headerBitLength += opcode->id.length - 2;
+    for(unsigned int i = 0; i < opcode->paramCount; i++) {
+        ASTParameter* pair = &opcode->params[i];
+        passed &= userTypeCheck(parser, USER_TYPE_ANY, pair);
+
+        bool checkLength = true;
+        if(tableHas(&paramNames, &pair->value)) {
+            error(parser, &errOpcodeParamShadow, &pair->value,
+                pair->value.data.string);
+            checkLength = false;
+        }
+        tableSet(&paramNames, &pair->value, &pair->name);
+
+        if(checkLength) {
+            Identifier* ident;
+            tableGet(&identifiers, (char*)pair->name.data.string, (void**)&ident);
+            headerBitLength += ident->as.userType.as.enumType.bitWidth;
+        }
+    }
+    if(passed) {
+        if(headerBitLength > maxHeaderBitLength) {
+            error(parser, &errOpcodeHeaderLarge, &opcode->id,
+                headerBitLength, maxHeaderBitLength);
+        }
+        if(headerBitLength < maxHeaderBitLength) {
+            error(parser, &errOpcodeHeaderSmall, &opcode->id,
+                headerBitLength, maxHeaderBitLength);
+        }
     }
 
-    if(s->as.opcode.lineCount > maxLines) {
-        error(parser, &errOpcodeLineCount, &s->as.opcode.name);
+    if(opcode->lineCount > maxLines) {
+        error(parser, &errOpcodeLineCount, &opcode->name);
     }
 
-    gencode.id = s->as.opcode.id.data.value;
-    gencode.name = s->as.opcode.name.start;
-    gencode.nameLen = s->as.opcode.name.length;
+    gencode.id = opcode->id.data.value;
+    gencode.name = opcode->name.start;
+    gencode.nameLen = opcode->name.length;
 
-    for(unsigned int j = 0; j < s->as.opcode.lineCount; j++) {
-        Line* line = s->as.opcode.lines[j];
+    for(unsigned int i = 0; i < opcode->lineCount; i++) {
+        Line* line = opcode->lines[i];
         GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
         genline->hasCondition = line->hasCondition;
 
@@ -458,11 +501,11 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             continue;
         }
         NodeArray lowNodes = analyseLine(core, parser, &line->bitsLow,
-            &s->as.opcode.name, j);
+            &opcode->name, i);
         ARRAY_ALLOC(unsigned int, *genline, lowBit);
-        for(unsigned int k = 0; k < lowNodes.nodeCount; k++) {
+        for(unsigned int j = 0; j < lowNodes.nodeCount; j++) {
             PUSH_ARRAY(unsigned int, *genline, lowBit,
-                lowNodes.nodes[k]->value);
+                lowNodes.nodes[j]->value);
         }
 
         if(line->hasCondition) {
@@ -472,11 +515,11 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                 continue;
             }
             NodeArray highNodes = analyseLine(core, parser, &line->bitsHigh,
-                &s->as.opcode.name, j);
+                &opcode->name, i);
             ARRAY_ALLOC(unsigned int, *genline, highBit);
-            for(unsigned int k = 0; k < highNodes.nodeCount; k++) {
+            for(unsigned int j = 0; j < highNodes.nodeCount; j++) {
                 PUSH_ARRAY(unsigned int, *genline, highBit,
-                    highNodes.nodes[k]->value);
+                    highNodes.nodes[j]->value);
             }
         } else {
             genline->highBitCapacity = genline->lowBitCapacity;
@@ -523,6 +566,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
 
     // check the correct number of members are present
     unsigned int size = enumStatement->width.data.value;
+    enumIdent->bitWidth = size;
     unsigned int requiredMemberCount = size == 1 ? 2 : 1 << size;
     if(enumStatement->memberCount != requiredMemberCount) {
         if(enumStatement->memberCount < requiredMemberCount) {

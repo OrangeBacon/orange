@@ -18,13 +18,13 @@ header {
     IPToAddress, memReadToInst, iRegSet
 }
 
-opcode nop 0b1() {}
+opcode nop 0b0000000000000000() {}
 
-opcode jmp 0b0110010110(Reg reg) {
+opcode jmp 0b0110010110000(Reg reg) {
     IPToAddress, memReadToInst, iRegSet;
     RegToAddress(reg), AddressToIP;
 }
 
-opcode halt 0b11() {
+opcode hlt 0b1111111111111111() {
     halt
 }
