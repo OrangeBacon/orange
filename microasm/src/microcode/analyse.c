@@ -12,8 +12,7 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
-// TODO fix opcode ids so they are correct between ast and vmcoregen
-// TODO finish opcode analysis, parameters, paramatised bits
+// TODO finish opcode analysis: paramatised bits
 
 // User defined types
 
@@ -441,14 +440,22 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     if(opsize == NULL) return;
     unsigned int maxHeaderBitLength = opsize->as.parameter.value;
 
-    GenOpCode gencode;
-    ARRAY_ALLOC(GenOpCodeLine*, gencode, line);
+    if(core->opcodes == NULL) {
+        DEBUG("Allocating opcode array");
+        core->opcodeCount = 1 << maxHeaderBitLength;
+        core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
+
+        for(unsigned int i = 0; i < core->opcodeCount; i++) {
+            core->opcodes[i].isValid = false;
+        }
+    }
 
     // basic header checking
     Table paramNames;
     initTable(&paramNames, tokenHash, tokenCmp);
 
     unsigned int headerBitLength = 0;
+    unsigned int opcodeID = opcode->id.data.value;
     bool passed = true;
 
     headerBitLength += opcode->id.length - 2;
@@ -467,27 +474,35 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         if(checkLength) {
             Identifier* ident;
             tableGet(&identifiers, (char*)pair->name.data.string, (void**)&ident);
-            headerBitLength += ident->as.userType.as.enumType.bitWidth;
+            unsigned int width = ident->as.userType.as.enumType.bitWidth;
+            headerBitLength += width;
+
+            opcodeID <<= width;
         }
     }
-    if(passed) {
-        if(headerBitLength > maxHeaderBitLength) {
-            error(parser, &errOpcodeHeaderLarge, &opcode->id,
-                headerBitLength, maxHeaderBitLength);
-        }
-        if(headerBitLength < maxHeaderBitLength) {
-            error(parser, &errOpcodeHeaderSmall, &opcode->id,
-                headerBitLength, maxHeaderBitLength);
-        }
+
+    if(!passed) {
+        return;
+    }
+
+    if(headerBitLength > maxHeaderBitLength) {
+        error(parser, &errOpcodeHeaderLarge, &opcode->id,
+            headerBitLength, maxHeaderBitLength);
+    }
+    if(headerBitLength < maxHeaderBitLength) {
+        error(parser, &errOpcodeHeaderSmall, &opcode->id,
+            headerBitLength, maxHeaderBitLength);
     }
 
     if(opcode->lineCount > maxLines) {
         error(parser, &errOpcodeLineCount, &opcode->name);
     }
 
-    gencode.id = opcode->id.data.value;
-    gencode.name = opcode->name.start;
-    gencode.nameLen = opcode->name.length;
+    GenOpCode* gencode = &core->opcodes[opcodeID];
+    gencode->isValid = true;
+    gencode->id = opcode->id.data.value;
+    gencode->name = opcode->name.start;
+    gencode->nameLen = opcode->name.length;
 
     for(unsigned int i = 0; i < opcode->lineCount; i++) {
         Line* line = opcode->lines[i];
@@ -526,10 +541,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             genline->highBitCount = genline->lowBitCount;
             genline->highBits = genline->lowBits;
         }
-        PUSH_ARRAY(GenOpCodeLine*, gencode, line, genline);
+        PUSH_ARRAY(GenOpCodeLine*, *gencode, line, genline);
     }
-
-    PUSH_ARRAY(GenOpCode, *core, opcode, gencode);
 }
 
 static Error errEnumMoreMembers = {0};

@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include "shared/platform.h"
+#include "shared/log.h"
 
 #define STRING_COMPONENT(x) #x,
 const char* ComponentTypeNames[] = {
@@ -12,13 +13,16 @@ const char* ComponentTypeNames[] = {
 #undef STRING_COMPONENT
 
 void initCore(VMCoreGen* core) {
+    CONTEXT(INFO, "Creating VMCoreGen");
     ARRAY_ALLOC(Component, *core, component);
     ARRAY_ALLOC(const char*, *core, variable);
     ARRAY_ALLOC(const char*, *core, loopVariable);
     ARRAY_ALLOC(const char*, *core, command);
     ARRAY_ALLOC(Command, *core, command);
-    ARRAY_ALLOC(GenOpCode, *core, opcode);
     ARRAY_ALLOC(unsigned int, *core, headBit);
+
+    core->opcodes = NULL;
+    core->opcodeCount = 0;
 
     initTable(&core->headers, strHash, strCmp);
     core->codeIncludeBase = "emulator/runtime/";
@@ -142,7 +146,7 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     }
     if(core->components[iBus].type != COMPONENT_BUS) {
         cErrPrintf(TextRed, "Cannot initialise instruction register using an \"%s\" "
-            "component \"%s\", \"BUS\" component required\n", 
+            "component \"%s\", \"BUS\" component required\n",
             ComponentTypeNames[core->components[iBus].type], core->components[iBus].name);
         exit(1);
     }
@@ -178,7 +182,7 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
     }
     if(core->components[data].type != COMPONENT_BUS) {
         cErrPrintf(TextRed, "Cannot initialise 64k memory using an \"%s\" "
-            "component \"%i\", \"BUS\" component required\n", 
+            "component \"%i\", \"BUS\" component required\n",
             ComponentTypeNames[core->components[data].type], core->components[data].name);
         exit(1);
     }
@@ -227,7 +231,7 @@ void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
     }
     if(core->components[bus].type != COMPONENT_BUS) {
         cErrPrintf(TextRed, "Cannot initialise additional memory output using an \"%s\" "
-            "component \"%s\", \"BUS\" component required\n", 
+            "component \"%s\", \"BUS\" component required\n",
             ComponentTypeNames[core->components[bus].type], core->components[bus].name);
         exit(1);
     }
@@ -257,16 +261,16 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
             "a bus and a register\n", reg);
         exit(1);
     }
-    if(core->components[bus].type != COMPONENT_BUS || 
+    if(core->components[bus].type != COMPONENT_BUS ||
         core->components[reg].type != COMPONENT_REGISTER) {
         cErrPrintf(TextRed, "Cannot connect bus and register using \"%s\" and \"%s\" "
-            "components \"%s\" and \"%s\", \"BUS\" and \"REGISTER\" components required\n", 
-            ComponentTypeNames[core->components[bus].type], 
+            "components \"%s\" and \"%s\", \"BUS\" and \"REGISTER\" components required\n",
+            ComponentTypeNames[core->components[bus].type],
             ComponentTypeNames[core->components[reg].type],
             core->components[bus].name, core->components[reg].name);
         exit(1);
     }
-    
+
     if(state == -1 || state == 0) {
         addCommand(core, (Command) {
             .name = aprintf("%sTo%s", core->components[bus].name, core->components[reg].name),

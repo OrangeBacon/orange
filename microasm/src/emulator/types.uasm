@@ -1,0 +1,10 @@
+type Reg = enum(3) {
+    A; B; C; D; E; AR; SP; IP;
+}
+
+bitgroup RegToAddress(Reg reg) {
+    $(reg)ToAddress
+}
+bitgroup AddressToReg(Reg reg) {
+    AddressTo$(reg)
+}

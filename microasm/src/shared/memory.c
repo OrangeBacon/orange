@@ -28,7 +28,7 @@ void ArenaInit() {
     CONTEXT(DEBUG, "Memory Initialization");
 
     arena.pageSize = 4096 * 16;
-    
+
     // add an initial page
     arena.align = 2 * sizeof(void*);
     arena.areas = malloc(sizeof(Arena));
@@ -63,6 +63,7 @@ void* ArenaAllocAlign(size_t size, size_t align) {
 
     // no large enough area found so add new area that is large enough
     if(ptr == NULL) {
+        INFO("Allocating new page");
 
         // ensure that new area will be large enough
         if(arena.pageSize < size) {
@@ -93,7 +94,7 @@ void* ArenaAllocAlign(size_t size, size_t align) {
     arena.areas[i].end = (void*)((uintptr_t)arena.areas[i].end + size + alignOffset);
     arena.areas[i].bytesLeft -= size + alignOffset;
 
-    TRACE("Assigned %u bytes from arena, %u left until reallocation", 
+    TRACE("Assigned %u bytes from arena, %u left until reallocation",
         size + alignOffset, arena.areas[i].bytesLeft);
     return ptr;
 }

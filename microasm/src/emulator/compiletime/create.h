@@ -20,6 +20,7 @@ typedef struct GenOpCode {
     const char* name;
     unsigned int nameLen;
     DEFINE_ARRAY(GenOpCodeLine*, line);
+    bool isValid;
 } GenOpCode;
 
 typedef struct Command {
@@ -70,7 +71,9 @@ typedef struct VMCoreGen {
 
     DEFINE_ARRAY(Command, command);
 
-    DEFINE_ARRAY(GenOpCode, opcode);
+    GenOpCode* opcodes;
+    unsigned int opcodeCount;
+
     DEFINE_ARRAY(unsigned int, headBit);
 
     const char* codeIncludeBase;

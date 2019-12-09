@@ -33,6 +33,9 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
 
     for(unsigned int i = 0; i < core->opcodeCount; i++) {
         GenOpCode* code = &core->opcodes[i];
+        if(!code->isValid) {
+            continue;
+        }
 
         fprintf(file, "// %.*s\ncase %u:\n", code->nameLen, code->name, code->id);
         for(unsigned int j = 0; j < code->lineCount; j++) {
