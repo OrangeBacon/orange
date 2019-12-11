@@ -456,6 +456,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
     unsigned int headerBitLength = 0;
     unsigned int opcodeID = opcode->id.data.value;
+    unsigned int variableWidth = 0;
     bool passed = true;
 
     headerBitLength += opcode->id.length - 2;
@@ -476,6 +477,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             tableGet(&identifiers, (char*)pair->name.data.string, (void**)&ident);
             unsigned int width = ident->as.userType.as.enumType.bitWidth;
             headerBitLength += width;
+            variableWidth += width;
 
             opcodeID <<= width;
         }
@@ -488,22 +490,29 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     if(headerBitLength > maxHeaderBitLength) {
         error(parser, &errOpcodeHeaderLarge, &opcode->id,
             headerBitLength, maxHeaderBitLength);
+        return;
     }
     if(headerBitLength < maxHeaderBitLength) {
         error(parser, &errOpcodeHeaderSmall, &opcode->id,
             headerBitLength, maxHeaderBitLength);
+        return;
     }
 
     if(opcode->lineCount > maxLines) {
         error(parser, &errOpcodeLineCount, &opcode->name);
+        return;
+    }
+
+    unsigned int maxGenedOpcodes = variableWidth == 1 ? 2 : 1 << variableWidth;
+    for(unsigned int i = 0; i < maxGenedOpcodes; i++) {
+        GenOpCode* gencode = &core->opcodes[opcodeID+i];
+        gencode->isValid = true;
+        gencode->id = opcode->id.data.value;
+        gencode->name = opcode->name.start;
+        gencode->nameLen = opcode->name.length;
     }
 
     GenOpCode* gencode = &core->opcodes[opcodeID];
-    gencode->isValid = true;
-    gencode->id = opcode->id.data.value;
-    gencode->name = opcode->name.start;
-    gencode->nameLen = opcode->name.length;
-
     for(unsigned int i = 0; i < opcode->lineCount; i++) {
         Line* line = opcode->lines[i];
         GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
@@ -715,9 +724,9 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
 
     // algorithm based off of fullfact from MATLAB's stats toolkit,
     // allows an int to be converted into a value to substitute
-    unsigned int* nreps = ArenaAlloc(sizeof(unsigned int)*substitutions);
-    unsigned int* ncycles = ArenaAlloc(sizeof(unsigned int)*substitutions);
-    unsigned int count = 0;
+    unsigned int ncycles = possibilities;
+    unsigned int* tests = ArenaAlloc(sizeof(unsigned int) * substitutions * possibilities);
+    unsigned int substitution = 0;
     for(unsigned int i = 0; i < s->as.bitGroup.segmentCount; i++){
         ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[i];
         if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
@@ -725,16 +734,20 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
             tableGet(&paramNames, &seg->identifier, (void**)&typeName);
             Identifier* type;
             tableGet(&identifiers, (char*)typeName->data.string, (void**)&type);
-            unsigned int memberCount =
+            unsigned int level =
                 type->as.userType.as.enumType.memberCount;
-            if(count == 0) {
-                nreps[count] = 1;
-                ncycles[count] = possibilities/memberCount;
-            } else {
-                nreps[count] = possibilities/ncycles[count-1];
-                ncycles[count] = ncycles[count-1]/memberCount;
+            unsigned int nreps = possibilities / ncycles;
+            ncycles /= level;
+            unsigned int count = 0;
+            for(unsigned int cycle = 0; cycle < ncycles; cycle++) {
+                for(unsigned int num = 0; num < level; num++) {
+                    for(unsigned int rep = 0; rep < nreps; rep++) {
+                        tests[count*substitutions+substitution] = num;
+                        count += 1;
+                    }
+                }
             }
-            count += 1;
+            substitution += 1;
         }
     }
 
@@ -744,6 +757,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
     for(unsigned int i = 0; i < possibilities; i++) {
         char* currentIdent = &substitutedList[i*lineLength];
         currentIdent[0] = '\0';
+
+        unsigned int count = 0;
         for(unsigned int j = 0; j < s->as.bitGroup.segmentCount; j++){
             ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[j];
             if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
@@ -758,10 +773,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 // Played around in excel to work this out, cannot remember
                 // how it works, but it does.  I don't think I knew when
                 // I wrote it either.
-                strcat(currentIdent, enumIdent->members[(int)floor(((double)i -
-                    floor((double)i/((double)enumIdent->memberCount *
-                    (double)nreps[i]))* (double)enumIdent->memberCount *
-                    (double)nreps[i]) / (double)nreps[i])]);
+                strcat(currentIdent, enumIdent->members[tests[i*substitutions+count]]);
+                count += 1;
             } else {
                 strncat(currentIdent, seg->identifier.data.string,
                     seg->identifier.length);
