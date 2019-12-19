@@ -15,9 +15,8 @@ is to move it to the `./docs/` folder, so it can be hosted in gh-pages.
 ## Block
 Block diagrams explaining the system.
 
-## HWVM
-A virtual machine/emulator for the system, written in C#, that tries to be as accurate to what the real hardware will be as possible.
-This makes it not that fast, although useful for testing.  This module is also known as "Starfish VM".
-
 ## MicroASM
-An assembler for the microcode assembly format.
+A program written in c to generate a virtual machine and assembler from an instruction set architecture description language, in src.
+
+Building: `CMake`
+Running: `microasm --help`, also see example code in `src/emulator/*.uasm`
