@@ -1,0 +1,21 @@
+opsize: 16
+phase: 4
+
+include "types"
+
+header {
+    IPToAddress, memReadToInst, iRegSet
+}
+
+opcode nop 0b0000000000000000() {}
+
+opcode jmp 0b0110010010(Reg rega, Reg regb) {
+    IPToAddress, memReadToInst, iRegSet;
+    RegToAddress(rega), memReadToInst;
+    RegToAddress(rega), memReadToInst;
+    AToAddress, memReadToData, DataToB;
+}
+
+opcode hlt 0b1111111111111111() {
+    halt
+}
