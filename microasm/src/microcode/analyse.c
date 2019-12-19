@@ -20,7 +20,7 @@ typedef struct IdentifierEnum {
     Token* definition;
 
     // null terminated strings for each name in the enum
-    DEFINE_ARRAY(char*, member);
+    DEFINE_ARRAY(Token*, member);
 
     // maximum length of each member name
     unsigned int identifierLength;
@@ -327,11 +327,15 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
 
 static Error errIdentifierNotDefined = {0};
 static Error errBitArraySubstitution = {0};
+static Error errTooManyParameters = {0};
 static void mcodeBitArrayCheckErrors() {
     newErrAt(&errIdentifierNotDefined, ERROR_SEMANTIC,
         "Identifier was not defined");
     newErrAt(&errBitArraySubstitution, ERROR_SEMANTIC,
         "Could not resolve argument name \"%s\"");
+    newErrAt(&errTooManyParameters, ERROR_SEMANTIC,
+        "Only one parameter accepted by enum");
+
 }
 
 // check if all identifers in the array reperesent a control bit
@@ -353,6 +357,10 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
         if(val->type == TYPE_VM_CONTROL_BIT) {
             continue;
         } else if(val->type == TYPE_BITGROUP) {
+            if(bit->paramCount != 1) {
+                passed = false;
+                error(parser, &errTooManyParameters, bit->data);
+            }
             for(unsigned int j = 0; j < bit->paramCount; j++) {
                 Token* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
@@ -423,6 +431,30 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 }
 
+static NodeArray genlinePush(BitArray* bits, VMCoreGen* core, Parser* parser, ASTOpcode* opcode, unsigned int possibility, unsigned int lineNumber, unsigned int* tests) {
+    BitArray subsLine;
+    ARRAY_ALLOC(Bit, subsLine, data);
+    for(unsigned int i = 0; i < bits->dataCount; i++) {
+        Bit bit = bits->datas[i];
+        Identifier* val;
+        tableGet(&identifiers, (char*)bit.data.data.string, (void**)&val);
+        if(val->type == TYPE_VM_CONTROL_BIT) {
+            PUSH_ARRAY(Bit, subsLine, data, bit);
+        } else {
+            for(unsigned int j = 0; j < opcode->paramCount; j++) {
+                ASTParameter* param = &opcode->params[j];
+                Identifier* paramType;
+                tableGet(&identifiers, (char*)param->name.data.string, (void**)&paramType);
+                Bit newbit;
+                newbit.data = createStrToken(&val->as.bitgroup.substitutedIdentifiers[val->as.bitgroup.lineLength*tests[possibility*opcode->paramCount+j]]);
+                PUSH_ARRAY(Bit, subsLine, data, newbit);
+            }
+        }
+    }
+
+    return analyseLine(core, parser, &subsLine, &opcode->name, lineNumber);
+}
+
 static Error errOpcodeHeaderSmall = {0};
 static Error errOpcodeHeaderLarge = {0};
 static Error errOpcodeLineCount = {0};
@@ -456,8 +488,9 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     unsigned int maxHeaderBitLength = opsize->as.parameter.value;
 
     if(core->opcodes == NULL) {
-        DEBUG("Allocating opcode array");
         core->opcodeCount = 1 << maxHeaderBitLength;
+
+        DEBUG("Allocating opcode array, size = %u", core->opcodeCount);
         core->opcodes = ArenaAlloc(sizeof(GenOpCode) * core->opcodeCount);
 
         for(unsigned int i = 0; i < core->opcodeCount; i++) {
@@ -544,19 +577,11 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         return;
     }
 
-    for(unsigned int i = 0; i < possibilities; i++) {
-        GenOpCode* gencode = &core->opcodes[opcodeID+i];
-        gencode->isValid = true;
-        gencode->id = opcode->id.data.value;
-        gencode->name = opcode->name.start;
-        gencode->nameLen = opcode->name.length;
-    }
-
     // algorithm based off of fullfact from MATLAB's stats toolkit,
     // allows an int to be converted into a value to substitute
     unsigned int ncycles = possibilities;
     unsigned int* tests = ArenaAlloc(sizeof(unsigned int) * opcode->paramCount * possibilities);
-    for(unsigned int i = 0; i < opcode->paramCount; i++){
+    for(unsigned int i = 0; i < opcode->paramCount; i++) {
         ASTParameter* typeName;
         tableGet(&paramNames, &opcode->params[i].value, (void**)&typeName);
         Identifier* type;
@@ -573,6 +598,42 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                     count += 1;
                 }
             }
+        }
+    }
+
+    for(unsigned int i = 0; i < possibilities; i++) {
+        GenOpCode* gencode = &core->opcodes[opcodeID+i];
+        gencode->isValid = true;
+        gencode->id = opcodeID+i;
+        gencode->name = opcode->name.start;
+        gencode->nameLen = opcode->name.length;
+        ARRAY_ALLOC(GenOpCodeLine, *gencode, line);
+
+        for(unsigned int j = 0; j < opcode->lineCount; j++) {
+            Line* line = opcode->lines[j];
+            GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
+            ARRAY_ALLOC(unsigned int, *genline, lowBit);
+            genline->hasCondition = line->hasCondition;
+
+            NodeArray low = genlinePush(&line->bitsLow, core, parser, opcode, i, j, tests);
+            for(unsigned int k = 0; k < low.nodeCount; k++) {
+                TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+i);
+                PUSH_ARRAY(unsigned int, *genline, lowBit, low.nodes[k]->value);
+            }
+
+            if(line->hasCondition) {
+                ARRAY_ALLOC(unsigned int, *genline, highBit);
+                NodeArray high = genlinePush(&line->bitsHigh, core, parser, opcode, i, j, tests);
+                for(unsigned int k = 0; k < high.nodeCount; k++) {
+                    PUSH_ARRAY(unsigned int, *genline, highBit, high.nodes[k]->value);
+                }
+            } else {
+                genline->highBits = genline->lowBits;
+                genline->highBitCount = genline->lowBitCount;
+                genline->highBitCapacity = genline->lowBitCapacity;
+            }
+
+            PUSH_ARRAY(GenOpCodeLine, *gencode, line, genline);
         }
     }
 }
@@ -629,7 +690,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
 
     Table membersTable;
     initTable(&membersTable, tokenHash, tokenCmp);
-    ARRAY_ALLOC(char*, *enumIdent, member);
+    ARRAY_ALLOC(Token*, *enumIdent, member);
     enumIdent->identifierLength = 0;
 
     // check there are no duplicated names
@@ -641,7 +702,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
             error(parser, &errEnumDuplicate, tok, original);
         } else {
             tableSet(&membersTable, tok, (void*)i);
-            PUSH_ARRAY(char*, *enumIdent, member, (char*)tok->data.string);
+            PUSH_ARRAY(Token*, *enumIdent, member, tok);
             enumIdent->identifierLength =
                 max(enumIdent->identifierLength, tok->length);
         }
@@ -796,7 +857,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 // Played around in excel to work this out, cannot remember
                 // how it works, but it does.  I don't think I knew when
                 // I wrote it either.
-                strcat(currentIdent, enumIdent->members[tests[i*substitutions+count]]);
+                strcat(currentIdent, enumIdent->members[tests[i*substitutions+count]]->data.string);
                 count += 1;
             } else {
                 strncat(currentIdent, seg->identifier.data.string,
@@ -880,4 +941,6 @@ void Analyse(Parser* parser, VMCoreGen* core) {
             case AST_BLOCK_BITGROUP: analyseBitgroup(parser, s); break;
         }
     }
+
+    INFO("Finished Analysis");
 }

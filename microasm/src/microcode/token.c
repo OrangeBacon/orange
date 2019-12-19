@@ -12,7 +12,7 @@ const char* TokenNames[] = {
 
 #undef STRING_TOKEN
 
-// simple debug print 
+// simple debug print
 void TokenPrint(Token* token) {
     printf("%.4i:%.4i %.17s: %.*s", token->line, token->column,
         TokenNames[token->type], token->length, token->start);
@@ -22,6 +22,7 @@ Token createStrToken(const char* str) {
     Token t;
     t.start = str;
     t.length = strlen(str);
+    t.data.string = str;
     return t;
 }
 

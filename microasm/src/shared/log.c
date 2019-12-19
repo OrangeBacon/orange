@@ -102,5 +102,7 @@ void logLog(int level, int line, const char* fmt, ...) {
     vfprintf(logFile, fmt, args);
     fprintf(logFile, "\n");
 
+    fflush(logFile);
+
     va_end(args);
 }

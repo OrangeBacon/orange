@@ -1,8 +1,10 @@
 #include "emulator/compiletime/codegen.h"
+#include "shared/log.h"
 
 #include <stdio.h>
 
 static void outputCommand(VMCoreGen* core, FILE* file, unsigned int command) {
+    CONTEXT(INFO, "Command = %u", command);
     for(unsigned int k = 0; k < core->commands[command].argsLength; k++) {
         Argument* arg = &core->commands[command].args[k];
         fprintf(file, "#define %s %s\n", arg->name, arg->value);
@@ -15,6 +17,7 @@ static void outputCommand(VMCoreGen* core, FILE* file, unsigned int command) {
 }
 
 static void outputLoop(VMCoreGen* core, FILE* file) {
+    CONTEXT(INFO, "VM File Write");
     for(unsigned int i = 0; i < core->variableCount; i++) {
         fprintf(file, "%s = {0};\n", core->variables[i]);
     }
@@ -36,7 +39,7 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
         if(!code->isValid) {
             continue;
         }
-
+        DEBUG("Outputting code %u = %.*s", code->id, code->nameLen, code->name);
         fprintf(file, "// %.*s\ncase %u:\n", code->nameLen, code->name, code->id);
         for(unsigned int j = 0; j < code->lineCount; j++) {
             GenOpCodeLine* line = code->lines[j];
@@ -65,6 +68,7 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
 }
 
 void coreCodegen(VMCoreGen* core, const char* filename) {
+    CONTEXT(INFO, "Running codegen");
     FILE* file = fopen(filename, "w");
 
     for(unsigned int i = 0; i < core->headers.capacity; i++) {

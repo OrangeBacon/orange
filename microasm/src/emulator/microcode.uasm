@@ -9,9 +9,11 @@ header {
 
 opcode nop 0b0000000000000000() {}
 
-opcode jmp 0b0110010110000(Reg reg) {
+opcode jmp 0b0110010010(Reg rega, Reg regb) {
     IPToAddress, memReadToInst, iRegSet;
-    RegToAddress(reg), AddressToIP;
+    RegToAddress(rega), memReadToInst;
+    RegToAddress(rega), memReadToInst;
+    AToAddress, memReadToData, DataToB;
 }
 
 opcode hlt 0b1111111111111111() {
