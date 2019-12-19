@@ -701,7 +701,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
             tableGetKey(&membersTable, tok, (void**)&original);
             error(parser, &errEnumDuplicate, tok, original);
         } else {
-            tableSet(&membersTable, tok, (void*)i);
+            tableSet(&membersTable, tok, NULL);
             PUSH_ARRAY(Token*, *enumIdent, member, tok);
             enumIdent->identifierLength =
                 max(enumIdent->identifierLength, tok->length);
