@@ -23,6 +23,6 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -G "MinGW Makefiles"
+        cmake .. -G "MinGW Makefiles" -DCMAKE_SH="CMAKE_SH-NOTFOUND" -DCMAKE_BYILD_TYPE=Debug
     - name: build
       run: cmake --build build
