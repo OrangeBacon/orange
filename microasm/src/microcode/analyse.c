@@ -326,28 +326,42 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
 }
 
 static Error errIdentifierNotDefined = {0};
+static Error errBitArraySubstitution = {0};
 static void mcodeBitArrayCheckErrors() {
     newErrAt(&errIdentifierNotDefined, ERROR_SEMANTIC,
         "Identifier was not defined");
+    newErrAt(&errBitArraySubstitution, ERROR_SEMANTIC,
+        "Could not resolve argument name \"%s\"");
 }
 
 // check if all identifers in the array reperesent a control bit
-static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr) {
+static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames) {
     CONTEXT(INFO, "Checking bit array");
 
     bool passed = true;
 
-    for(unsigned int j = 0; j < arr->dataCount; j++) {
-        Token* bit = &arr->datas[j].data;
+    for(unsigned int i = 0; i < arr->dataCount; i++) {
+        Bit* bit = &arr->datas[i];
 
         Identifier* val;
-        if(!tableGet(&identifiers, (char*)bit->data.string, (void**)&val)) {
+        if(!tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val)) {
             error(parser, &errIdentifierNotDefined, bit);
             passed = false;
             continue;
         }
-        if(val->type != TYPE_VM_CONTROL_BIT) {
-            wrongType(parser, bit, TYPE_VM_CONTROL_BIT, val);
+
+        if(val->type == TYPE_VM_CONTROL_BIT) {
+            continue;
+        } else if(val->type == TYPE_BITGROUP) {
+            for(unsigned int j = 0; j < bit->paramCount; j++) {
+                Token* param = &bit->params[j];
+                if(!tableHas(paramNames, param)) {
+                    passed = false;
+                    error(parser, &errBitArraySubstitution, param, param->data.string);
+                }
+            }
+        } else {
+            wrongType(parser, &bit->data, TYPE_VM_CONTROL_BIT, val);
             passed = false;
         }
     }
@@ -396,7 +410,8 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     for(unsigned int i = 0; i < s->as.header.lineCount; i++) {
         BitArray* line = &s->as.header.lines[i];
 
-        if(!mcodeBitArrayCheck(parser, line)) {
+        Table noParams;
+        if(!mcodeBitArrayCheck(parser, line, &noParams)) {
             continue;
         }
 
@@ -456,7 +471,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
     unsigned int headerBitLength = 0;
     unsigned int opcodeID = opcode->id.data.value;
-    unsigned int variableWidth = 0;
+    unsigned int possibilities = 1;
     bool passed = true;
 
     headerBitLength += opcode->id.length - 2;
@@ -477,9 +492,9 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             tableGet(&identifiers, (char*)pair->name.data.string, (void**)&ident);
             unsigned int width = ident->as.userType.as.enumType.bitWidth;
             headerBitLength += width;
-            variableWidth += width;
-
             opcodeID <<= width;
+
+            possibilities *= ident->as.userType.as.enumType.memberCount;
         }
     }
 
@@ -503,16 +518,6 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         return;
     }
 
-    unsigned int maxGenedOpcodes = variableWidth == 1 ? 2 : 1 << variableWidth;
-    for(unsigned int i = 0; i < maxGenedOpcodes; i++) {
-        GenOpCode* gencode = &core->opcodes[opcodeID+i];
-        gencode->isValid = true;
-        gencode->id = opcode->id.data.value;
-        gencode->name = opcode->name.start;
-        gencode->nameLen = opcode->name.length;
-    }
-
-    GenOpCode* gencode = &core->opcodes[opcodeID];
     for(unsigned int i = 0; i < opcode->lineCount; i++) {
         Line* line = opcode->lines[i];
         GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
@@ -520,37 +525,55 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
         // by default analyse low bits
         // are all of the bits valid
-        if(!mcodeBitArrayCheck(parser, &line->bitsLow)) {
-            // if not, analyseLine would crash, so skip this line
+        if(!mcodeBitArrayCheck(parser, &line->bitsLow, &paramNames)) {
+            passed = false;
             continue;
-        }
-        NodeArray lowNodes = analyseLine(core, parser, &line->bitsLow,
-            &opcode->name, i);
-        ARRAY_ALLOC(unsigned int, *genline, lowBit);
-        for(unsigned int j = 0; j < lowNodes.nodeCount; j++) {
-            PUSH_ARRAY(unsigned int, *genline, lowBit,
-                lowNodes.nodes[j]->value);
         }
 
         if(line->hasCondition) {
             // only check high bits if there is a condition,
             // otherwise they are identical
-            if(!mcodeBitArrayCheck(parser, &line->bitsHigh)) {
+            if(!mcodeBitArrayCheck(parser, &line->bitsHigh, &paramNames)) {
+                passed = false;
                 continue;
             }
-            NodeArray highNodes = analyseLine(core, parser, &line->bitsHigh,
-                &opcode->name, i);
-            ARRAY_ALLOC(unsigned int, *genline, highBit);
-            for(unsigned int j = 0; j < highNodes.nodeCount; j++) {
-                PUSH_ARRAY(unsigned int, *genline, highBit,
-                    highNodes.nodes[j]->value);
-            }
-        } else {
-            genline->highBitCapacity = genline->lowBitCapacity;
-            genline->highBitCount = genline->lowBitCount;
-            genline->highBits = genline->lowBits;
         }
-        PUSH_ARRAY(GenOpCodeLine*, *gencode, line, genline);
+    }
+
+    if(!passed) {
+        return;
+    }
+
+    for(unsigned int i = 0; i < possibilities; i++) {
+        GenOpCode* gencode = &core->opcodes[opcodeID+i];
+        gencode->isValid = true;
+        gencode->id = opcode->id.data.value;
+        gencode->name = opcode->name.start;
+        gencode->nameLen = opcode->name.length;
+    }
+
+    // algorithm based off of fullfact from MATLAB's stats toolkit,
+    // allows an int to be converted into a value to substitute
+    unsigned int ncycles = possibilities;
+    unsigned int* tests = ArenaAlloc(sizeof(unsigned int) * opcode->paramCount * possibilities);
+    for(unsigned int i = 0; i < opcode->paramCount; i++){
+        ASTParameter* typeName;
+        tableGet(&paramNames, &opcode->params[i].value, (void**)&typeName);
+        Identifier* type;
+        tableGet(&identifiers, (char*)typeName->name.data.string, (void**)&type);
+        unsigned int level =
+            type->as.userType.as.enumType.memberCount;
+        unsigned int nreps = possibilities / ncycles;
+        ncycles /= level;
+        unsigned int count = 0;
+        for(unsigned int cycle = 0; cycle < ncycles; cycle++) {
+            for(unsigned int num = 0; num < level; num++) {
+                for(unsigned int rep = 0; rep < nreps; rep++) {
+                    tests[count*opcode->paramCount+i] = num;
+                    count += 1;
+                }
+            }
+        }
     }
 }
 
