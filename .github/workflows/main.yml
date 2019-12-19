@@ -4,10 +4,14 @@ on: [push, pull_request]
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
-
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    
     steps:
     - uses: actions/checkout@v1
-    - name: ghaction-cmake
-      uses: lpenz/ghaction-cmake@v0.1
+    - name: configure
+      run: mkdir build && cd build && cmake ..
+    - name: build
+      run: cmake --build build
