@@ -19,6 +19,8 @@ typedef struct posArg {
     const char* helpMessage;
 } posArg;
 
+typedef struct argParser argParser;
+
 // data for a optional, non-positional argument
 typedef struct optionArg {
     // multi character name
@@ -43,16 +45,20 @@ typedef struct optionArg {
     bool found;
 
     const char* helpMessage;
-} optionArg;
 
-typedef struct argParser argParser;
+    bool isUniversal;
+    argParser* universalRoot;
+    bool universalChildrenOnly;
+    bool printed;
+
+} optionArg;
 
 // argument parser state
 struct argParser {
     // arguments to be parsed
     int argc;
     char** argv;
-    
+
     // map of all avaliable modes to parsers
     // that can handle the mode
     Table modes;
@@ -93,6 +99,10 @@ struct argParser {
 
     const char* helpMessage;
     const char* versionString;
+
+    bool printUsage;
+
+    DEFINE_ARRAY(optionArg*, universalOption);
 };
 
 // setup a new argument parser
@@ -121,6 +131,8 @@ void argArguments(argParser* parser, int argc, char** argv);
 // add an optional argument to the parser, can be identified by "-${shortName}"
 // or "--${longName}".  The argument cannot be repeated and optionaly takes an argument
 optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg);
+
+optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool takesArg, bool childrenOnly);
 
 void argAddExistingOption(argParser* parser, optionArg* arg);
 

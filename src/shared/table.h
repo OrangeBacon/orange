@@ -72,4 +72,6 @@ bool tableGetKey(Table* table, void* voidKey, void** realkey);
 // does the key exist in the table
 bool tableHas(Table* table, void* key);
 
+void tableRemove(Table* table, void* key);
+
 #endif

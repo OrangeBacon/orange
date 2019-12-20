@@ -56,7 +56,7 @@ static Entry* findEntry(Entry* entries, int capacity, Key* key, KeyCompare cmp) 
 
 // increase the size of a table to the given capacity
 static void adjustCapacity(Table* table, unsigned int capacity) {
-    
+
     // create new data section and null initialise
     Entry* entries = ArenaAlloc(sizeof(Entry) * capacity);
     for(unsigned int i = 0; i < capacity; i++) {
@@ -116,7 +116,7 @@ bool tableGet(Table* table, void* voidKey, void** value) {
     if(table->entries == NULL) {
         return false;
     }
-    
+
     // create key to search for
     Key key;
     key.value = voidKey;
@@ -151,7 +151,7 @@ bool tableHas(Table* table, void* key) {
     if(table->entries == NULL) {
         return false;
     }
-    
+
     Key test;
     test.value = key;
     test.hash = table->hash(key);
@@ -160,4 +160,17 @@ bool tableHas(Table* table, void* key) {
 
     // if the item is in the table, its key will not be null
     return !(entry->key.value == NULL);
+}
+
+void tableRemove(Table* table, void* key) {
+    if(table->entries == NULL) {
+        return;
+    }
+
+    Key test;
+    test.value = key;
+    test.hash = table->hash(key);
+
+    Entry* entry = findEntry(table->entries, table->capacity, &test, table->cmp);
+    entry->key.value = NULL;
 }

@@ -17,13 +17,15 @@ int main(int argc, char** argv){
     parser.helpMessage = "A series of tools to use with the Orange computer system";
     parser.versionString = "Microasm v0.0.2 alpha\n"
         "Built "__DATE__" "__TIME__"\n";
+    parser.printUsage = false;
+
+    optionArg* disableColor = argUniversalOption(&parser, 'c', "no-color", false, true);
+    disableColor->helpMessage = "disable color output";
 
     argParser* analyse = argMode(&parser, "analyse");
     analyse->helpMessage = "Parse and analyse a microcode description file";
     posArg* microcode = argString(analyse, "file");
     microcode->helpMessage = "microcode description file to be parsed";
-    optionArg* disableColor = argOption(analyse, 'c', "no-color", false);
-    disableColor->helpMessage = "disable color output";
 
 #if BUILD_STAGE > 0
     argParser* vm = argMode(&parser, "vm");
@@ -35,7 +37,6 @@ int main(int argc, char** argv){
     optionArg* vmLogFile = argOption(vm, 'l', "log", true);
     vmLogFile->argumentName = "path";
     vmLogFile->helpMessage = "log file location, default location is stdout";
-    argAddExistingOption(vm, disableColor);
 #endif
 
 #if BUILD_STAGE == 0 || DEBUG_BUILD
@@ -45,7 +46,6 @@ int main(int argc, char** argv){
     codegenInput->helpMessage = "Input microcode file to generate code for";
     posArg* codegenOutput = argString(codegen, "file");
     codegenOutput->helpMessage = "Where to write the generated code";
-    argAddExistingOption(codegen, disableColor);
 #endif
 
     argArguments(&parser, argc, argv);

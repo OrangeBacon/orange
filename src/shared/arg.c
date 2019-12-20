@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "shared/arg.h"
 #include "shared/platform.h"
 
@@ -32,11 +33,25 @@ typedef struct argParserArr {
     DEFINE_ARRAY(argParser*, parser);
 } argParserArr;
 
+typedef struct optionArgArr {
+    DEFINE_ARRAY(optionArg*, option);
+} optionArgArr;
+
 // sorting function for character list
 int charSort(const void* a, const void* b) {
     const char* x = a;
     const char* y = b;
-    return *x - *y;
+
+    if(*x == *y) {
+        return 0;
+    }
+    if(isupper(*x) && !isupper(*y) && tolower(*x) == *y) {
+        return -1;
+    }
+    if(!isupper(*x) && isupper(*y) && *y == tolower(*x)) {
+        return 1;
+    }
+    return tolower(*x) - tolower(*y);
 }
 
 // sorting function for argument parser list
@@ -48,63 +63,65 @@ int parserSort(const void* a, const void* b) {
 
 // print the usage description for the current parser
 static void argUsage(argParser* parser) {
-    cErrPrintf(TextWhite, "%s ", parser->name);
+    if(parser->printUsage) {
+        cErrPrintf(TextWhite, "%s ", parser->name);
 
-    charArr shortOpts;
-    ARRAY_ALLOC(char, shortOpts, char);
+        charArr shortOpts;
+        ARRAY_ALLOC(char, shortOpts, char);
 
-    // gather single character options without an argument
-    for(unsigned int i = 0; i < parser->options.capacity; i++) {
-        Entry* entry = &parser->options.entries[i];
-        if(entry->key.value == NULL) {
-            continue;
+        // gather single character options without an argument
+        for(unsigned int i = 0; i < parser->options.capacity; i++) {
+            Entry* entry = &parser->options.entries[i];
+            if(entry->key.value == NULL) {
+                continue;
+            }
+            optionArg* arg = entry->value;
+            if(arg->type == OPT_NO_ARG && arg->hasShortName) {
+                PUSH_ARRAY(char, shortOpts, char, arg->shortName);
+            }
         }
-        optionArg* arg = entry->value;
-        if(arg->type == OPT_NO_ARG && arg->hasShortName) {
-            PUSH_ARRAY(char, shortOpts, char, arg->shortName);
+
+        // sort the single character options
+        qsort(shortOpts.chars, shortOpts.charCount, sizeof(char), charSort);
+
+        // and print them out
+        if(shortOpts.charCount > 0) {
+            cErrPrintf(TextWhite, "[-%.*s] ", shortOpts.charCount, shortOpts.chars);
         }
-    }
 
-    // sort the single character options
-    qsort(shortOpts.chars, shortOpts.charCount, sizeof(char), charSort);
-
-    // and print them out
-    if(shortOpts.charCount > 0) {
-        cErrPrintf(TextWhite, "[-%.*s] ", shortOpts.charCount, shortOpts.chars);
-    }
-
-    // print options without a single character identifier or that take an argument
-    for(unsigned int i = 0; i < parser->options.capacity; i++) {
-        Entry* entry = &parser->options.entries[i];
-        if(entry->key.value == NULL) {
-            continue;
+        // print options without a single character identifier or that take an argument
+        for(unsigned int i = 0; i < parser->options.capacity; i++) {
+            Entry* entry = &parser->options.entries[i];
+            if(entry->key.value == NULL) {
+                continue;
+            }
+            optionArg* arg = entry->value;
+            switch(arg->type) {
+                case OPT_STRING:
+                    if(arg->hasShortName) {
+                        cErrPrintf(TextWhite, "[-%c", arg->shortName);
+                    } else {
+                        cErrPrintf(TextWhite, "[--%s", arg->longName);
+                    }
+                    cErrPrintf(TextWhite, " %s] ", arg->argumentName);
+                    break;
+                default:
+                    if(!arg->hasShortName) {
+                        cErrPrintf(TextWhite, "[--%s]", arg->longName);
+                    }
+                    break;
+            }
         }
-        optionArg* arg = entry->value;
-        switch(arg->type) {
-            case OPT_STRING:
-                if(arg->hasShortName) {
-                    cErrPrintf(TextWhite, "[-%c", arg->shortName);
-                } else {
-                    cErrPrintf(TextWhite, "[--%s", arg->longName);
-                }
-                cErrPrintf(TextWhite, " %s] ", arg->argumentName);
-                break;
-            default:
-                if(!arg->hasShortName) {
-                    cErrPrintf(TextWhite, "[--%s]", arg->longName);
-                }
-                break;
+
+        // prints positional arguments
+        for(unsigned int i = 0; i < parser->posArgCount; i++) {
+            posArg* arg = &parser->posArgs[i];
+            cErrPrintf(TextWhite, "<%s> ", arg->description);
         }
-    }
 
-    // prints positional arguments
-    for(unsigned int i = 0; i < parser->posArgCount; i++) {
-        posArg* arg = &parser->posArgs[i];
-        cErrPrintf(TextWhite, "<%s> ", arg->description);
+        // end of usage for current parser
+        cErrPrintf(TextWhite, "\n");
     }
-
-    // end of usage for current parser
-    cErrPrintf(TextWhite, "\n");
 
     argParserArr parsers;
     ARRAY_ALLOC(argParser*, parsers, parser);
@@ -127,41 +144,85 @@ static void argUsage(argParser* parser) {
     }
 }
 
+static void optionHelp(optionArg* arg) {
+    cErrPrintf(TextWhite, "  ");
+    switch(arg->type) {
+        case OPT_STRING:
+            if(arg->hasShortName) {
+                cErrPrintf(TextWhite, "-%c, ", arg->shortName);
+            }
+            cErrPrintf(TextWhite, "--%s %s\n", arg->longName, arg->argumentName);
+            break;
+        case OPT_NO_ARG:
+            if(arg->hasShortName) {
+                cErrPrintf(TextWhite, "-%c, ", arg->shortName);
+            }
+            cErrPrintf(TextWhite, "--%s\n", arg->longName);
+    }
+    cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+    arg->printed = true;
+}
+
 static void argHelp(argParser* parser) {
-    cErrPrintf(TextWhite, "\nHelp for %s:\n", parser->name);
+    cErrPrintf(TextWhite, "\n%s:\n", parser->name);
 
     if(parser->helpMessage != NULL) {
-        cErrPrintf(TextWhite, "About: %s\n", parser->helpMessage);
+        cErrPrintf(TextWhite, "%s\n", parser->helpMessage);
     }
 
-    for(unsigned int i = 0; i < parser->posArgCount; i++) {
-        posArg* arg = &parser->posArgs[i];
-        cErrPrintf(TextWhite, "  <%s>\n", arg->description);
-        cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+    if(parser->printUsage) {
+        for(unsigned int i = 0; i < parser->posArgCount; i++) {
+            posArg* arg = &parser->posArgs[i];
+            cErrPrintf(TextWhite, "  <%s>\n", arg->description);
+            cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+        }
+
+        // print option help
+        for(unsigned int i = 0; i < parser->options.capacity; i++) {
+            Entry* entry = &parser->options.entries[i];
+            if(entry->key.value == NULL) {
+                continue;
+            }
+            optionArg* arg = entry->value;
+            if(arg->isUniversal) {
+                continue;
+            }
+            optionHelp(arg);
+        }
     }
 
-    // print option help
-    for(unsigned int i = 0; i < parser->options.capacity; i++) {
-        Entry* entry = &parser->options.entries[i];
-        if(entry->key.value == NULL) {
-            continue;
+    optionArgArr universalOptions;
+    ARRAY_ALLOC(optionArg*, universalOptions, option);
+    for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
+        optionArg* arg = parser->universalOptions[i];
+        if(!arg->universalChildrenOnly && (arg->universalRoot == parser || !arg->printed)) {
+            PUSH_ARRAY(optionArg*, universalOptions, option, arg);
         }
-        optionArg* arg = entry->value;
-        cErrPrintf(TextWhite, "  ");
-        switch(arg->type) {
-            case OPT_STRING:
-                if(arg->hasShortName) {
-                    cErrPrintf(TextWhite, "-%c, ", arg->shortName);
-                }
-                cErrPrintf(TextWhite, "--%s %s\n", arg->longName, arg->argumentName);
-                break;
-            case OPT_NO_ARG:
-                if(arg->hasShortName) {
-                    cErrPrintf(TextWhite, "-%c, ", arg->shortName);
-                }
-                cErrPrintf(TextWhite, "--%s\n", arg->longName);
+    }
+
+    if(universalOptions.optionCount > 0) {
+        cErrPrintf(TextWhite, "%s; %s <*>:\n", parser->name, parser->name);
+        for(unsigned int i = 0; i < universalOptions.optionCount; i++) {
+            optionArg* arg = universalOptions.options[i];
+            optionHelp(arg);
         }
-        cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+    }
+
+    optionArgArr childOptions;
+    ARRAY_ALLOC(optionArg*, childOptions, option);
+    for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
+        optionArg* arg = parser->universalOptions[i];
+        if(arg->universalChildrenOnly && (arg->universalRoot == parser || !arg->printed)) {
+            PUSH_ARRAY(optionArg*, childOptions, option, arg);
+        }
+    }
+
+    if(childOptions.optionCount > 0) {
+        cErrPrintf(TextWhite, "%s <*>:\n", parser->name);
+        for(unsigned int i = 0; i < childOptions.optionCount; i++) {
+            optionArg* arg = childOptions.options[i];
+            optionHelp(arg);
+        }
     }
 
     argParserArr parsers;
@@ -193,7 +254,9 @@ void argPrintMessage(argParser* parser) {
     if(parser->helpOption->found || !parser->success) {
         cErrPrintf(TextWhite, "Usage: \n");
         argUsage(parser->errorRoot);
+    }
 
+    if(!parser->success && !parser->helpOption->found && !parser->versionOption->found) {
         for(unsigned int i = 0; i < parser->errorMessageCount; i++) {
             cErrPrintf(TextWhite, "\nError: ");
             cErrPrintf(TextRed, "%s\n", parser->errorMessages[i]);
@@ -219,7 +282,7 @@ static void argError(argParser* parser, const char* message, ...) {
 
     parser->success = false;
     parser->errorRoot = parser;
-    
+
     int len = vsnprintf(NULL, 0, message, args) + 1;
     va_end(args);
     va_start(args, message);
@@ -242,6 +305,7 @@ void argInit(argParser* parser, const char* name) {
     initTable(&parser->options, strHash, strCmp);
     ARRAY_ALLOC(posArg, *parser, posArg);
     ARRAY_ALLOC(const char*, *parser, errorMessage);
+    ARRAY_ALLOC(optionArg*, *parser, universalOption);
     parser->success = true;
     parser->parsed = false;
     parser->parseOptions = true;
@@ -251,12 +315,13 @@ void argInit(argParser* parser, const char* name) {
     parser->isSubParser = false;
     parser->errorRoot = NULL;
     parser->helpMessage = NULL;
+    parser->printUsage = true;
 
-    optionArg* help = argOption(parser, 'h', "help", false);
+    optionArg* help = argUniversalOption(parser, 'h', "help", false, false);
     help->helpMessage = "display this help message";
     parser->helpOption = help;
 
-    optionArg* version = argOption(parser, 'V', "version", false);
+    optionArg* version = argUniversalOption(parser, 'V', "version", false, false);
     version->helpMessage = "display the version and build time of this program";
     parser->versionOption = version;
 }
@@ -289,6 +354,7 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName, bo
     arg->value.as_string = NULL;
     arg->argumentName = "string";
     arg->helpMessage = "No help message found";
+    arg->printed = false;
 
     // add it to the table of options
     tableSet(&parser->options, (void*)longName, arg);
@@ -305,6 +371,20 @@ void argAddExistingOption(argParser* parser, optionArg* arg) {
     tableSet(&parser->options, (void*)arg->longName, arg);
 }
 
+optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool takesArg, bool childrenOnly) {
+    optionArg* arg = argOption(parser, shortName, longName, takesArg);
+    arg->isUniversal = true;
+    arg->universalRoot = parser;
+    arg->universalChildrenOnly = childrenOnly;
+
+    PUSH_ARRAY(optionArg*, *parser, universalOption, arg);
+    if(childrenOnly) {
+        tableRemove(&parser->options, (void*)longName);
+    }
+
+    return arg;
+}
+
 argParser* argMode(argParser* parser, const char* name) {
     // error checking
     if(tableHas(&parser->modes, (void*)name)) {
@@ -315,9 +395,6 @@ argParser* argMode(argParser* parser, const char* name) {
 
     // the name of a sub-parser is the main-parser's name and the sub-parsers
     // name concatenated
-
-    // +1 for the space
-    // +1 for the null byte
     int len = snprintf(NULL, 0, "%s %s", parser->name, name);
     char* nameArr = ArenaAlloc(sizeof(char) * len);
     sprintf(nameArr, "%s %s", parser->name, name);
@@ -328,6 +405,12 @@ argParser* argMode(argParser* parser, const char* name) {
     new->helpOption->longName = parser->helpOption->longName;
     new->versionOption->shortName = parser->versionOption->shortName;
     new->versionOption->longName = parser->versionOption->longName;
+    ARRAY_ALLOC(optionArg*, *new, universalOption);
+    for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
+        optionArg* arg = parser->universalOptions[i];
+        PUSH_ARRAY(optionArg*, *new, universalOption, arg);
+        tableSet(&new->options, (void*)arg->longName, arg);
+    }
 
     tableSet(&parser->modes, (void*)name, new);
     return new;
@@ -571,7 +654,7 @@ void argParse(argParser* parser) {
     }
     parser->parsed = true;
 
-    if(!parser->isSubParser && (parser->errorMessageCount > 0 || parser->helpOption->found)) {
+    if(!parser->isSubParser && (parser->errorMessageCount > 0 || parser->helpOption->found || parser->versionOption->found)) {
         argPrintMessage(parser);
     }
 }
