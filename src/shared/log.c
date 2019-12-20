@@ -8,8 +8,9 @@ FILE* logFile = NULL;
 
 // TODO: Add log tags based on fmt hash
 // TODO: Add tag based filtering
-// TODO: Add command-line arguments to control logging
-// TODO: Prevent trace and debug log calls in release mode
+// TODO: Add logging to the rest of the program
+// TODO: Don't write to file until file provided so messages can be filtered
+//       if emitted before minimum log level set.
 
 bool logInit() {
     logFile = tmpfile();
@@ -61,6 +62,9 @@ void logContextEnd(LogContext* ctx){
 }
 
 static int minumumLevel = 0;
+void logSetMinLevel(int level) {
+    minumumLevel = level;
+}
 
 void logLog(int level, int line, const char* fmt, ...) {
     if(level < minumumLevel || fmt[0] == '\0') {

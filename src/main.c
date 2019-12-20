@@ -8,7 +8,6 @@
 
 int main(int argc, char** argv){
     if(!logInit()) return -1;
-    if(!logSetFile(fopen("log.txt", "w"))) return -1;
     startColor();
     ArenaInit();
 
@@ -19,8 +18,12 @@ int main(int argc, char** argv){
         "Built "__DATE__" "__TIME__"\n";
     parser.printUsage = false;
 
-    optionArg* disableColor = argUniversalOption(&parser, 'c', "no-color", false, true);
+    optionArg* disableColor = argUniversalOption(&parser, 'c', "no-color", true);
     disableColor->helpMessage = "disable color output";
+    optionArg* logFile = argUniversalOptionString(&parser, 'l', "log-file", false);
+    logFile->helpMessage = "File name to write logging to.  Default is tempfile voided on program close.";
+    optionArg* logLevel = argUniversalOptionInt(&parser, 'd', "debug-level", false);
+    logLevel->helpMessage = "Minimum level of importance for log messages to be written.  >= 1000 = fatal, >= 400 = info, ...";
 
     argParser* analyse = argMode(&parser, "analyse");
     analyse->helpMessage = "Parse and analyse a microcode description file";
@@ -32,11 +35,11 @@ int main(int argc, char** argv){
     vm->helpMessage = "Run a microcode binary file in a virtual machine";
     posArg* vmBinary = argString(vm, "file");
     vmBinary->helpMessage = "file containing bytecode to execute in the vm";
-    optionArg* vmVerbose = argOption(vm, 'v', "verbose", false);
+    optionArg* vmVerbose = argOption(vm, 'v', "verbose");
     vmVerbose->helpMessage = "enable extra debugging logging";
-    optionArg* vmLogFile = argOption(vm, 'l', "log", true);
+    optionArg* vmLogFile = argOptionString(vm, 'L', "run-log");
     vmLogFile->argumentName = "path";
-    vmLogFile->helpMessage = "log file location, default location is stdout";
+    vmLogFile->helpMessage = "vm runtime log file location, default location is stdout";
 #endif
 
 #if BUILD_STAGE == 0 || DEBUG_BUILD
@@ -52,7 +55,26 @@ int main(int argc, char** argv){
     argParse(&parser);
 
     if(!argSuccess(&parser)) {
+        logClose();
         return -1;
+    }
+
+    if(logLevel->found) {
+        logSetMinLevel(logLevel->value.as_int);
+    }
+
+    if(logFile->found) {
+        FILE* file = fopen(logFile->value.as_string, "w");
+        if(!file) {
+            cErrPrintf(TextRed, "Unable to create specified logfile.  Quiting.");
+            logClose();
+            return 1;
+        }
+        if(!logSetFile(file)) {
+            cErrPrintf(TextRed, "Unable to set logfile to specified file descriptor.  Quitting.");
+            logClose();
+            return 1;
+        }
     }
 
     if(disableColor->found) {
@@ -62,21 +84,27 @@ int main(int argc, char** argv){
 #if BUILD_STAGE > 0
     if(vm->parsed) {
         runEmulator(strArg(*vm, 0), vmVerbose->found, vmLogFile->value.as_string);
+        logClose();
         return 0;
     }
 #endif
 
 #if BUILD_STAGE == 0 || DEBUG_BUILD
     if(codegen->parsed) {
-        return runCodegen(strArg(*codegen, 0), strArg(*codegen, 1));
+        int result = runCodegen(strArg(*codegen, 0), strArg(*codegen, 1));
+        logClose();
+        return result;
     }
 #endif
 
     if(analyse->parsed) {
-        return !runFileName(strArg(*analyse, 0));
+        bool result = !runFileName(strArg(*analyse, 0));
+        logClose();
+        return result;
     }
 
     parser.success = false;
     argPrintMessage(&parser);
+    logClose();
     return -1;
 }

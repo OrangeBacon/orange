@@ -32,10 +32,12 @@ typedef struct optionArg {
 
     enum optType {
         OPT_STRING,
+        OPT_INT,
         OPT_NO_ARG
     } type;
     union optValue {
         char* as_string;
+        intmax_t as_int;
     } value;
 
     // name of argument to this option if string option
@@ -130,9 +132,13 @@ void argArguments(argParser* parser, int argc, char** argv);
 
 // add an optional argument to the parser, can be identified by "-${shortName}"
 // or "--${longName}".  The argument cannot be repeated and optionaly takes an argument
-optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg);
+optionArg* argOption(argParser* parser, char shortName, const char* longName);
+optionArg* argOptionString(argParser* parser, char shortName, const char* longName);
+optionArg* argOptionInt(argParser* parser, char shortName, const char* longName);
 
-optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool takesArg, bool childrenOnly);
+optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool childrenOnly);
+optionArg* argUniversalOptionString(argParser* parser, char shortName, const char* longName, bool childrenOnly);
+optionArg* argUniversalOptionInt(argParser* parser, char shortName, const char* longName, bool childrenOnly);
 
 void argAddExistingOption(argParser* parser, optionArg* arg);
 

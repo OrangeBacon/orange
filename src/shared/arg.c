@@ -1,11 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <ctype.h>
 #include "shared/arg.h"
 #include "shared/platform.h"
 
 // TODO: Add repeated arguments
-// TODO: Add numeric arguments
 
 // display error caused by in-correct arg-parser description
 // ony caused by errors in the executable - when raised
@@ -147,6 +148,7 @@ static void argUsage(argParser* parser) {
 static void optionHelp(optionArg* arg) {
     cErrPrintf(TextWhite, "  ");
     switch(arg->type) {
+        case OPT_INT:
         case OPT_STRING:
             if(arg->hasShortName) {
                 cErrPrintf(TextWhite, "-%c, ", arg->shortName);
@@ -317,17 +319,16 @@ void argInit(argParser* parser, const char* name) {
     parser->helpMessage = NULL;
     parser->printUsage = true;
 
-    optionArg* help = argUniversalOption(parser, 'h', "help", false, false);
+    optionArg* help = argUniversalOption(parser, 'h', "help", false);
     help->helpMessage = "display this help message";
     parser->helpOption = help;
 
-    optionArg* version = argUniversalOption(parser, 'V', "version", false, false);
+    optionArg* version = argUniversalOption(parser, 'V', "version", false);
     version->helpMessage = "display the version and build time of this program";
     parser->versionOption = version;
 }
 
-optionArg* argOption(argParser* parser, char shortName, const char* longName, bool takesArg) {
-
+optionArg* argOption(argParser* parser, char shortName, const char* longName) {
     // error checking for the names
     if(tableHas(&parser->options, (void*)longName)) {
         argInternalError(parser, "Option %s already exists", longName);
@@ -349,15 +350,28 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName, bo
     arg->hasShortName = shortName != '\0';
     arg->shortName = shortName;
     arg->longName = longName;
-    arg->type = takesArg ? OPT_STRING : OPT_NO_ARG;
+    arg->type = OPT_NO_ARG;
     arg->found = false;
     arg->value.as_string = NULL;
-    arg->argumentName = "string";
     arg->helpMessage = "No help message found";
     arg->printed = false;
 
     // add it to the table of options
     tableSet(&parser->options, (void*)longName, arg);
+    return arg;
+}
+
+optionArg* argOptionString(argParser* parser, char shortName, const char* longName) {
+    optionArg* arg = argOption(parser, shortName, longName);
+    arg->argumentName = "string";
+    arg->type = OPT_STRING;
+    return arg;
+}
+
+optionArg* argOptionInt(argParser* parser, char shortName, const char* longName) {
+    optionArg* arg = argOption(parser, shortName, longName);
+    arg->argumentName = "number";
+    arg->type = OPT_INT;
     return arg;
 }
 
@@ -371,8 +385,8 @@ void argAddExistingOption(argParser* parser, optionArg* arg) {
     tableSet(&parser->options, (void*)arg->longName, arg);
 }
 
-optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool takesArg, bool childrenOnly) {
-    optionArg* arg = argOption(parser, shortName, longName, takesArg);
+optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool childrenOnly) {
+    optionArg* arg = argOption(parser, shortName, longName);
     arg->isUniversal = true;
     arg->universalRoot = parser;
     arg->universalChildrenOnly = childrenOnly;
@@ -382,6 +396,20 @@ optionArg* argUniversalOption(argParser* parser, char shortName, const char* lon
         tableRemove(&parser->options, (void*)longName);
     }
 
+    return arg;
+}
+
+optionArg* argUniversalOptionString(argParser* parser, char shortName, const char* longName, bool childrenOnly) {
+    optionArg* arg = argUniversalOption(parser, shortName, longName, childrenOnly);
+    arg->type = OPT_STRING;
+    arg->argumentName = "string";
+    return arg;
+}
+
+optionArg* argUniversalOptionInt(argParser* parser, char shortName, const char* longName, bool childrenOnly) {
+    optionArg* arg = argUniversalOption(parser, shortName, longName, childrenOnly);
+    arg->type = OPT_INT;
+    arg->argumentName = "number";
     return arg;
 }
 
@@ -451,20 +479,33 @@ static optionArg* argFindShortName(argParser* parser, char name) {
     return NULL;
 }
 
+static intmax_t parseInt(argParser* parser, char* str) {
+    errno = 0;
+    char* endPtr;
+    intmax_t ret = strtoimax(str, &endPtr, 0);
+    if(errno != 0) {
+        argError(parser, "Cannot parse argument as number: %s", strerror(errno));
+    }
+    if(*endPtr != '\0') {
+        argError(parser, "Only able to parse part of argument as number");
+    }
+    return ret;
+}
+
 // parse argument i as a long (begins with "--") argument
-static void argParseLongArg(argParser* parser, int i) {
+static void argParseLongArg(argParser* parser, int* i) {
     optionArg* value;
 
     // find first equals symbol in the argument
-    char* equals = strchr(&parser->argv[i][2], '=');
+    char* equals = strchr(&parser->argv[*i][2], '=');
 
     // the argument contains an equals symbol, indicating passing an argument to
     // the option this function is parsing, eg --hello=world
     if(equals != NULL) {
         // allocate a new string for the name section of the argument
-        char* name = ArenaAlloc(sizeof(char) * (equals - &parser->argv[i][2] + 1));
-        strncpy(name, &parser->argv[i][2], equals - &parser->argv[i][2]);
-        name[equals - &parser->argv[i][2]] = '\0';
+        char* name = ArenaAlloc(sizeof(char) * (equals - &parser->argv[*i][2] + 1));
+        strncpy(name, &parser->argv[*i][2], equals - &parser->argv[*i][2]);
+        name[equals - &parser->argv[*i][2]] = '\0';
 
         // lookup the name of the argument
         if(tableGet(&parser->options, name, (void**)&value)) {
@@ -478,6 +519,13 @@ static void argParseLongArg(argParser* parser, int i) {
                     value->value.as_string = equals + 1;
                     value->found = true;
                     break;
+                case OPT_INT:
+                    if(value->found == true) {
+                        argError(parser, "Cannot repeat option \"%s\"", name);
+                    }
+                    value->value.as_int = parseInt(parser, equals + 1);
+                    value->found = true;
+                    break;
                 default:
                     argError(parser, "Cannot pass argument to option \"%s\" that"
                         " does not require an argument", name);
@@ -489,18 +537,29 @@ static void argParseLongArg(argParser* parser, int i) {
     }
 
     // no argument to the option within this argument
-    if(tableGet(&parser->options, &parser->argv[i][2], (void**)&value)) {
+    if(tableGet(&parser->options, &parser->argv[*i][2], (void**)&value)) {
         switch(value->type) {
             // assume argument after the current one is an argument to the current option
             case OPT_STRING:
-                i += 1;
-                if(i >= parser->argc) {
+                *i += 1;
+                if(*i >= parser->argc) {
                     argError(parser, "Option \"%s\" requires an argument", value->longName);
                 }
                 if(value->found == true) {
                     argError(parser, "Cannot repeat option \"%s\"", value->longName);
                 }
-                value->value.as_string = parser->argv[i];
+                value->value.as_string = parser->argv[*i];
+                value->found = true;
+                break;
+            case OPT_INT:
+                *i += 1;
+                if(*i >= parser->argc) {
+                    argError(parser, "Option \"%s\" requires an argument", value->longName);
+                }
+                if(value->found == true) {
+                    argError(parser, "Cannot repeat option \"%s\"", value->longName);
+                }
+                value->value.as_int = parseInt(parser, parser->argv[*i]);
                 value->found = true;
                 break;
             case OPT_NO_ARG:
@@ -510,15 +569,15 @@ static void argParseLongArg(argParser* parser, int i) {
                 value->found = true;
         }
     } else {
-        argError(parser, "Unknown option \"%s\"", &parser->argv[i][2]);
+        argError(parser, "Unknown option \"%s\"", &parser->argv[*i][2]);
     }
 }
 
 // parse option i assuming that it is a short option (eg "-a")
-static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
-    optionArg* first = argFindShortName(parser, parser->argv[i][1]);
+static void argParseShortArg(argParser* parser, int* i, unsigned int argLen) {
+    optionArg* first = argFindShortName(parser, parser->argv[*i][1]);
     if(first == NULL) {
-        argError(parser, "Undefined option \"%c\"", parser->argv[i][1]);
+        argError(parser, "Undefined option \"%c\"", parser->argv[*i][1]);
         return;
     }
 
@@ -529,19 +588,41 @@ static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
                 if(first->found == true) {
                     argError(parser, "Cannot repeat option \"%c\"", first->shortName);
                 }
-                first->value.as_string = &parser->argv[i][2];
+                first->value.as_string = &parser->argv[*i][2];
                 first->found = true;
                 break;
             } else {
                 // argument like -l "log.txt"
-                i += 1;
-                if(i >= parser->argc) {
+                *i += 1;
+                if(*i >= parser->argc) {
                     argError(parser, "Option \"%c\" requires an argument", first->shortName);
                 }
                 if(first->found == true) {
                     argError(parser, "Cannot repeat option \"%c\"", first->shortName);
                 }
-                first->value.as_string = parser->argv[i];
+                first->value.as_string = parser->argv[*i];
+                first->found = true;
+                break;
+            }
+        case OPT_INT:
+            if(argLen > 2) {
+                // argument like -llog.txt
+                if(first->found == true) {
+                    argError(parser, "Cannot repeat option \"%c\"", first->shortName);
+                }
+                first->value.as_int = parseInt(parser, &parser->argv[*i][2]);
+                first->found = true;
+                break;
+            } else {
+                // argument like -l "log.txt"
+                *i += 1;
+                if(*i >= parser->argc) {
+                    argError(parser, "Option \"%c\" requires an argument", first->shortName);
+                }
+                if(first->found == true) {
+                    argError(parser, "Cannot repeat option \"%c\"", first->shortName);
+                }
+                first->value.as_int = parseInt(parser, parser->argv[*i]);
                 first->found = true;
                 break;
             }
@@ -553,19 +634,20 @@ static void argParseShortArg(argParser* parser, int i, unsigned int argLen) {
 
             // argument like "-abc" where none of a, b or c have arguments
             for(unsigned int j = 2; j < argLen; j++) {
-                optionArg* arg = argFindShortName(parser, parser->argv[i][j]);
+                optionArg* arg = argFindShortName(parser, parser->argv[*i][j]);
                 if(arg == NULL) {
-                    argError(parser, "Undefined option \"%c\"", parser->argv[i][j]);
+                    argError(parser, "Undefined option \"%c\"", parser->argv[*i][j]);
                     return;
                 }
 
                 switch(arg->type) {
+                    case OPT_INT:
                     case OPT_STRING:
                         // do not want to support single character options with arguments
                         // inside compressed argument lists
                         argError(parser, "Option \"%c\" requires an argument so cannot be"
                             " in a multiple option argument",
-                            parser->argv[i][j]);
+                            parser->argv[*i][j]);
                         break;
                     case OPT_NO_ARG:
                         if(arg->found == true) {
@@ -624,9 +706,9 @@ void argParse(argParser* parser) {
         // if other argument beginning with '-' found
         if(parser->parseOptions && parser->argv[i][0] == '-' && argLen > 1) {
             if(parser->argv[i][1] == '-') {
-                argParseLongArg(parser, i);
+                argParseLongArg(parser, &i);
             } else {
-                argParseShortArg(parser, i, argLen);
+                argParseShortArg(parser, &i, argLen);
             }
             continue;
         }
