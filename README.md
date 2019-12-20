@@ -16,7 +16,12 @@ is to move it to the `./docs/` folder, so it can be hosted in gh-pages.
 Block diagrams explaining the system.
 
 ## MicroASM
+Current Version: v0.0.2 alpha
 A program written in c to generate a virtual machine and assembler from an instruction set architecture description language, in src.
+Current features: generate simple virtual machine from the description language, assembler not written yet.
+Possible eventual goals include a programming language that can target the described ISA, Some ISAs for already existing processors
+and defining the virtual machine in the description, rather than in MicroASM's source.
 
-Building: `CMake`
+
+Building: `CMake`, if on windows, use MinGW GCC. MSVC does not work, unsure if clang would work, but hopefully would.
 Running: `microasm --help`, also see example code in `src/emulator/*.uasm`

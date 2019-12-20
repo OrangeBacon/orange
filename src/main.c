@@ -15,7 +15,7 @@ int main(int argc, char** argv){
     argParser parser;
     argInit(&parser, "microasm");
     parser.helpMessage = "A series of tools to use with the Orange computer system";
-    parser.versionString = "Microasm v0.0.1 alpha testing\n"
+    parser.versionString = "Microasm v0.0.2 alpha\n"
         "Built "__DATE__" "__TIME__"\n";
 
     argParser* analyse = argMode(&parser, "analyse");
