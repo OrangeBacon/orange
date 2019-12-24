@@ -23,7 +23,9 @@ int main(int argc, char** argv){
     optionArg* logFile = argUniversalOptionString(&parser, 'l', "log-file", false);
     logFile->helpMessage = "File name to write logging to.  Default is tempfile voided on program close.";
     optionArg* logLevel = argUniversalOptionInt(&parser, 'd', "debug-level", false);
-    logLevel->helpMessage = "Minimum level of importance for log messages to be written.  >= 1000 = fatal, >= 400 = info, ...";
+    logLevel->helpMessage = "Minimum level of importance for log messages to be written. "
+        "Fatal is 1000, error is 800, warn is 600, info is 400, debug is 200, trace is 0. "
+        "Default value is 0.  Debug and trace logging are disabled when in release mode.";
 
     argParser* analyse = argMode(&parser, "analyse");
     analyse->helpMessage = "Parse and analyse a microcode description file";

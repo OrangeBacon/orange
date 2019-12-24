@@ -38,6 +38,22 @@ typedef struct optionArgArr {
     DEFINE_ARRAY(optionArg*, option);
 } optionArgArr;
 
+typedef struct charOpt {
+    char c;
+    optionArg* arg;
+} charOpt;
+typedef struct charOptArr {
+    DEFINE_ARRAY(charOpt, option);
+} charOptArr;
+
+typedef struct strOpt {
+    const char* str;
+    optionArg* arg;
+} strOpt;
+typedef struct strOptArr {
+    DEFINE_ARRAY(strOpt, option);
+} strOptArr;
+
 // sorting function for character list
 int charSort(const void* a, const void* b) {
     const char* x = a;
@@ -55,6 +71,34 @@ int charSort(const void* a, const void* b) {
     return tolower(*x) - tolower(*y);
 }
 
+int optionArgSort(const void* a, const void* b) {
+    const optionArg* x = *(optionArg**)a;
+    const optionArg* y = *(optionArg**)b;
+
+    if(x->hasShortName && y->hasShortName) {
+        return charSort(&x->shortName, &y->shortName);
+    }
+    if(x->hasShortName && !y->hasShortName) {
+        return 1;
+    }
+    if(!x->hasShortName && y->hasShortName) {
+        return -1;
+    }
+    return strcmp(x->longName, y->longName);
+}
+
+int argOptSort(const void* a, const void* b) {
+    const charOpt* x = a;
+    const charOpt* y = b;
+    return charSort(&x->c, &y->c);
+}
+
+int strOptSort(const void* a, const void* b) {
+    const strOpt* x = a;
+    const strOpt* y = b;
+    return strcmp(x->arg->longName, y->arg->longName);
+}
+
 // sorting function for argument parser list
 int parserSort(const void* a, const void* b) {
     const argParser* const * x = a;
@@ -66,6 +110,7 @@ int parserSort(const void* a, const void* b) {
 static void argUsage(argParser* parser) {
     if(parser->printUsage) {
         cErrPrintf(TextWhite, "%s ", parser->name);
+        int currentLength = strlen(parser->name) + 1;
 
         charArr shortOpts;
         ARRAY_ALLOC(char, shortOpts, char);
@@ -88,36 +133,75 @@ static void argUsage(argParser* parser) {
         // and print them out
         if(shortOpts.charCount > 0) {
             cErrPrintf(TextWhite, "[-%.*s] ", shortOpts.charCount, shortOpts.chars);
+            currentLength += 4 + shortOpts.charCount;
         }
 
-        // print options without a single character identifier or that take an argument
+        // print options with a short name that take an argument
+        charOptArr shortArgOpts;
+        ARRAY_ALLOC(charOpt, shortArgOpts, option);
         for(unsigned int i = 0; i < parser->options.capacity; i++) {
             Entry* entry = &parser->options.entries[i];
             if(entry->key.value == NULL) {
                 continue;
             }
             optionArg* arg = entry->value;
-            switch(arg->type) {
-                case OPT_STRING:
-                    if(arg->hasShortName) {
-                        cErrPrintf(TextWhite, "[-%c", arg->shortName);
-                    } else {
-                        cErrPrintf(TextWhite, "[--%s", arg->longName);
-                    }
-                    cErrPrintf(TextWhite, " %s] ", arg->argumentName);
-                    break;
-                default:
-                    if(!arg->hasShortName) {
-                        cErrPrintf(TextWhite, "[--%s]", arg->longName);
-                    }
-                    break;
+            if(arg->type != OPT_NO_ARG && arg->hasShortName) {
+                PUSH_ARRAY(charOpt, shortArgOpts, option, ((charOpt) {
+                    .c = arg->shortName,
+                    .arg = arg
+                }));
             }
+        }
+        qsort(shortArgOpts.options, shortArgOpts.optionCount, sizeof(charOpt), argOptSort);
+        for(unsigned int i = 0; i < shortArgOpts.optionCount; i++) {
+            optionArg* arg = shortArgOpts.options[i].arg;
+            int length = strlen(arg->argumentName) + 5;
+            if(length + currentLength > 80) {
+                cErrPrintf(TextWhite, "\n  ");
+                currentLength = 2;
+            }
+            cErrPrintf(TextWhite, "[-%c %s] ", arg->shortName, arg->argumentName);
+            currentLength += length + 1;
+        }
+
+        // print options without a short name that take an argument
+        strOptArr longArgOpts;
+        ARRAY_ALLOC(strOpt, longArgOpts, option);
+        for(unsigned int i = 0; i < parser->options.capacity; i++) {
+            Entry* entry = &parser->options.entries[i];
+            if(entry->key.value == NULL) {
+                continue;
+            }
+            optionArg* arg = entry->value;
+            if(arg->type != OPT_NO_ARG && !arg->hasShortName) {
+                PUSH_ARRAY(strOpt, longArgOpts, option, ((strOpt) {
+                    .str = arg->longName,
+                    .arg = arg
+                }));
+            }
+        }
+        qsort(longArgOpts.options, longArgOpts.optionCount, sizeof(strOpt), strOptSort);
+        for(unsigned int i = 0; i < longArgOpts.optionCount; i++) {
+            optionArg* arg = longArgOpts.options[i].arg;
+            int length = strlen(arg->longName) + strlen(arg->argumentName) + 5;
+            if(length + currentLength > 80) {
+                cErrPrintf(TextWhite, "\n  ");
+                currentLength = 2;
+            }
+            cErrPrintf(TextWhite, "[--%s %s] ", arg->longName, arg->argumentName);
+            currentLength += length + 1;
         }
 
         // prints positional arguments
         for(unsigned int i = 0; i < parser->posArgCount; i++) {
             posArg* arg = &parser->posArgs[i];
+            int length = strlen(arg->description) + 2;
+            if(length + currentLength > 80) {
+                cErrPrintf(TextWhite, "\n  ");
+                currentLength = 2;
+            }
             cErrPrintf(TextWhite, "<%s> ", arg->description);
+            currentLength += length + 1;
         }
 
         // end of usage for current parser
@@ -145,6 +229,47 @@ static void argUsage(argParser* parser) {
     }
 }
 
+static void printWordWrap(const char* prefix, const char* message) {
+    if(strlen(message) > 0) {
+        cErrPrintf(TextWhite, prefix);
+    }
+
+    int charWidth = 80 - strlen(prefix);
+
+    const char* startPtr = message;
+    int length = 0;
+    int currentLineLength = 0;
+    char c;
+    bool printedWord = false;
+    while(true) {
+        c = startPtr[length++];
+        if(c == ' ' || c == '\0') {
+            if(currentLineLength + length > charWidth) {
+                cErrPrintf(TextWhite, "\n%s", prefix);
+                printedWord = false;
+                currentLineLength = 0;
+                while(length > charWidth) {
+                    cErrPrintf(TextWhite, "%.*s\n%s", charWidth, startPtr, prefix);
+                    length -= charWidth;
+                    startPtr += charWidth;
+                }
+            }
+            if(printedWord) {
+                cErrPrintf(TextWhite, " ");
+            }
+            cErrPrintf(TextWhite, "%.*s", length-1, startPtr);
+            startPtr += length;
+            currentLineLength += length;
+            length = 0;
+            printedWord = true;
+            if(c == '\0') {
+                break;
+            }
+        }
+    }
+    cErrPrintf(TextWhite, "\n");
+}
+
 static void optionHelp(optionArg* arg) {
     cErrPrintf(TextWhite, "  ");
     switch(arg->type) {
@@ -161,7 +286,7 @@ static void optionHelp(optionArg* arg) {
             }
             cErrPrintf(TextWhite, "--%s\n", arg->longName);
     }
-    cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+    printWordWrap("    ", arg->helpMessage);
     arg->printed = true;
 }
 
@@ -176,10 +301,12 @@ static void argHelp(argParser* parser) {
         for(unsigned int i = 0; i < parser->posArgCount; i++) {
             posArg* arg = &parser->posArgs[i];
             cErrPrintf(TextWhite, "  <%s>\n", arg->description);
-            cErrPrintf(TextWhite, "    %s\n", arg->helpMessage);
+            printWordWrap("    ", arg->helpMessage);
         }
 
         // print option help
+        optionArgArr args;
+        ARRAY_ALLOC(optionArg, args, option);
         for(unsigned int i = 0; i < parser->options.capacity; i++) {
             Entry* entry = &parser->options.entries[i];
             if(entry->key.value == NULL) {
@@ -189,7 +316,11 @@ static void argHelp(argParser* parser) {
             if(arg->isUniversal) {
                 continue;
             }
-            optionHelp(arg);
+            PUSH_ARRAY(optionArg, args, option, arg);
+        }
+        qsort(args.options, args.optionCount, sizeof(optionArg*), optionArgSort);
+        for(unsigned int i = 0; i < args.optionCount; i++) {
+            optionHelp(args.options[i]);
         }
     }
 
@@ -203,6 +334,7 @@ static void argHelp(argParser* parser) {
     }
 
     if(universalOptions.optionCount > 0) {
+        qsort(universalOptions.options, universalOptions.optionCount, sizeof(optionArg*), optionArgSort);
         cErrPrintf(TextWhite, "%s; %s <*>:\n", parser->name, parser->name);
         for(unsigned int i = 0; i < universalOptions.optionCount; i++) {
             optionArg* arg = universalOptions.options[i];
@@ -220,6 +352,7 @@ static void argHelp(argParser* parser) {
     }
 
     if(childOptions.optionCount > 0) {
+        qsort(childOptions.options, childOptions.optionCount, sizeof(optionArg*), optionArgSort);
         cErrPrintf(TextWhite, "%s <*>:\n", parser->name);
         for(unsigned int i = 0; i < childOptions.optionCount; i++) {
             optionArg* arg = childOptions.options[i];
