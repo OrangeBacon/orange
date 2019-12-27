@@ -32,22 +32,22 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     printf("\n");
 
     // file name/location
-    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->scanner->fileName, token->line, token->column);
+    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->scanner->fileName, token->range.line, token->range.column);
 
     // number of charcters required to print the longest line number
-    int lineNumberLength = floor(log10(abs(token->line + 1))) + 1;
+    int lineNumberLength = floor(log10(abs(token->range.line + 1))) + 1;
 
     int start;
     int length;
 
     // line before the error
-    printLine(parser, token->line - 1, &start, &length, lineNumberLength);
+    printLine(parser, token->range.line - 1, &start, &length, lineNumberLength);
 
     // line with the error token on
-    printLine(parser, token->line, &start, &length, lineNumberLength);
+    printLine(parser, token->range.line, &start, &length, lineNumberLength);
 
     // how far along the line the error token starts
-    int startPos = token->start - parser->scanner->base - start;
+    int startPos = token->range.start - parser->scanner->base - start;
 
     // buffer to store arrow to errored token
     char* buf = malloc(length * sizeof(char));
@@ -57,7 +57,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
             buf[i] = ' ';
         }
         // underline fill length below errored token
-        for(int i = startPos; i < startPos + token->length; i++) {
+        for(int i = startPos; i < startPos + token->range.length; i++) {
             buf[i] = '^';
         }
 
@@ -67,7 +67,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     }
 
     // line after error token
-    printLine(parser, token->line + 1, &start, &length, lineNumberLength);
+    printLine(parser, token->range.line + 1, &start, &length, lineNumberLength);
 
     printf("\n");
 }
@@ -111,7 +111,7 @@ void newErrEnd(Error* error, ErrorLevel level, const char* message) {
     error->location = EL_END;
 }
 
-void newErrConsume(Error* error, ErrorLevel level, 
+void newErrConsume(Error* error, ErrorLevel level,
     MicrocodeTokenType type, const char* message) {
 
     newErr(error, level, message);

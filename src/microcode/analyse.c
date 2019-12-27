@@ -12,8 +12,6 @@
 #include "microcode/parser.h"
 #include "microcode/error.h"
 
-// TODO finish opcode analysis: paramatised bits
-
 // User defined types
 
 typedef struct IdentifierEnum {
@@ -507,7 +505,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     unsigned int possibilities = 1;
     bool passed = true;
 
-    headerBitLength += opcode->id.length - 2;
+    headerBitLength += opcode->id.range.length - 2;
     for(unsigned int i = 0; i < opcode->paramCount; i++) {
         ASTParameter* pair = &opcode->params[i];
         passed &= userTypeCheck(parser, USER_TYPE_ANY, pair);
@@ -605,8 +603,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         GenOpCode* gencode = &core->opcodes[opcodeID+i];
         gencode->isValid = true;
         gencode->id = opcodeID+i;
-        gencode->name = opcode->name.start;
-        gencode->nameLen = opcode->name.length;
+        gencode->name = opcode->name.range.start;
+        gencode->nameLen = opcode->name.range.length;
         ARRAY_ALLOC(GenOpCodeLine, *gencode, line);
 
         for(unsigned int j = 0; j < opcode->lineCount; j++) {
@@ -704,7 +702,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
             tableSet(&membersTable, tok, NULL);
             PUSH_ARRAY(Token*, *enumIdent, member, tok);
             enumIdent->identifierLength =
-                max(enumIdent->identifierLength, tok->length);
+                max(enumIdent->identifierLength, tok->range.length);
         }
     }
 
@@ -799,7 +797,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 substitutions++;
             }
         } else {
-            lineLength += seg->identifier.length;
+            lineLength += seg->identifier.range.length;
         }
     }
     if(!passed) {
@@ -861,7 +859,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 count += 1;
             } else {
                 strncat(currentIdent, seg->identifier.data.string,
-                    seg->identifier.length);
+                    seg->identifier.range.length);
             }
         }
 

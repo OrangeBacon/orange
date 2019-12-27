@@ -2,14 +2,14 @@
 #define AST_H
 
 #include <stdbool.h>
+#include "microcode/token.h"
 #include "shared/memory.h"
 
-struct Token;
 struct Parser;
 
 typedef struct Bit {
-    struct Token data;
-    DEFINE_ARRAY(struct Token, param);
+    Token data;
+    DEFINE_ARRAY(Token, param);
 } Bit;
 
 typedef struct BitArray {
@@ -20,29 +20,29 @@ typedef struct Line {
     bool hasCondition;
     BitArray bitsLow;
     BitArray bitsHigh;
-    struct Token conditionErrorToken;
+    Token conditionErrorToken;
 } Line;
 
 typedef struct ASTHeader {
     DEFINE_ARRAY(BitArray, line);
-    struct Token errorPoint;
+    Token errorPoint;
 } ASTHeader;
 
 typedef struct ASTParameter {
-    struct Token name;
-    struct Token value;
+    Token name;
+    Token value;
 } ASTParameter;
 
 typedef struct ASTOpcode {
-    struct Token id;
-    struct Token name;
+    Token id;
+    Token name;
     DEFINE_ARRAY(Line*, line);
     DEFINE_ARRAY(ASTParameter, param);
 } ASTOpcode;
 
 typedef struct ASTTypeEnum {
-    struct Token width;
-    DEFINE_ARRAY(struct Token, member);
+    Token width;
+    DEFINE_ARRAY(Token, member);
 } ASTTypeEnum;
 
 typedef enum UserType {
@@ -51,7 +51,7 @@ typedef enum UserType {
 } UserType;
 
 typedef struct ASTType {
-    struct Token name;
+    Token name;
 
     UserType type;
 
@@ -65,11 +65,11 @@ typedef struct ASTBitGroupIdentifier {
         AST_BIT_GROUP_IDENTIFIER_SUBST,
         AST_BIT_GROUP_IDENTIFIER_LITERAL
     } type;
-    struct Token identifier;
+    Token identifier;
 } ASTBitGroupIdentifier;
 
 typedef struct ASTBitGroup {
-    struct Token name;
+    Token name;
     DEFINE_ARRAY(ASTParameter, param);
     DEFINE_ARRAY(ASTBitGroupIdentifier, segment);
 } ASTBitGroup;

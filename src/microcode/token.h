@@ -26,6 +26,13 @@ const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 #undef ENUM_TOKEN
 #undef ADD_TOKEN
 
+typedef struct SourceRange {
+    const char* start;
+    int length;
+    int line;
+    int column;
+} SourceRange;
+
 typedef union TokenData {
     const char* string;
     unsigned int value;
@@ -34,10 +41,7 @@ typedef union TokenData {
 // type and source location of a token
 typedef struct Token {
     MicrocodeTokenType type;
-    const char* start;
-    int length;
-    int line;
-    int column;
+    SourceRange range;
     TokenData data;
 } Token;
 

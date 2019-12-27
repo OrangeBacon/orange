@@ -24,15 +24,6 @@ typedef struct Parser {
     // should the compiler be recovering from an error currently
     bool panicMode;
 
-    // has a _ statement been parsed yet?
-    // allows them to only be included once per file
-    // if no then is a token where the line number is -1
-    // if yes then is the token representing the start of
-    // the relavant block
-
-    Token headerStatement;
-    Token inputStatement;
-
     // the ast that is being constructed currently
     AST* ast;
 

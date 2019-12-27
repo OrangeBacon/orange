@@ -17,7 +17,7 @@ static Token number(Scanner* scanner);
 static Token string(Scanner* scanner, char end);
 static Token identifier(Scanner* scanner);
 static MicrocodeTokenType identifierType(Scanner* scanner);
-static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length, 
+static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length,
     const char* rest, MicrocodeTokenType type);
 static Token makeToken(Scanner* scanner, MicrocodeTokenType type);
 static Token errorToken(Scanner* scanner, const char* message);
@@ -83,7 +83,7 @@ bool getLine(const char* string, int line, int* start, int* length) {
 
     // should the iteration stop at the next newline character
     bool willEnd = false;
-    
+
     // length of the line that is being iterated over
     int lineLength = 0;
 
@@ -231,9 +231,9 @@ static Token string(Scanner* scanner, char end) {
     }
 
     Token ret = makeToken(scanner, TOKEN_STRING);
-    char* buf = ArenaAlloc(sizeof(char) * (ret.length-2+1));
+    char* buf = ArenaAlloc(sizeof(char) * (ret.range.length-2+1));
     *buf = '\0';
-    strncat(buf, ret.start+1, ret.length-2);
+    strncat(buf, ret.range.start+1, ret.range.length-2);
     ret.data.string = buf;
     return ret;
 }
@@ -262,9 +262,9 @@ static MicrocodeTokenType identifierType(Scanner* scanner) {
 }
 
 // is the remainder of the last scanned identifier the same as the provided string
-static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length, 
+static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length,
       const char* rest, MicrocodeTokenType type) {
-    if(scanner->current - scanner->start == start + length && 
+    if(scanner->current - scanner->start == start + length &&
           memcmp(scanner->start + start, rest, length) == 0) {
         return type;
     }
@@ -275,10 +275,10 @@ static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length,
 static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
     Token token;
     token.type = type;
-    token.start = scanner->start;
-    token.length = (int)(scanner->current - scanner->start);
-    token.line = scanner->line;
-    token.column = scanner->column;
+    token.range.start = scanner->start;
+    token.range.length = (int)(scanner->current - scanner->start);
+    token.range.line = scanner->line;
+    token.range.column = scanner->column;
     if(type == TOKEN_IDENTIFIER) {
         token.data.string = tokenAllocName(&token);
     }
@@ -290,10 +290,10 @@ static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
 static Token errorToken(Scanner* scanner, const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
-    token.start = scanner->start;
-    token.length = (int)(scanner->current - scanner->start);
-    token.line = scanner->line;
-    token.column = scanner->column;
+    token.range.start = scanner->start;
+    token.range.length = (int)(scanner->current - scanner->start);
+    token.range.line = scanner->line;
+    token.range.column = scanner->column;
     token.data.string = message;
 
     return token;

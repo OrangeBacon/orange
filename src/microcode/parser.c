@@ -240,7 +240,7 @@ static Error errMissingTypeName = {0};
 static Error errMissingTypeEquals = {0};
 static Error errTypeTypeWrong = {0};
 static void typeErrors() {
-    newErrConsume(&errMissingTypeName, ERROR_SYNTAX, 
+    newErrConsume(&errMissingTypeName, ERROR_SYNTAX,
         TOKEN_IDENTIFIER, "Expected name of type being parsed");
     newErrConsume(&errMissingTypeEquals, ERROR_SYNTAX,
         TOKEN_EQUAL, "Expected \"=\" to assign value in type declaration");
@@ -585,7 +585,7 @@ static errorInitialiser errorInitialisers[] = {
 
 void InitParser() {
     CONTEXT(INFO, "Initialising parser data");
-   
+
     if(!errorsInitialised) {
         for(unsigned int i = 0; i < sizeof(errorInitialisers)/sizeof(errorInitialiser); i++) {
             errorInitialisers[i]();
@@ -601,8 +601,6 @@ bool Parse(Parser* parser, Scanner* scan, AST* ast) {
     parser->scanner = scan;
     parser->hadError = false;
     parser->panicMode = false;
-    parser->headerStatement.line = -1;
-    parser->inputStatement.line = -1;
     ARRAY_ALLOC(bool, *parser, errorStack);
     ARRAY_ALLOC(EmittedError, *parser, error);
     parser->ast = ast;
