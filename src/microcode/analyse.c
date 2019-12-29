@@ -131,7 +131,7 @@ static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
 
     Identifier* value;
     if(!tableGet(&identifiers, name, (void**)&value)) {
-        error(parser, &errParamMissing, errPoint, name, usage);
+        error(parser, &errParamMissing, &errPoint->range, name, usage);
         tableSet(&erroredParameters, name, (void*)1);
         return NULL;
     }
@@ -139,7 +139,7 @@ static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
     if(value->type == TYPE_PARAMETER) {
         return value;
     }
-    error(parser, &errParameterWrongType, errPoint, usage, name,
+    error(parser, &errParameterWrongType, &errPoint->range, usage, name,
         IdentifierTypeNames[value->type]);
     tableSet(&erroredParameters, name, (void*)1);
     return NULL;
@@ -163,7 +163,7 @@ static void alreadyDefined(Parser* parser, char* name, Identifier* current,
         case AST_BLOCK_TYPE: errLoc = &s->as.type.name; break;
     }
 
-    error(parser, &errDuplicateDefine, errLoc, name,
+    error(parser, &errDuplicateDefine, &errLoc->range, name,
         IdentifierTypeNames[current->type]);
 }
 
@@ -176,7 +176,7 @@ static void wrongTypeErrors() {
 // wrapper to make reporting type errors easier
 static void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
     Identifier* val) {
-    error(parser, &errWrongType, errLoc, errLoc->data.string,
+    error(parser, &errWrongType, &errLoc->range, errLoc->data.string,
         IdentifierTypeNames[expected], IdentifierTypeNames[val->type]);
 }
 
@@ -199,7 +199,7 @@ static bool userTypeCheck(Parser* parser, UserType typeRequired,
     Identifier* ident;
     if(!tableGet(&identifiers, (char*)typePair->name.data.string,
                  (void**)&ident)) {
-        error(parser, &errUndefinedType, &typePair->name,
+        error(parser, &errUndefinedType, &typePair->name.range,
             typePair->name.data.string, UserTypeNames[typeRequired]);
         return false;
     }
@@ -214,7 +214,7 @@ static bool userTypeCheck(Parser* parser, UserType typeRequired,
     }
 
     if(ident->as.userType.type != typeRequired) {
-        error(parser, &errWrongUserType, UserTypeNames[typeRequired],
+        error(parser, &errWrongUserType, &typePair->value.range, UserTypeNames[typeRequired],
             UserTypeNames[ident->as.userType.type]);
     }
 
@@ -289,7 +289,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
     // get execution order for the microcode bits
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
-        error(mcode, &errNoOrdering, opcodeName, lineNumber);
+        error(mcode, &errNoOrdering, &opcodeName->range, lineNumber);
     }
 
     // checking if any bus reads happen when the bus has not been written to
@@ -308,7 +308,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
         for(unsigned int j = 0; j < command->readsLength; j++) {
             Component* bus = &core->components[command->reads[j]];
             if(!bus->busStatus) {
-                error(mcode, &errBusRead, opcodeName, lineNumber);
+                error(mcode, &errBusRead, &opcodeName->range, lineNumber);
             }
         }
 
@@ -347,7 +347,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
 
         Identifier* val;
         if(!tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val)) {
-            error(parser, &errIdentifierNotDefined, bit);
+            error(parser, &errIdentifierNotDefined, &bit->range);
             passed = false;
             continue;
         }
@@ -357,13 +357,13 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
         } else if(val->type == TYPE_BITGROUP) {
             if(bit->paramCount != 1) {
                 passed = false;
-                error(parser, &errTooManyParameters, bit->data);
+                error(parser, &errTooManyParameters, &bit->data.range);
             }
             for(unsigned int j = 0; j < bit->paramCount; j++) {
                 Token* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
                     passed = false;
-                    error(parser, &errBitArraySubstitution, param, param->data.string);
+                    error(parser, &errBitArraySubstitution, &param->range, param->data.string);
                 }
             }
         } else {
@@ -396,7 +396,7 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing header");
 
     if(parsedHeader) {
-        error(parser, &errDuplicateHeader, &s->as.header.errorPoint,
+        error(parser, &errDuplicateHeader, &s->as.header.errorPoint.range,
             firstHeader->as.header.errorPoint);
         return;
     }
@@ -409,7 +409,7 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     unsigned int maxLines = (1 << phase->as.parameter.value);
 
     if(s->as.header.lineCount > maxLines) {
-        error(parser, &errHeaderLineCount, &s->as.header.errorPoint,
+        error(parser, &errHeaderLineCount, &s->as.header.errorPoint.range,
             s->as.header.lineCount, maxLines);
     }
 
@@ -512,7 +512,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
         bool checkLength = true;
         if(tableHas(&paramNames, &pair->value)) {
-            error(parser, &errOpcodeParamShadow, &pair->value,
+            error(parser, &errOpcodeParamShadow, &pair->value.range,
                 pair->value.data.string);
             checkLength = false;
         }
@@ -534,18 +534,18 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 
     if(headerBitLength > maxHeaderBitLength) {
-        error(parser, &errOpcodeHeaderLarge, &opcode->id,
+        error(parser, &errOpcodeHeaderLarge, &opcode->id.range,
             headerBitLength, maxHeaderBitLength);
         return;
     }
     if(headerBitLength < maxHeaderBitLength) {
-        error(parser, &errOpcodeHeaderSmall, &opcode->id,
+        error(parser, &errOpcodeHeaderSmall, &opcode->id.range,
             headerBitLength, maxHeaderBitLength);
         return;
     }
 
     if(opcode->lineCount > maxLines) {
-        error(parser, &errOpcodeLineCount, &opcode->name);
+        error(parser, &errOpcodeLineCount, &opcode->name.range);
         return;
     }
 
@@ -674,11 +674,11 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     unsigned int requiredMemberCount = size == 1 ? 2 : 1 << size;
     if(enumStatement->memberCount != requiredMemberCount) {
         if(enumStatement->memberCount < requiredMemberCount) {
-            error(parser, &errEnumMoreMembers, &typeStatement->name,
+            error(parser, &errEnumMoreMembers, &typeStatement->name.range,
                 requiredMemberCount, enumStatement->memberCount);
         } else {
             error(parser, &errEnumLessMembers,
-                &enumStatement->members[requiredMemberCount],
+                &enumStatement->members[requiredMemberCount].range,
                 requiredMemberCount, enumStatement->memberCount);
         }
     }
@@ -697,7 +697,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
         if(tableHas(&membersTable, tok)) {
             Token* original;
             tableGetKey(&membersTable, tok, (void**)&original);
-            error(parser, &errEnumDuplicate, tok, original);
+            error(parser, &errEnumDuplicate, &tok->range, original);
         } else {
             tableSet(&membersTable, tok, NULL);
             PUSH_ARRAY(Token*, *enumIdent, member, tok);
@@ -765,7 +765,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         passed &= userTypeCheck(parser, USER_TYPE_ENUM, pair);
 
         if(tableHas(&paramNames, &pair->value)) {
-            error(parser, &errBitgroupParamSelfShadow, &pair->value,
+            error(parser, &errBitgroupParamSelfShadow, &pair->value.range,
                 pair->value.data.string);
         }
         tableSet(&paramNames, &pair->value, &pair->name);
@@ -785,7 +785,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
             Token* typeName;
             if(!tableGet(&paramNames, &seg->identifier, (void**)&typeName)) {
-                error(parser, &errBitgroupSubsUndefined, &seg->identifier);
+                error(parser, &errBitgroupSubsUndefined, &seg->identifier.range);
                 passed = false;
             } else {
                 Identifier* type;
@@ -867,11 +867,11 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         // control bit was formed
         Identifier* val;
         if(!tableGet(&identifiers, currentIdent, (void**)&val)) {
-            error(parser, &errSubstitutionError, value->as.bitgroup.definition);
+            error(parser, &errSubstitutionError, &value->as.bitgroup.definition->range);
             passed = false;
         }
         if(val->type != TYPE_VM_CONTROL_BIT) {
-            error(parser, &errSubstitutionType, value->as.bitgroup.definition,
+            error(parser, &errSubstitutionType, &value->as.bitgroup.definition->range,
                 IdentifierTypeNames[val->type]);
             passed = false;
         }

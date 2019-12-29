@@ -17,7 +17,7 @@ static void printLine(Parser* parser, int line, int* start, int* length, int lin
 }
 
 // print a message about a token to stderr
-void printMessage(Parser* parser, Token* token, const char* name, unsigned int code, TextColor color,
+void printMessage(Parser* parser, SourceRange* range, const char* name, unsigned int code, TextColor color,
     const char* message) {
     CONTEXT(DEBUG, "Printing Error");
     setErrorState(parser);
@@ -32,22 +32,22 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     printf("\n");
 
     // file name/location
-    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->scanner->fileName, token->range.line, token->range.column);
+    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->scanner->fileName, range->line, range->column);
 
     // number of charcters required to print the longest line number
-    int lineNumberLength = floor(log10(abs(token->range.line + 1))) + 1;
+    int lineNumberLength = floor(log10(abs(range->line + 1))) + 1;
 
     int start;
     int length;
 
     // line before the error
-    printLine(parser, token->range.line - 1, &start, &length, lineNumberLength);
+    printLine(parser, range->line - 1, &start, &length, lineNumberLength);
 
     // line with the error token on
-    printLine(parser, token->range.line, &start, &length, lineNumberLength);
+    printLine(parser, range->line, &start, &length, lineNumberLength);
 
     // how far along the line the error token starts
-    int startPos = token->range.start - parser->scanner->base - start;
+    int startPos = range->start - parser->scanner->base - start;
 
     // buffer to store arrow to errored token
     char* buf = malloc(length * sizeof(char));
@@ -57,7 +57,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
             buf[i] = ' ';
         }
         // underline fill length below errored token
-        for(int i = startPos; i < startPos + token->range.length; i++) {
+        for(int i = startPos; i < startPos + range->length; i++) {
             buf[i] = '^';
         }
 
@@ -67,7 +67,7 @@ void printMessage(Parser* parser, Token* token, const char* name, unsigned int c
     }
 
     // line after error token
-    printLine(parser, token->range.line + 1, &start, &length, lineNumberLength);
+    printLine(parser, range->line + 1, &start, &length, lineNumberLength);
 
     printf("\n");
 }
@@ -148,13 +148,13 @@ void vError(Parser* parser, Error* error, va_list args) {
 
     switch(error->location) {
         case EL_ASK:
-            eErr.token = *va_arg(args, Token*);
+            eErr.range = *va_arg(args, SourceRange*);
             break;
         case EL_CURRENT:
-            eErr.token = parser->current;
+            eErr.range = parser->current.range;
             break;
         case EL_PREVIOUS:
-            eErr.token = parser->previous;
+            eErr.range = parser->previous.range;
             break;
         case EL_END:
             eErr.atEnd = true;
@@ -181,7 +181,7 @@ void vError(Parser* parser, Error* error, va_list args) {
 
     for(unsigned int i = 0; i < error->noteCount; i++) {
         EmittedErrorNoteData data = {0};
-        data.token = *va_arg(args, Token*);
+        data.token = *va_arg(args, SourceRange*);
         data.message = getMessagePrint(error->notes[i], args);
         PUSH_ARRAY(EmittedErrorNoteData, eErr, noteData, data);
     }
@@ -200,7 +200,7 @@ void printErrors(Parser* parser) {
     CONTEXT(DEBUG, "Printing all errors");
     for(unsigned int i = 0; i < parser->errorCount; i++) {
         EmittedError* err = &parser->errors[i];
-        printMessage(err->parser, &err->token, err->name, err->error->id, err->color, err->message);
+        printMessage(err->parser, &err->range, err->name, err->error->id, err->color, err->message);
 
         for(unsigned int j = 0; j < err->noteDataCount; j++) {
             EmittedErrorNoteData* data = &err->noteDatas[j];

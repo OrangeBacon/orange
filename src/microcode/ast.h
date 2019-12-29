@@ -10,10 +10,12 @@ struct Parser;
 typedef struct Bit {
     Token data;
     DEFINE_ARRAY(Token, param);
+    SourceRange range;
 } Bit;
 
 typedef struct BitArray {
     DEFINE_ARRAY(Bit, data);
+    SourceRange range;
 } BitArray;
 
 typedef struct Line {
@@ -21,16 +23,19 @@ typedef struct Line {
     BitArray bitsLow;
     BitArray bitsHigh;
     Token conditionErrorToken;
+    SourceRange range;
 } Line;
 
 typedef struct ASTHeader {
     DEFINE_ARRAY(BitArray, line);
     Token errorPoint;
+    SourceRange range;
 } ASTHeader;
 
 typedef struct ASTParameter {
     Token name;
     Token value;
+    SourceRange range;
 } ASTParameter;
 
 typedef struct ASTOpcode {
@@ -38,11 +43,13 @@ typedef struct ASTOpcode {
     Token name;
     DEFINE_ARRAY(Line*, line);
     DEFINE_ARRAY(ASTParameter, param);
+    SourceRange range;
 } ASTOpcode;
 
 typedef struct ASTTypeEnum {
     Token width;
     DEFINE_ARRAY(Token, member);
+    SourceRange range;
 } ASTTypeEnum;
 
 typedef enum UserType {
@@ -58,6 +65,7 @@ typedef struct ASTType {
     union {
         ASTTypeEnum enumType;
     } as;
+    SourceRange range;
 } ASTType;
 
 typedef struct ASTBitGroupIdentifier {
@@ -66,12 +74,14 @@ typedef struct ASTBitGroupIdentifier {
         AST_BIT_GROUP_IDENTIFIER_LITERAL
     } type;
     Token identifier;
+    SourceRange range;
 } ASTBitGroupIdentifier;
 
 typedef struct ASTBitGroup {
     Token name;
     DEFINE_ARRAY(ASTParameter, param);
     DEFINE_ARRAY(ASTBitGroupIdentifier, segment);
+    SourceRange range;
 } ASTBitGroup;
 
 typedef enum ASTStatementType {

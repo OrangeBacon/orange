@@ -120,9 +120,15 @@ static void microcodeLineErrors() {
 static BitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
     BitArray result;
+    result.range.column = parser->current.range.column;
+    result.range.line = parser->current.range.line;
+    result.range.start = parser->current.range.start;
     ARRAY_ALLOC(Token, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
+        bit.range.column = parser->current.range.column;
+        bit.range.line = parser->current.range.line;
+        bit.range.start = parser->current.range.start;
         bit.data = parser->previous;
         ARRAY_ZERO(bit, param);
         if(match(parser, TOKEN_LEFT_PAREN)) {
@@ -135,11 +141,13 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
             }
             consume(parser, &errParameterRightParen);
         }
+        bit.range.length = parser->previous.range.start + parser->previous.range.length - bit.range.start;
         PUSH_ARRAY(Token, result, data, bit);
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }
     }
+    result.range.length = parser->previous.range.start + parser->previous.range.length - result.range.start;
     return result;
 }
 
@@ -317,7 +325,7 @@ static void header(Parser* parser) {
 
         if(line->hasCondition) {
             INFO("Found condition in header statement");
-            error(parser, &errHeaderCondition, &line->conditionErrorToken);
+            error(parser, &errHeaderCondition, &line->conditionErrorToken.range);
         }
 
         PUSH_ARRAY(BitArray, s->as.header, line, line->bitsLow);

@@ -29,13 +29,13 @@ typedef struct Error {
 } Error;
 
 typedef struct EmittedErrorNoteData {
-    Token token;
+    SourceRange token;
     const char* message;
 } EmittedErrorNoteData;
 
 typedef struct EmittedError {
     Error* error;
-    Token token;
+    SourceRange range;
     bool atEnd;
     const char* message;
     const char* name;
