@@ -435,15 +435,15 @@ static void include(Parser* parser) {
         }
 
         INFO("Found file to include, parsing");
-        Scanner newScanner;
-        Parser newParser;
-        ScannerInit(&newScanner, readFilePtr(file), foundFileName);
-        Parse(&newParser, &newScanner, parser->ast);
+        Scanner* newScanner = ArenaAlloc(sizeof(Scanner));
+        Parser* newParser = ArenaAlloc(sizeof(Parser));
+        ScannerInit(newScanner, readFilePtr(file), foundFileName);
+        Parse(newParser, newScanner, parser->ast);
 
-        if(newParser.hadError){
+        if(newParser->hadError){
             parser->hadError = true;
-            for(unsigned int i = 0; i < newParser.errorCount; i++) {
-                PUSH_ARRAY(EmittedError, *parser, error, newParser.errors[i]);
+            for(unsigned int i = 0; i < newParser->errorCount; i++) {
+                PUSH_ARRAY(EmittedError, *parser, error, newParser->errors[i]);
             }
         }
 
