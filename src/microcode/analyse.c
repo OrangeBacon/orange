@@ -108,15 +108,7 @@ static int max(int a, int b) {
 Table identifiers;
 
 Table erroredParameters;
-static Error errParamMissing = {0};
-static Error errParameterWrongType = {0};
-static void getParameterErrors() {
-    initTable(&erroredParameters, strHash, strCmp);
-    newErrAt(&errParamMissing, ERROR_SEMANTIC, "Parameter '%s' required to "
-        "parse %s not found");
-    newErrAt(&errParameterWrongType, ERROR_SEMANTIC, "To parse %s, '%s' is "
-        "required as a parameter, but it is defined as a %s");
-}
+bool erroredParametersInitialized = false;
 
 // lookup a name as an identifier, check
 //   if the name exists
@@ -124,14 +116,23 @@ static void getParameterErrors() {
 // if either check fails, emit error
 //   unless error already emitted about that name
 static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
-    char* usage) {
+    char* usage)
+{
+    if(!erroredParametersInitialized) {
+        initTable(&erroredParameters, strHash, strCmp);
+    }
+
     if(tableHas(&erroredParameters, name)) {
         return NULL;
     }
 
     Identifier* value;
     if(!tableGet(&identifiers, name, (void**)&value)) {
-        error(parser, &errParamMissing, &errPoint->range, name, usage);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Parameter '%s' required to parse %s not "
+            "found", name, usage);
+        errAddSource(err, &errPoint->range);
+        errEmit(err, parser);
         tableSet(&erroredParameters, name, (void*)1);
         return NULL;
     }
@@ -139,16 +140,16 @@ static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
     if(value->type == TYPE_PARAMETER) {
         return value;
     }
-    error(parser, &errParameterWrongType, &errPoint->range, usage, name,
+
+    Error* err = errNew(ERROR_SEMANTIC);
+    errAddText(err, TextRed, "To parse %s, '%s' is required as a parameter, "
+        "but it is defined as a %s", usage, name,
         IdentifierTypeNames[value->type]);
+    errAddSource(err, &errPoint->range);
+    errEmit(err, parser);
+
     tableSet(&erroredParameters, name, (void*)1);
     return NULL;
-}
-
-static Error errDuplicateDefine = {0};
-static void alreadyDefinedErrors() {
-    newErrAt(&errDuplicateDefine, ERROR_SEMANTIC, "One or more prior "
-    "definitions for '%s' found, currently declared as being of type %s");
 }
 
 // report symbol redefenition error at correct location
@@ -163,33 +164,24 @@ static void alreadyDefined(Parser* parser, char* name, Identifier* current,
         case AST_BLOCK_TYPE: errLoc = &s->as.type.name; break;
     }
 
-    error(parser, &errDuplicateDefine, &errLoc->range, name,
+    Error* err = errNew(ERROR_SEMANTIC);
+    errAddText(err, TextRed, "One or more prior definitions for '%s' found, "
+        "currently declared as being of type %s", name,
         IdentifierTypeNames[current->type]);
-}
-
-static Error errWrongType = {0};
-static void wrongTypeErrors() {
-    newErrAt(&errWrongType, ERROR_SEMANTIC, "Expecting identifier '%s' to have "
-        "type '%s', got type '%s'");
+    errAddSource(err, &errLoc->range);
+    errEmit(err, parser);
 }
 
 // wrapper to make reporting type errors easier
 static void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
-    Identifier* val) {
-    error(parser, &errWrongType, &errLoc->range, errLoc->data.string,
-        IdentifierTypeNames[expected], IdentifierTypeNames[val->type]);
-}
-
-static Error errUndefinedType = {0};
-static Error errNotType = {0};
-static Error errWrongUserType = {0};
-static void userTypeCheckErrors() {
-    newErrAt(&errUndefinedType, ERROR_SEMANTIC, "Identifier '%s' is not "
-    "defined, %s type expected");
-    newErrAt(&errNotType, ERROR_SEMANTIC, "Expected identifier to be a type, "
-        "but got %s");
-    newErrAt(&errWrongUserType, ERROR_SEMANTIC, "Expected identifier to have "
-        "user type of '%s' however, it has type '%s'");
+    Identifier* val)
+{
+    Error* err = errNew(ERROR_SEMANTIC);
+    errAddText(err, TextRed, "Expecting identifier '%s' to have type '%s', "
+        "got type '%s'", errLoc->data.string, IdentifierTypeNames[expected],
+        IdentifierTypeNames[val->type]);
+    errAddSource(err, &errLoc->range);
+    errEmit(err, parser);
 }
 
 // check if a type name has the required user defined type
@@ -198,9 +190,14 @@ static bool userTypeCheck(Parser* parser, UserType typeRequired,
     ASTParameter *typePair) {
     Identifier* ident;
     if(!tableGet(&identifiers, (char*)typePair->name.data.string,
-                 (void**)&ident)) {
-        error(parser, &errUndefinedType, &typePair->name.range,
-            typePair->name.data.string, UserTypeNames[typeRequired]);
+        (void**)&ident))
+    {
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Identifier '%s' is not defined, %s type "
+            "expected", typePair->name.data.string,
+            UserTypeNames[typeRequired]);
+        errAddSource(err, &typePair->name.range);
+        errEmit(err, parser);
         return false;
     }
 
@@ -214,8 +211,12 @@ static bool userTypeCheck(Parser* parser, UserType typeRequired,
     }
 
     if(ident->as.userType.type != typeRequired) {
-        error(parser, &errWrongUserType, &typePair->value.range, UserTypeNames[typeRequired],
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Expected identifier to have user type of "
+            "'%s' however, it has type '%s'", UserTypeNames[typeRequired],
             UserTypeNames[ident->as.userType.type]);
+        errAddSource(err, &typePair->value.range);
+        errEmit(err, parser);
     }
 
     return true;
@@ -240,18 +241,9 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
     tableSet(&identifiers, key, (void*)value);
 }
 
-static Error errNoOrdering = {0};
-static Error errBusRead = {0};
-static void analyseLineErrors() {
-    newErrAt(&errNoOrdering, ERROR_SEMANTIC, "Unable to order microcode bits "
-        "in line %u");
-    newErrAt(&errBusRead, ERROR_SEMANTIC, "Command reads from bus before it "
-        "was written in line %u");
-}
-
 // analyse an array of microcode bits
 // assumes that all the identifiers in the array exist and have the correct type
-static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
+static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     Token* opcodeName, unsigned int lineNumber) {
     CONTEXT(INFO, "Analysing line");
 
@@ -289,7 +281,11 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
     // get execution order for the microcode bits
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
-        error(mcode, &errNoOrdering, &opcodeName->range, lineNumber);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Unable to order microcode bits in line %u",
+            lineNumber);
+        errAddSource(err, &opcodeName->range);
+        errEmit(err, parser);
     }
 
     // checking if any bus reads happen when the bus has not been written to
@@ -308,7 +304,11 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
         for(unsigned int j = 0; j < command->readsLength; j++) {
             Component* bus = &core->components[command->reads[j]];
             if(!bus->busStatus) {
-                error(mcode, &errBusRead, &opcodeName->range, lineNumber);
+                Error* err = errNew(ERROR_SEMANTIC);
+                errAddText(err, TextRed, "Command reads from bus before it was "
+                    "written in line %u", lineNumber);
+                errAddSource(err, &opcodeName->range);
+                errEmit(err, parser);
             }
         }
 
@@ -323,19 +323,6 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* mcode, BitArray* line,
     return nodes;
 }
 
-static Error errIdentifierNotDefined = {0};
-static Error errBitArraySubstitution = {0};
-static Error errTooManyParameters = {0};
-static void mcodeBitArrayCheckErrors() {
-    newErrAt(&errIdentifierNotDefined, ERROR_SEMANTIC,
-        "Identifier was not defined");
-    newErrAt(&errBitArraySubstitution, ERROR_SEMANTIC,
-        "Could not resolve argument name \"%s\"");
-    newErrAt(&errTooManyParameters, ERROR_SEMANTIC,
-        "Only one parameter accepted by enum");
-
-}
-
 // check if all identifers in the array reperesent a control bit
 static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames) {
     CONTEXT(INFO, "Checking bit array");
@@ -347,7 +334,10 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
 
         Identifier* val;
         if(!tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val)) {
-            error(parser, &errIdentifierNotDefined, &bit->range);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Identifier was not defined");
+            errAddSource(err, &bit->range);
+            errEmit(err, parser);
             passed = false;
             continue;
         }
@@ -357,13 +347,21 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
         } else if(val->type == TYPE_BITGROUP) {
             if(bit->paramCount != 1) {
                 passed = false;
-                error(parser, &errTooManyParameters, &bit->data.range);
+                Error* err = errNew(ERROR_SEMANTIC);
+                errAddText(err, TextRed, "Only one parameter accepted by enum");
+                errAddSource(err, &bit->data.range);
+                errEmit(err, parser);
             }
             for(unsigned int j = 0; j < bit->paramCount; j++) {
                 Token* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
                     passed = false;
-                    error(parser, &errBitArraySubstitution, &param->range, param->data.string);
+                    Error* err = errNew(ERROR_SEMANTIC);
+                    errAddText(err, TextRed,
+                        "Could not resolve argument name \"%s\"",
+                        param->data.string);
+                    errAddSource(err, &param->range);
+                    errEmit(err, parser);
                 }
             }
         } else {
@@ -373,16 +371,6 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
     }
 
     return passed;
-}
-
-static Error errDuplicateHeader = {0};
-static Error errHeaderLineCount = {0};
-static void analyseHeaderErrors() {
-    newErrAt(&errDuplicateHeader, ERROR_SEMANTIC,
-        "Cannot have more than one header statement in a microcode");
-    newErrNoteAt(&errDuplicateHeader, "Header first included here");
-    newErrAt(&errHeaderLineCount, ERROR_SEMANTIC,
-        "Number of lines in header (%u) is too high, the maximum is %u");
 }
 
 // has a header statement been analysed yet?
@@ -396,8 +384,13 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing header");
 
     if(parsedHeader) {
-        error(parser, &errDuplicateHeader, &s->as.header.errorPoint.range,
-            firstHeader->as.header.errorPoint);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Cannot have more than one header statement "
+            "in a microcode");
+        errAddSource(err, &s->as.header.errorPoint.range);
+        errAddText(err, TextBlue, "Header first included here");
+        errAddSource(err, &firstHeader->as.header.errorPoint.range);
+        errEmit(err, parser);
         return;
     }
     parsedHeader = true;
@@ -409,8 +402,11 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     unsigned int maxLines = (1 << phase->as.parameter.value);
 
     if(s->as.header.lineCount > maxLines) {
-        error(parser, &errHeaderLineCount, &s->as.header.errorPoint.range,
-            s->as.header.lineCount, maxLines);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Number of lines in header (%u) is too high, "
+            "the maximum is %u", s->as.header.lineCount, maxLines);
+        errAddSource(err, &s->as.header.errorPoint.range);
+        errEmit(err, parser);
     }
 
     for(unsigned int i = 0; i < s->as.header.lineCount; i++) {
@@ -451,21 +447,6 @@ static NodeArray genlinePush(BitArray* bits, VMCoreGen* core, Parser* parser, AS
     }
 
     return analyseLine(core, parser, &subsLine, &opcode->name, lineNumber);
-}
-
-static Error errOpcodeHeaderSmall = {0};
-static Error errOpcodeHeaderLarge = {0};
-static Error errOpcodeLineCount = {0};
-static Error errOpcodeParamShadow = {0};
-static void analyseOpcodeErrors() {
-    newErrAt(&errOpcodeHeaderSmall, ERROR_SEMANTIC,
-        "Opcode header does not contain enough bits, found %u, expected %u");
-    newErrAt(&errOpcodeHeaderLarge, ERROR_SEMANTIC,
-        "Opcode header contains too many bits, found %u, expected %u");
-    newErrAt(&errOpcodeLineCount, ERROR_SEMANTIC,
-        "Number of lines in opcode is too high");
-    newErrAt(&errOpcodeParamShadow, ERROR_SEMANTIC,
-        "Parameter name \"%s\" is used multiple times");
 }
 
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
@@ -512,8 +493,11 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
         bool checkLength = true;
         if(tableHas(&paramNames, &pair->value)) {
-            error(parser, &errOpcodeParamShadow, &pair->value.range,
-                pair->value.data.string);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Parameter name \"%s\" is used multiple "
+                "times", pair->value.data.string);
+            errAddSource(err, &pair->value.range);
+            errEmit(err, parser);
             checkLength = false;
         }
         tableSet(&paramNames, &pair->value, &pair->name);
@@ -534,18 +518,28 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 
     if(headerBitLength > maxHeaderBitLength) {
-        error(parser, &errOpcodeHeaderLarge, &opcode->id.range,
-            headerBitLength, maxHeaderBitLength);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Opcode header contains too many bits, found "
+            "%u, expected %u", headerBitLength, maxHeaderBitLength);
+        errAddSource(err, &opcode->id.range);
+        errEmit(err, parser);
         return;
     }
     if(headerBitLength < maxHeaderBitLength) {
-        error(parser, &errOpcodeHeaderSmall, &opcode->id.range,
-            headerBitLength, maxHeaderBitLength);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Opcode header does not contain enough bits, "
+            "found %u, expected %u", headerBitLength, maxHeaderBitLength);
+        errAddSource(err, &opcode->id.range);
+        errEmit(err, parser);
         return;
     }
 
     if(opcode->lineCount > maxLines) {
-        error(parser, &errOpcodeLineCount, &opcode->name.range);
+        Error* err = errNew(ERROR_SEMANTIC);
+        errAddText(err, TextRed, "Number of lines in opcode is too high",
+            headerBitLength, maxHeaderBitLength);
+        errAddSource(err, &opcode->name.range);
+        errEmit(err, parser);
         return;
     }
 
@@ -636,18 +630,6 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 }
 
-static Error errEnumMoreMembers = {0};
-static Error errEnumLessMembers = {0};
-static Error errEnumDuplicate = {0};
-static void analyseTypeErrors() {
-    newErrAt(&errEnumMoreMembers, ERROR_SEMANTIC, "Enum statement requires %u "
-        "members, got %u");
-    newErrAt(&errEnumLessMembers, ERROR_SEMANTIC, "Enum statement requires %u "
-        "members, got %u");
-    newErrAt(&errEnumDuplicate, ERROR_SEMANTIC, "Duplicated enum member");
-    newErrNoteAt(&errEnumDuplicate, "Originaly defined here");
-}
-
 static void analyseEnum(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Analysing enum statement");
 
@@ -674,12 +656,18 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     unsigned int requiredMemberCount = size == 1 ? 2 : 1 << size;
     if(enumStatement->memberCount != requiredMemberCount) {
         if(enumStatement->memberCount < requiredMemberCount) {
-            error(parser, &errEnumMoreMembers, &typeStatement->name.range,
-                requiredMemberCount, enumStatement->memberCount);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Enum statement requires %u members, "
+                "got %u", requiredMemberCount, enumStatement->memberCount);
+            errAddSource(err, &typeStatement->name.range);
+            errEmit(err, parser);
         } else {
-            error(parser, &errEnumLessMembers,
-                &enumStatement->members[requiredMemberCount].range,
-                requiredMemberCount, enumStatement->memberCount);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Enum statement requires %u members, "
+                "got %u", requiredMemberCount, enumStatement->memberCount);
+            errAddSource(err,
+                &enumStatement->members[requiredMemberCount].range);
+            errEmit(err, parser);
         }
     }
 
@@ -697,7 +685,12 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
         if(tableHas(&membersTable, tok)) {
             Token* original;
             tableGetKey(&membersTable, tok, (void**)&original);
-            error(parser, &errEnumDuplicate, &tok->range, original);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Duplicated enum member");
+            errAddSource(err, &tok->range);
+            errAddText(err, TextBlue, "Originaly defined here");
+            errAddSource(err, &original->range);
+            errEmit(err, parser);
         } else {
             tableSet(&membersTable, tok, NULL);
             PUSH_ARRAY(Token*, *enumIdent, member, tok);
@@ -719,22 +712,6 @@ static void analyseType(Parser* parser, ASTStatement* s) {
             // in the parser, only used for analysis
             break;
     }
-}
-
-static Error errBitgroupParamSelfShadow = {0};
-static Error errBitgroupSubsUndefined = {0};
-static Error errSubstitutionError = {0};
-static Error errSubstitutionType = {0};
-static void analyseBitgroupErrors() {
-    newErrAt(&errBitgroupParamSelfShadow, ERROR_SEMANTIC, "Parameter name '%s' "
-        "collides with another parameter of the same name");
-    newErrAt(&errBitgroupSubsUndefined, ERROR_SEMANTIC, "Variable to "
-        "substitute is not defined");
-    newErrAt(&errSubstitutionError, ERROR_SEMANTIC, "Found undefined resultant "
-        "identifier while substituting into bitgroup");
-    newErrAt(&errSubstitutionType, ERROR_SEMANTIC, "Found resultant identifier "
-        "to have type %s, expecting VM_CONTROL_BIT while substituting "
-        "into bitgroup");
 }
 
 static void analyseBitgroup(Parser* parser, ASTStatement* s) {
@@ -765,8 +742,11 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         passed &= userTypeCheck(parser, USER_TYPE_ENUM, pair);
 
         if(tableHas(&paramNames, &pair->value)) {
-            error(parser, &errBitgroupParamSelfShadow, &pair->value.range,
-                pair->value.data.string);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Parameter name '%s' collides with "
+                "another parameter of the same name", pair->value.data.string);
+            errAddSource(err, &pair->value.range);
+            errEmit(err, parser);
         }
         tableSet(&paramNames, &pair->value, &pair->name);
     }
@@ -785,7 +765,11 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
             Token* typeName;
             if(!tableGet(&paramNames, &seg->identifier, (void**)&typeName)) {
-                error(parser, &errBitgroupSubsUndefined, &seg->identifier.range);
+                Error* err = errNew(ERROR_SEMANTIC);
+                errAddText(err, TextRed, "Variable to substitute is not "
+                    "defined");
+                errAddSource(err, &seg->identifier.range);
+                errEmit(err, parser);
                 passed = false;
             } else {
                 Identifier* type;
@@ -867,12 +851,20 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         // control bit was formed
         Identifier* val;
         if(!tableGet(&identifiers, currentIdent, (void**)&val)) {
-            error(parser, &errSubstitutionError, &value->as.bitgroup.definition->range);
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Found undefined resultant identifier "
+                "while substituting into bitgroup");
+            errAddSource(err, &value->as.bitgroup.definition->range);
+            errEmit(err, parser);
             passed = false;
         }
         if(val->type != TYPE_VM_CONTROL_BIT) {
-            error(parser, &errSubstitutionType, &value->as.bitgroup.definition->range,
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "Found resultant identifier to have type "
+                "%s, expecting VM_CONTROL_BIT while substituting into bitgroup",
                 IdentifierTypeNames[val->type]);
+            errAddSource(err, &value->as.bitgroup.definition->range);
+            errEmit(err, parser);
             passed = false;
         }
 
@@ -885,38 +877,10 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
     value->as.bitgroup.lineLength = lineLength;
 }
 
-static bool errorsInitialised;
-typedef void (*errorInitialiser)();
-static errorInitialiser errorInitialisers[] = {
-    getParameterErrors,
-    alreadyDefinedErrors,
-    wrongTypeErrors,
-    userTypeCheckErrors,
-    analyseLineErrors,
-    mcodeBitArrayCheckErrors,
-    analyseHeaderErrors,
-    analyseOpcodeErrors,
-    analyseTypeErrors,
-    analyseBitgroupErrors
-};
-
-void InitAnalysis() {
-    // initialise errors in consistant order
-    // can be run without the analysis to be able to map an error id
-    // to an error
-    if(!errorsInitialised) {
-        for(unsigned int i = 0;
-            i < sizeof(errorInitialisers)/sizeof(errorInitialiser); i++) {
-            errorInitialisers[i]();
-        }
-    }
-}
-
 void Analyse(Parser* parser, VMCoreGen* core) {
     CONTEXT(INFO, "Running analysis");
 
     if(parser->hadError)return;
-    if(!errorsInitialised)InitAnalysis();
 
     initTable(&identifiers, strHash, strCmp);
 
