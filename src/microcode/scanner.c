@@ -279,6 +279,7 @@ static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
     token.range.length = (int)(scanner->current - scanner->start);
     token.range.line = scanner->line;
     token.range.column = scanner->column;
+    token.range.filename = scanner->fileName;
     if(type == TOKEN_IDENTIFIER) {
         token.data.string = tokenAllocName(&token);
     }
@@ -294,6 +295,7 @@ static Token errorToken(Scanner* scanner, const char* message) {
     token.range.length = (int)(scanner->current - scanner->start);
     token.range.line = scanner->line;
     token.range.column = scanner->column;
+    token.range.filename = scanner->fileName;
     token.data.string = message;
 
     return token;

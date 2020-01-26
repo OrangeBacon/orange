@@ -17,7 +17,10 @@ typedef struct ErrorChunk {
     } type;
 
     union {
-        const char* text;
+        struct {
+            const char* message;
+            TextColor color;
+        } text;
         SourceRange source;
     } as;
 } ErrorChunk;

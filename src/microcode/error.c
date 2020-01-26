@@ -74,8 +74,11 @@ static void printMessage(Parser* parser, SourceRange* range, const char* name, u
 Error* errNew(ErrorLevel level) {
     CONTEXT(INFO, "Creating Error");
     Error* err = ArenaAlloc(sizeof(Error));
+
     err->level = level;
     ARRAY_ALLOC(ErrorChunk, *err, chunk);
+
+    return err;
 }
 
 void errAddText(Error* err, TextColor color, const char* text, ...) {
@@ -89,7 +92,8 @@ void vErrAddText(Error* err, TextColor color, const char* text, va_list args) {
     CONTEXT(TRACE, "Adding text to error");
     ErrorChunk chunk;
     chunk.type = ERROR_CHUNK_TEXT;
-    chunk.as.text = vaprintf(text, args);
+    chunk.as.text.message = vaprintf(text, args);
+    chunk.as.text.color = color;
     PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
 }
 
@@ -115,4 +119,5 @@ void errEmit(Error* err, struct Parser* parser) {
 
 void printErrors(Parser* parser) {
     printf("PRINTING ERROR - TODO: SHOW PROPER INFOMATION");
+    (void)parser;
 }

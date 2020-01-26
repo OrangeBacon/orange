@@ -74,6 +74,6 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
 
 // format a string into a newly allocated buffer valid for the life of
 // the compiler - avoids storing va_list
-char* aprintf(char* format, ...);
+char* aprintf(const char* format, ...);
 
-char* vaprintf(char* format, va_list args);
+char* vaprintf(const char* format, va_list args);

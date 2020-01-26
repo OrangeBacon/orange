@@ -106,7 +106,7 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size) {
     return new_ptr;
 }
 
-char* aprintf(char* format, ...) {
+char* aprintf(const char* format, ...) {
     va_list args;
     va_start(args, format);
     char* buf = vaprintf(format, args);
@@ -114,7 +114,7 @@ char* aprintf(char* format, ...) {
     return buf;
 }
 
-char* vaprintf(char* format, va_list args) {
+char* vaprintf(const char* format, va_list args) {
 
     va_list lengthArgs;
     va_copy(lengthArgs, args);
