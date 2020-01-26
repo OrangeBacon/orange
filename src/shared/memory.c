@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "shared/memory.h"
 #include "shared/log.h"
 
@@ -104,4 +105,25 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size) {
     void* new_ptr = ArenaAlloc(new_size);
     memcpy(new_ptr, old_ptr, old_size);
     return new_ptr;
+}
+
+char* aprintf(char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    char* buf = vaprintf(format, args);
+    va_end(args);
+    return buf;
+}
+
+char* vaprintf(char* format, va_list args) {
+
+    va_list lengthArgs;
+    va_copy(lengthArgs, args);
+    size_t len = vsnprintf(NULL, 0, format, lengthArgs) + 1;
+    va_end(lengthArgs);
+
+    char* buf = ArenaAlloc(len * sizeof(char));
+    vsprintf(buf, format, args);
+
+    return buf;
 }

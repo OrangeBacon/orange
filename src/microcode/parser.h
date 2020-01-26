@@ -29,7 +29,7 @@ typedef struct Parser {
 
     DEFINE_ARRAY(bool, errorStack);
 
-    DEFINE_ARRAY(struct EmittedError, error);
+    DEFINE_ARRAY(struct Error*, error);
 } Parser;
 
 // initialise a new parser

@@ -33,11 +33,6 @@ static bool check(Parser* parser, MicrocodeTokenType type) {
     return parser->current.type == type;
 }
 
-static Error errUnexpectedCharacter = {0};
-static void advanceErrors() {
-    newErrCurrent(&errUnexpectedCharacter, ERROR_SYNTAX, "%s");
-}
-
 // reports all error tokens, returning next non error token
 static void advance(Parser* parser) {
     CONTEXT(DEBUG, "Get next valid token");
@@ -49,8 +44,12 @@ static void advance(Parser* parser) {
             TRACE("Found valid token");
             break;
         }
+
         DEBUG("Found error token");
-        error(parser, &errUnexpectedCharacter, parser->current.data.string);
+        Error* err = errNew(ERROR_SYNTAX);
+        errAddText(err, TextRed, "Unexpected Character %s", parser->current.data.string);
+        errAddSource(err, &parser->current.range);
+        errEmit(err, parser);
     }
 }
 
@@ -62,18 +61,28 @@ static bool match(Parser* parser, MicrocodeTokenType type) {
     return true;
 }
 
-static void consume(Parser* parser, Error* error, ...) {
+static void consume(Parser* parser, MicrocodeTokenType tok,
+    const char* message, ...)
+{
     CONTEXT(DEBUG, "consume valid token");
+
     va_list args;
-    va_start(args, error);
-    if(parser->current.type == error->consumeType) {
+    va_start(args, message);
+
+    if(parser->current.type == tok) {
         advance(parser);
         va_end(args);
-        DEBUG("Found %s token", TokenNames[error->consumeType]);
+        DEBUG("Found %s token", TokenNames[tok]);
         return;
     }
-    INFO("Could not find %s token", TokenNames[error->consumeType]);
-    vError(parser, error, args);
+
+    INFO("Could not find %s token", TokenNames[tok]);
+
+    Error* err = errNew(ERROR_SYNTAX);
+    vErrAddText(err, TextRed, message, args);
+    errAddSource(err, &parser->current.range);
+    errEmit(err, parser);
+
     va_end(args);
 }
 
@@ -139,7 +148,8 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
                     break;
                 }
             }
-            consume(parser, &errParameterRightParen);
+            consume(parser, TOKEN_RIGHT_PAREN, "Expected ')', got '%s'",
+                parser->previous.data.string);
         }
         bit.range.length = parser->previous.range.start + parser->previous.range.length - bit.range.start;
         PUSH_ARRAY(Token, result, data, bit);
@@ -610,7 +620,7 @@ bool Parse(Parser* parser, Scanner* scan, AST* ast) {
     parser->hadError = false;
     parser->panicMode = false;
     ARRAY_ALLOC(bool, *parser, errorStack);
-    ARRAY_ALLOC(EmittedError, *parser, error);
+    ARRAY_ALLOC(Error, *parser, error);
     parser->ast = ast;
 
     return runParser(parser);

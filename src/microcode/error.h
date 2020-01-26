@@ -3,57 +3,35 @@
 
 #include <stdarg.h>
 #include "shared/platform.h"
-
-struct Parser;
-struct Token;
+#include "microcode/token.h"
 
 typedef enum ErrorLevel {
     ERROR_SYNTAX,
     ERROR_SEMANTIC,
 } ErrorLevel;
 
-typedef enum ErrorLocation {
-    EL_ASK,
-    EL_CURRENT,
-    EL_PREVIOUS,
-    EL_END
-} ErrorLocation;
+typedef struct ErrorChunk {
+    enum {
+        ERROR_CHUNK_TEXT,
+        ERROR_CHUNK_SOURCE
+    } type;
+
+    union {
+        const char* text;
+        SourceRange source;
+    } as;
+} ErrorChunk;
 
 typedef struct Error {
-    unsigned int id;
     ErrorLevel level;
-    const char* message;
-    ErrorLocation location;
-    MicrocodeTokenType consumeType;
-    DEFINE_ARRAY(const char*, note);
+    DEFINE_ARRAY(ErrorChunk, chunk);
 } Error;
 
-typedef struct EmittedErrorNoteData {
-    SourceRange token;
-    const char* message;
-} EmittedErrorNoteData;
-
-typedef struct EmittedError {
-    Error* error;
-    SourceRange range;
-    bool atEnd;
-    const char* message;
-    const char* name;
-    TextColor color;
-    struct Parser* parser;
-    DEFINE_ARRAY(EmittedErrorNoteData, noteData);
-} EmittedError;
-
-void newErrAt(Error* error, ErrorLevel level, const char* message);
-void newErrCurrent(Error* error, ErrorLevel level, const char* message);
-void newErrPrevious(Error* error, ErrorLevel level, const char* message);
-void newErrEnd(Error* error, ErrorLevel level, const char* message);
-void newErrConsume(Error* error, ErrorLevel level,
-    MicrocodeTokenType type, const char* message);
-void newErrNoteAt(Error* error, const char* message);
-
-void vError(struct Parser* parser, Error* error, va_list args);
-void error(struct Parser* parser, Error* error, ...);
+Error* errNew(ErrorLevel level);
+void errAddText(Error* err, TextColor color, const char* text, ...);
+void vErrAddText(Error* err, TextColor color, const char* text, va_list args);
+void errAddSource(Error* err, SourceRange* loc);
+void errEmit(Error* err, struct Parser* parser);
 
 void printErrors(struct Parser* parser);
 
