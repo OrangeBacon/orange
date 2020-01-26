@@ -63,23 +63,6 @@ void addCommand(VMCoreGen* core, Command command) {
     PUSH_ARRAY(Command, *core, command, command);
 }
 
-char* aprintf(char* format, ...) {
-    va_list args;
-    va_start(args, format);
-
-    size_t len = vsnprintf(NULL, 0, format, args) + 1;
-    char* buf = ArenaAlloc(len * sizeof(char));
-
-    va_end(args);
-    va_start(args, format);
-
-    vsprintf(buf, format, args);
-
-    va_end(args);
-
-    return buf;
-}
-
 void addHeader(VMCoreGen* core, const char* header) {
     tableSet(&core->headers, (void*)header, (void*)1);
 }
