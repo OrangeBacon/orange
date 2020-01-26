@@ -75,6 +75,7 @@ Error* errNew(ErrorLevel level) {
     CONTEXT(INFO, "Creating Error");
     Error* err = ArenaAlloc(sizeof(Error));
     err->level = level;
+    ARRAY_ALLOC(ErrorChunk, *err, chunk);
 }
 
 void errAddText(Error* err, TextColor color, const char* text, ...) {

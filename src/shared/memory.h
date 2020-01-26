@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 // section of memory
 typedef struct Area {
