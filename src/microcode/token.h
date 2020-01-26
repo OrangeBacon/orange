@@ -28,7 +28,8 @@ const char* TokenNames[FOREACH_TOKEN(ADD_TOKEN)];
 
 typedef struct SourceRange {
     const char* filename;
-    const char* start;
+    const char* tokenStart;
+    const char* sourceStart;
     int length;
     int line;
     int column;

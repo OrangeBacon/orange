@@ -597,7 +597,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         GenOpCode* gencode = &core->opcodes[opcodeID+i];
         gencode->isValid = true;
         gencode->id = opcodeID+i;
-        gencode->name = opcode->name.range.start;
+        gencode->name = opcode->name.range.tokenStart;
         gencode->nameLen = opcode->name.range.length;
         ARRAY_ALLOC(GenOpCodeLine, *gencode, line);
 

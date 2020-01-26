@@ -113,13 +113,13 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
     BitArray result;
     result.range.column = parser->current.range.column;
     result.range.line = parser->current.range.line;
-    result.range.start = parser->current.range.start;
+    result.range.tokenStart = parser->current.range.tokenStart;
     ARRAY_ALLOC(Token, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
         bit.range.column = parser->current.range.column;
         bit.range.line = parser->current.range.line;
-        bit.range.start = parser->current.range.start;
+        bit.range.tokenStart = parser->current.range.tokenStart;
         bit.data = parser->previous;
         ARRAY_ZERO(bit, param);
         if(match(parser, TOKEN_LEFT_PAREN)) {
@@ -133,15 +133,15 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
             consume(parser, TOKEN_RIGHT_PAREN, "Expected ')', got '%s'",
                 parser->previous.data.string);
         }
-        bit.range.length = parser->previous.range.start +
-            parser->previous.range.length - bit.range.start;
+        bit.range.length = parser->previous.range.tokenStart +
+            parser->previous.range.length - bit.range.tokenStart;
         PUSH_ARRAY(Token, result, data, bit);
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }
     }
-    result.range.length = parser->previous.range.start +
-        parser->previous.range.length - result.range.start;
+    result.range.length = parser->previous.range.tokenStart +
+        parser->previous.range.length - result.range.tokenStart;
     return result;
 }
 

@@ -8,30 +8,22 @@
 #include "microcode/error.h"
 #include "shared/log.h"
 
-/*
-static void printLine(Parser* parser, int line, int* start, int* length, int lineNumberLength) {
-    if(getLine(parser->scanner->base, line, start, length)) {
-        cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength, line, *length, parser->scanner->base + *start);
+
+static void printLine(SourceRange* range, int lineNumberLength, int offset,
+    int* start, int* length)
+{
+    if(getLine(range->sourceStart, range->line + offset, start, length)) {
+        cErrPrintf(TextWhite, "  %*i | %.*s\n", lineNumberLength,
+            range->line + offset, *length, range->sourceStart + *start);
     }
 }
 
 // print a message about a token to stderr
-static void printMessage(Parser* parser, SourceRange* range, const char* name, unsigned int code, TextColor color,
-    const char* message) {
-    CONTEXT(DEBUG, "Printing Error");
-    setErrorState(parser);
-
-    // error message
-    if(code == 0) {
-        cErrPrintf(color, "%s: ", name);
-    } else {
-        cErrPrintf(color, "%s [E%04u]: ", name, code);
-    }
-    cErrPrintf(color, message);
-    printf("\n");
+static void printMessage(SourceRange* range, TextColor color) {
+    CONTEXT(DEBUG, "Printing Error Source");
 
     // file name/location
-    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", parser->scanner->fileName, range->line, range->column);
+    cErrPrintf(TextWhite, "  --> %s:%i:%i\n", range->filename, range->line, range->column);
 
     // number of charcters required to print the longest line number
     int lineNumberLength = floor(log10(abs(range->line + 1))) + 1;
@@ -40,13 +32,13 @@ static void printMessage(Parser* parser, SourceRange* range, const char* name, u
     int length;
 
     // line before the error
-    printLine(parser, range->line - 1, &start, &length, lineNumberLength);
+    printLine(range, lineNumberLength, -1, &start, &length);
 
     // line with the error token on
-    printLine(parser, range->line, &start, &length, lineNumberLength);
+    printLine(range, lineNumberLength, 0, &start, &length);
 
     // how far along the line the error token starts
-    int startPos = range->start - parser->scanner->base - start;
+    int startPos = range->tokenStart - range->sourceStart - start;
 
     // buffer to store arrow to errored token
     char* buf = malloc(length * sizeof(char));
@@ -66,10 +58,10 @@ static void printMessage(Parser* parser, SourceRange* range, const char* name, u
     }
 
     // line after error token
-    printLine(parser, range->line + 1, &start, &length, lineNumberLength);
+    printLine(range, lineNumberLength, 1, &start, &length);
 
     printf("\n");
-}*/
+}
 
 Error* errNew(ErrorLevel level) {
     CONTEXT(INFO, "Creating Error");
@@ -113,11 +105,32 @@ void errEmit(Error* err, struct Parser* parser) {
     if(err->level == ERROR_SYNTAX) {
         parser->panicMode = true;
     }
+    setErrorState(parser);
 
     PUSH_ARRAY(Error, *parser, error, err);
 }
 
 void printErrors(Parser* parser) {
-    printf("PRINTING ERROR - TODO: SHOW PROPER INFOMATION");
-    (void)parser;
+    for(unsigned int i = 0; i < parser->errorCount; i++) {
+        Error* err = parser->errors[i];
+        if(err->level == ERROR_SYNTAX) {
+            cErrPrintf(TextWhite, "Syntax Error:\n");
+        } else if(err->level == ERROR_SEMANTIC) {
+            cErrPrintf(TextWhite, "Semantic Error:\n");
+        }
+
+        TextColor color = TextWhite;
+        for(unsigned int j = 0; j < err->chunkCount; j++) {
+            ErrorChunk* chunk = &err->chunks[j];
+            switch(chunk->type) {
+                case ERROR_CHUNK_TEXT:
+                    cErrPrintf(chunk->as.text.color, chunk->as.text.message);
+                    cErrPrintf(TextWhite, "\n");
+                    color = chunk->as.text.color;
+                    break;
+                case ERROR_CHUNK_SOURCE:
+                    printMessage(&chunk->as.source, color);
+            }
+        }
+    }
 }

@@ -233,7 +233,7 @@ static Token string(Scanner* scanner, char end) {
     Token ret = makeToken(scanner, TOKEN_STRING);
     char* buf = ArenaAlloc(sizeof(char) * (ret.range.length-2+1));
     *buf = '\0';
-    strncat(buf, ret.range.start+1, ret.range.length-2);
+    strncat(buf, ret.range.tokenStart+1, ret.range.length-2);
     ret.data.string = buf;
     return ret;
 }
@@ -275,11 +275,12 @@ static MicrocodeTokenType checkKeyword(Scanner* scanner, int start, int length,
 static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
     Token token;
     token.type = type;
-    token.range.start = scanner->start;
+    token.range.tokenStart = scanner->start;
     token.range.length = (int)(scanner->current - scanner->start);
     token.range.line = scanner->line;
     token.range.column = scanner->column;
     token.range.filename = scanner->fileName;
+    token.range.sourceStart = scanner->base;
     if(type == TOKEN_IDENTIFIER) {
         token.data.string = tokenAllocName(&token);
     }
@@ -291,11 +292,12 @@ static Token makeToken(Scanner* scanner, MicrocodeTokenType type) {
 static Token errorToken(Scanner* scanner, const char* message) {
     Token token;
     token.type = TOKEN_ERROR;
-    token.range.start = scanner->start;
+    token.range.tokenStart = scanner->start;
     token.range.length = (int)(scanner->current - scanner->start);
     token.range.line = scanner->line;
     token.range.column = scanner->column;
     token.range.filename = scanner->fileName;
+    token.range.sourceStart = scanner->base;
     token.data.string = message;
 
     return token;
