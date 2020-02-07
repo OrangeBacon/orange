@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include "shared/platform.h"
+#include "shared/graph.h"
 #include "microcode/token.h"
 
 typedef enum ErrorLevel {
@@ -13,7 +14,8 @@ typedef enum ErrorLevel {
 typedef struct ErrorChunk {
     enum {
         ERROR_CHUNK_TEXT,
-        ERROR_CHUNK_SOURCE
+        ERROR_CHUNK_SOURCE,
+        ERROR_CHUNK_GRAPH
     } type;
 
     union {
@@ -22,6 +24,7 @@ typedef struct ErrorChunk {
             TextColor color;
         } text;
         SourceRange source;
+        Graph graph;
     } as;
 } ErrorChunk;
 
@@ -34,6 +37,7 @@ Error* errNew(ErrorLevel level);
 void errAddText(Error* err, TextColor color, const char* text, ...);
 void vErrAddText(Error* err, TextColor color, const char* text, va_list args);
 void errAddSource(Error* err, SourceRange* loc);
+void errAddGraph(Error* err, Graph* graph);
 void errEmit(Error* err, struct Parser* parser);
 
 void printErrors(struct Parser* parser);

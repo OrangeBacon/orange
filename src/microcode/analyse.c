@@ -285,6 +285,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         errAddText(err, TextRed, "Unable to order microcode bits in line %u",
             lineNumber);
         errAddSource(err, &opcodeName->range);
+        errAddText(err, TextBlue, "Instruction graph: ");
+        errAddGraph(err, &graph);
         errEmit(err, parser);
     }
 

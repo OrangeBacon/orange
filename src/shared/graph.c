@@ -37,7 +37,7 @@ Node* AddNode(Graph* graph, unsigned int node) {
 
 void AddEdge(Graph* graph, unsigned int start, unsigned int end) {
     PUSH_ARRAY(Edge, *graph, edge, ((Edge){
-        .start = AddNode(graph, start), 
+        .start = AddNode(graph, start),
         .end = AddNode(graph, end)
     }));
 }
@@ -47,7 +47,7 @@ NodeArray NodesNoInput(Graph* graph) {
     // initialise return value
     NodeArray ret;
     ARRAY_ALLOC(Node*, ret, node);
-    
+
     // check each node
     for(unsigned int i = 0; i < graph->nodeCount; i++) {
         Node* node = &graph->nodes[i];
@@ -98,4 +98,13 @@ NodeArray TopologicalSort(Graph* graph) {
 
     ret.validArray = !retNull;
     return ret;
+}
+
+void printGraph(Graph* graph) {
+    cOutPrintf(TextWhite, "digraph g {\n");
+    for(unsigned i = 0; i < graph->edgeCount; i++) {
+        Edge* edge = &graph->edges[i];
+        cOutPrintf(TextWhite, "\t\"%d\" -> \"%d\";\n", edge->start->value, edge->start->value);
+    }
+    cOutPrintf(TextWhite, "}\n");
 }

@@ -97,6 +97,14 @@ void errAddSource(Error* err, SourceRange* loc) {
     PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
 }
 
+void errAddGraph(Error* err, Graph* graph) {
+    CONTEXT(TRACE, "Adding graph to error");
+    ErrorChunk chunk;
+    chunk.type = ERROR_CHUNK_GRAPH;
+    chunk.as.graph = *graph;
+    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+}
+
 void errEmit(Error* err, struct Parser* parser) {
     CONTEXT(INFO, "Emitting created error");
     if(parser->panicMode) return;
@@ -130,7 +138,15 @@ void printErrors(Parser* parser) {
                     break;
                 case ERROR_CHUNK_SOURCE:
                     printMessage(&chunk->as.source, color);
+                    break;
+                case ERROR_CHUNK_GRAPH:
+                    printGraph(&chunk->as.graph);
             }
         }
+    }
+
+    if(parser->errorCount > 0) {
+        cErrPrintf(TextRed, "Build Failed due to %d previous messages\n",
+            parser->errorCount);
     }
 }

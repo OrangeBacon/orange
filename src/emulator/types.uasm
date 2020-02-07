@@ -8,3 +8,10 @@ bitgroup RegToAddress(Reg reg) {
 bitgroup AddressToReg(Reg reg) {
     AddressTo$(reg)
 }
+
+bitgroup RegToData(Reg reg) {
+    $(reg)ToData
+}
+bitgroup DataToReg(Reg reg) {
+    DataTo$(reg)
+}

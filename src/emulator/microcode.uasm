@@ -16,6 +16,10 @@ opcode jmp 0b0110010010(Reg rega, Reg regb) {
     AToAddress, memReadToData, DataToB;
 }
 
+#opcode mov 0b0000000011(Reg dst, Reg src) {
+#    RegToData(src), DataToReg(dst)
+#}
+
 opcode hlt 0b1111111111111111() {
     halt
 }

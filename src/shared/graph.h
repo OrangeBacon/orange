@@ -47,4 +47,6 @@ NodeArray NodesNoInput(Graph* graph);
 // sort the nodes
 NodeArray TopologicalSort(Graph* graph);
 
+void printGraph(Graph* graph);
+
 #endif
