@@ -17,8 +17,8 @@ static bool isInArray(Node* arr, unsigned int count, unsigned int value) {
     return false;
 }
 
-Node* AddNode(Graph* graph, unsigned int node) {
-    Node newNode = {.value = node, .removed = false};
+Node* AddNode(Graph* graph, unsigned int node, const char* name) {
+    Node newNode = {.value = node, .removed = false, .name = name};
 
     // add new node
     if(!isInArray(graph->nodes, graph->nodeCount, node)) {
@@ -35,10 +35,20 @@ Node* AddNode(Graph* graph, unsigned int node) {
     return NULL;
 }
 
-void AddEdge(Graph* graph, unsigned int start, unsigned int end) {
+void AddEdge(Graph* graph, unsigned int startVal, const char* startName, unsigned int endVal, const char* endName) {
+    Node* start = AddNode(graph, startVal, startName);
+    Node* end = AddNode(graph, endVal, endName);
+
+    for(unsigned int i = 0; i < graph->edgeCount; i++) {
+        if(graph->edges[i].start->value == startVal &&
+           graph->edges[i].end->value == endVal) {
+            return;
+        }
+    }
+
     PUSH_ARRAY(Edge, *graph, edge, ((Edge){
-        .start = AddNode(graph, start),
-        .end = AddNode(graph, end)
+        .start = start,
+        .end = end
     }));
 }
 
@@ -104,7 +114,7 @@ void printGraph(Graph* graph) {
     cOutPrintf(TextWhite, "digraph g {\n");
     for(unsigned i = 0; i < graph->edgeCount; i++) {
         Edge* edge = &graph->edges[i];
-        cOutPrintf(TextWhite, "\t\"%d\" -> \"%d\";\n", edge->start->value, edge->start->value);
+        cOutPrintf(TextWhite, "\t\"%s\" -> \"%s\";\n", edge->start->name, edge->start->name);
     }
     cOutPrintf(TextWhite, "}\n");
 }

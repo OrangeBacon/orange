@@ -8,6 +8,10 @@ typedef struct Node {
     // ids do not have to be sequential
     unsigned int value;
 
+    // name of the node, only used in printing the graph
+    // does not affect node comparisons.
+    const char* name;
+
     // is the node still active, used in toposport
     bool removed;
 } Node;
@@ -36,10 +40,14 @@ typedef struct NodeArray {
 void InitGraph(Graph* graph);
 
 // add and return a new node
-Node* AddNode(Graph* graph, unsigned int node);
+// if it finds a node with the same id, it will return that one, rather than
+// creating a new node.  In that case, the returned node's name will be
+// the one it already had, not what was passed to this function.
+Node* AddNode(Graph* graph, unsigned int node, const char* name);
 
 // link two nodes
-void AddEdge(Graph* graph, unsigned int start, unsigned int end);
+// creates the nodes if they do not exist.
+void AddEdge(Graph* graph, unsigned int startVal, const char* startName, unsigned int endVal, const char* endName);
 
 // return the array of active nodes with no edges directed inwards
 NodeArray NodesNoInput(Graph* graph);

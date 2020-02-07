@@ -258,7 +258,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         tableGet(&identifiers, (char*)line->datas[i].data.data.string,
             (void**)&value);
         unsigned int command = value->as.control.value;
-        AddNode(&graph, command);
+        AddNode(&graph, command, aprintf("command %d", command));
         for(unsigned int j = 0;
             j < core->commands[command].changesLength; j++) {
             unsigned int changed = core->commands[command].changes[j];
@@ -271,7 +271,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
                     l < core->commands[comm].dependsLength; l++) {
                     unsigned int depended = core->commands[comm].depends[l];
                     if(changed == depended) {
-                        AddEdge(&graph, command, comm);
+                        AddEdge(&graph, command, aprintf("command %d", command), comm, aprintf("command %d", comm));
                     }
                 }
             }
