@@ -595,6 +595,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         }
     }
 
+    bool errored = false;
     for(unsigned int i = 0; i < possibilities; i++) {
         GenOpCode* gencode = &core->opcodes[opcodeID+i];
         gencode->isValid = true;
@@ -609,7 +610,13 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
 
+            unsigned int errorCount = parser->errorCount;
             NodeArray low = genlinePush(&line->bitsLow, core, parser, opcode, i, j, tests);
+            if(parser->errorCount > errorCount) {
+                INFO("Leaving opcode analysis due to errors");
+                errored = true;
+                break;
+            }
             for(unsigned int k = 0; k < low.nodeCount; k++) {
                 TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+i);
                 PUSH_ARRAY(unsigned int, *genline, lowBit, low.nodes[k]->value);
@@ -617,7 +624,13 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
             if(line->hasCondition) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
+                unsigned int errorCount = parser->errorCount;
                 NodeArray high = genlinePush(&line->bitsHigh, core, parser, opcode, i, j, tests);
+                if(parser->errorCount > errorCount) {
+                    INFO("Leaving opcode analysis due to errors");
+                    errored = true;
+                    break;
+                }
                 for(unsigned int k = 0; k < high.nodeCount; k++) {
                     PUSH_ARRAY(unsigned int, *genline, highBit, high.nodes[k]->value);
                 }
@@ -628,6 +641,10 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             }
 
             PUSH_ARRAY(GenOpCodeLine, *gencode, line, genline);
+        }
+
+        if(errored) {
+            break;
         }
     }
 }
