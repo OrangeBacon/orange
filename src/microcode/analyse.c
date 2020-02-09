@@ -263,6 +263,11 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     InitGraph(&graph, printGraphState);
 
     for(unsigned int i = 0; i < line->dataCount; i++) {
+        // adds a command to the graph
+        // the command gets a node in the graph
+        // add edge command -> everything it changes
+        // add edge everything it depends on -> command
+
         Identifier* bitIdent;
         tableGet(&identifiers, (char*)line->datas[i].data.data.string,
             (void**)&bitIdent);
@@ -289,8 +294,6 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         }
     }
 
-    printGraph(&graph);
-
     // get execution order for the microcode bits
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
@@ -298,10 +301,20 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         errAddText(err, TextRed, "Unable to order microcode bits in line %u",
             lineNumber);
         errAddSource(err, &opcodeName->range);
-        errAddText(err, TextBlue, "Instruction graph: ");
+        errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
         errAddGraph(err, &graph);
         errEmit(err, parser);
         return nodes;
+    }
+
+    // filter graph results for only commands, not components
+    NodeArray commands;
+    ARRAY_ALLOC(Node*, commands, node);
+    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
+        Node* node = nodes.nodes[i];
+        if((GraphState)node->data == GRAPH_STATE_COMMAND) {
+            PUSH_ARRAY(Node*, commands, node, node);
+        }
     }
 
     // checking if any bus reads happen when the bus has not been written to
@@ -313,12 +326,9 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     }
 
     // loop through all commands in execution order
-    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
+    for(unsigned int i = 0; i < commands.nodeCount; i++) {
 
-        // TODO: THIS IS BROKEN
-        // each node id is a component, used as a command ID!
-        // very wrong
-        Command* command = &core->commands[nodes.nodes[i]->value];
+        Command* command = &core->commands[commands.nodes[i]->value];
 
         // read from bus and check if possible
         for(unsigned int j = 0; j < command->readsLength; j++) {
@@ -328,7 +338,10 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
                 errAddText(err, TextRed, "Command reads from bus before it was "
                     "written in line %u", lineNumber);
                 errAddSource(err, &opcodeName->range);
+                errAddText(err, TextBlue, "Command graph (graphviz dot):");
+                errAddGraph(err, &graph);
                 errEmit(err, parser);
+                nodes.validArray = false;
             }
         }
 
@@ -628,9 +641,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
 
-            unsigned int errorCount = parser->errorCount;
             NodeArray low = genlinePush(&line->bitsLow, core, parser, opcode, i, j, tests);
-            if(parser->errorCount > errorCount) {
+            if(!low.validArray) {
                 INFO("Leaving opcode analysis due to errors");
                 errored = true;
                 break;
@@ -642,9 +654,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
             if(line->hasCondition) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
-                unsigned int errorCount = parser->errorCount;
                 NodeArray high = genlinePush(&line->bitsHigh, core, parser, opcode, i, j, tests);
-                if(parser->errorCount > errorCount) {
+                if(!high.validArray) {
                     INFO("Leaving opcode analysis due to errors");
                     errored = true;
                     break;
