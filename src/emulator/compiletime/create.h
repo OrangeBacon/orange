@@ -56,7 +56,8 @@ const char* ComponentTypeNames[FOREACH_COMPONENT(ADD_COMPONENT)];
 #undef ADD_COMPONENT
 
 typedef struct Component {
-    const char* name;
+    const char* internalName;
+    const char* printName;
     ComponentType type;
 
     bool busStatus;

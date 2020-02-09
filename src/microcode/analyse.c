@@ -250,33 +250,30 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     Graph graph;
     InitGraph(&graph);
 
-    // This works. Dont ask how, I cannot remember
-    // creates dependancy graph for all the microcode bits, based on what they
-    // change and what values they depend on.
     for(unsigned int i = 0; i < line->dataCount; i++) {
-        Identifier* value;
+        Identifier* bitIdent;
         tableGet(&identifiers, (char*)line->datas[i].data.data.string,
-            (void**)&value);
-        unsigned int command = value->as.control.value;
-        AddNode(&graph, command, aprintf("command %d", command));
-        for(unsigned int j = 0;
-            j < core->commands[command].changesLength; j++) {
-            unsigned int changed = core->commands[command].changes[j];
-            for(unsigned int k = 0; k < line->dataCount; k++) {
-                Identifier* value;
-                tableGet(&identifiers, (char*)line->datas[k].data.data.string,
-                    (void**)&value);
-                unsigned int comm = value->as.control.value;
-                for(unsigned int l = 0;
-                    l < core->commands[comm].dependsLength; l++) {
-                    unsigned int depended = core->commands[comm].depends[l];
-                    if(changed == depended) {
-                        AddEdge(&graph, command, aprintf("command %d", command), comm, aprintf("command %d", comm));
-                    }
-                }
+            (void**)&bitIdent);
+        unsigned int commandID = bitIdent->as.control.value;
+        Command* coreCommand = &core->commands[commandID];
+
+        // add edge from every dependancy to everything this command changes
+        // each dependancy could change any of the components in changes
+        for(unsigned int j = 0; j < coreCommand->dependsLength; j++) {
+            unsigned int dependCompID = coreCommand->depends[j];
+            Component* dependComp = &core->components[dependCompID];
+
+            for(unsigned int k = 0; k < coreCommand->changesLength; k++) {
+                unsigned int changeCompID = coreCommand->changes[k];
+                Component* changeComp = &core->components[changeCompID];
+
+                AddEdge(&graph, dependCompID, dependComp->printName,
+                    changeCompID, changeComp->printName);
             }
         }
     }
+
+    printGraph(&graph);
 
     // get execution order for the microcode bits
     NodeArray nodes = TopologicalSort(&graph);
@@ -288,6 +285,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         errAddText(err, TextBlue, "Instruction graph: ");
         errAddGraph(err, &graph);
         errEmit(err, parser);
+        return nodes;
     }
 
     // checking if any bus reads happen when the bus has not been written to
@@ -300,6 +298,10 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
 
     // loop through all commands in execution order
     for(unsigned int i = 0; i < nodes.nodeCount; i++) {
+
+        // TODO: THIS IS BROKEN
+        // each node id is a component, used as a command ID!
+        // very wrong
         Command* command = &core->commands[nodes.nodes[i]->value];
 
         // read from bus and check if possible
@@ -875,7 +877,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 "while substituting into bitgroup");
             errAddSource(err, &value->as.bitgroup.definition->range);
             errEmit(err, parser);
-            passed = false;
+            return;
         }
         if(val->type != TYPE_VM_CONTROL_BIT) {
             Error* err = errNew(ERROR_SEMANTIC);
@@ -884,10 +886,6 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 IdentifierTypeNames[val->type]);
             errAddSource(err, &value->as.bitgroup.definition->range);
             errEmit(err, parser);
-            passed = false;
-        }
-
-        if(!passed) {
             return;
         }
     }

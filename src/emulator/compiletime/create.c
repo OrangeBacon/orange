@@ -105,7 +105,8 @@ unsigned int addRegister(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
     PUSH_ARRAY(Component, *core, component, ((Component){
-        .name = name,
+        .internalName = name,
+        .printName = aprintf("Register %s", name),
         .type = COMPONENT_REGISTER
     }));
     return core->componentCount - 1;
@@ -115,7 +116,8 @@ unsigned int addBus(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
     PUSH_ARRAY(Component, *core, component, ((Component){
-        .name = name,
+        .internalName = name,
+        .printName = aprintf("Bus %s", name),
         .type = COMPONENT_BUS
     }));
     return core->componentCount - 1;
@@ -130,7 +132,7 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     if(core->components[iBus].type != COMPONENT_BUS) {
         cErrPrintf(TextRed, "Cannot initialise instruction register using an \"%s\" "
             "component \"%s\", \"BUS\" component required\n",
-            ComponentTypeNames[core->components[iBus].type], core->components[iBus].name);
+            ComponentTypeNames[core->components[iBus].type], core->components[iBus].internalName);
         exit(1);
     }
 
@@ -142,7 +144,8 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     addVariable(core, "uint16_t arg12");
     addVariable(core, "uint16_t arg123");
     PUSH_ARRAY(Component, *core, component, ((Component){
-        .name = "IReg",
+        .internalName = "IReg",
+        .printName = "Instruction Register",
         .type = COMPONENT_OTHER
     }));
     unsigned int this = core->componentCount - 1;
@@ -150,7 +153,7 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     addCommand(core, (Command) {
         .name = "iRegSet",
         .file = "instRegSet",
-        ARGUMENTS(((Argument){.name = "inst", .value = core->components[iBus].name})),
+        ARGUMENTS(((Argument){.name = "inst", .value = core->components[iBus].internalName})),
         DEPENDS(iBus),
         CHANGES(this),
         BUS_READ(iBus)
@@ -166,23 +169,24 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
     if(core->components[data].type != COMPONENT_BUS) {
         cErrPrintf(TextRed, "Cannot initialise 64k memory using an \"%s\" "
             "component \"%i\", \"BUS\" component required\n",
-            ComponentTypeNames[core->components[data].type], core->components[data].name);
+            ComponentTypeNames[core->components[data].type], core->components[data].internalName);
         exit(1);
     }
 
     addHeader(core, "<stdint.h>");
     PUSH_ARRAY(Component, *core, component, ((Component){
-        .name = "Memory64",
+        .internalName = "Memory64",
+        .printName = "Linear 64K Memory",
         .type = COMPONENT_OTHER
     }));
     unsigned int this = core->componentCount - 1;
 
     addCommand(core, (Command) {
-        .name = aprintf("memReadTo%s", core->components[data].name),
+        .name = aprintf("memReadTo%s", core->components[data].internalName),
         .file = "memRead",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->components[data].name}),
-            ((Argument){.name = "address", .value = core->components[address].name})),
+            ((Argument){.name = "data", .value = core->components[data].internalName}),
+            ((Argument){.name = "address", .value = core->components[address].internalName})),
         DEPENDS(address, this),
         CHANGES(data),
         BUS_READ(address),
@@ -193,8 +197,8 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
         .name = "memWrite",
         .file = "memWrite",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->components[data].name}),
-            ((Argument){.name = "address", .value = core->components[address].name})),
+            ((Argument){.name = "data", .value = core->components[data].internalName}),
+            ((Argument){.name = "address", .value = core->components[address].internalName})),
         DEPENDS(address, data),
         CHANGES(this),
         BUS_READ(address, data)
@@ -215,16 +219,16 @@ void addMemoryBusOutput(VMCoreGen* core, Memory* mem, unsigned int bus) {
     if(core->components[bus].type != COMPONENT_BUS) {
         cErrPrintf(TextRed, "Cannot initialise additional memory output using an \"%s\" "
             "component \"%s\", \"BUS\" component required\n",
-            ComponentTypeNames[core->components[bus].type], core->components[bus].name);
+            ComponentTypeNames[core->components[bus].type], core->components[bus].internalName);
         exit(1);
     }
 
     addCommand(core, (Command) {
-        .name = aprintf("memReadTo%s", core->components[bus].name),
+        .name = aprintf("memReadTo%s", core->components[bus].internalName),
         .file = "memRead",
         ARGUMENTS(
-            ((Argument){.name = "data", .value = core->components[bus].name}),
-            ((Argument){.name = "address", .value = core->components[mem->address].name})),
+            ((Argument){.name = "data", .value = core->components[bus].internalName}),
+            ((Argument){.name = "address", .value = core->components[mem->address].internalName})),
         DEPENDS(mem->address, mem->id),
         CHANGES(bus),
         BUS_READ(mem->address),
@@ -250,17 +254,17 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
             "components \"%s\" and \"%s\", \"BUS\" and \"REGISTER\" components required\n",
             ComponentTypeNames[core->components[bus].type],
             ComponentTypeNames[core->components[reg].type],
-            core->components[bus].name, core->components[reg].name);
+            core->components[bus].internalName, core->components[reg].internalName);
         exit(1);
     }
 
     if(state == -1 || state == 0) {
         addCommand(core, (Command) {
-            .name = aprintf("%sTo%s", core->components[bus].name, core->components[reg].name),
+            .name = aprintf("%sTo%s", core->components[bus].internalName, core->components[reg].internalName),
             .file = "busToReg",
             ARGUMENTS(
-                ((Argument){.name = "BUS", .value = core->components[bus].name}),
-                ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
+                ((Argument){.name = "BUS", .value = core->components[bus].internalName}),
+                ((Argument){.name = "REGISTER", .value = core->components[reg].internalName})),
             DEPENDS(bus),
             CHANGES(reg),
             BUS_READ(bus)
@@ -269,11 +273,11 @@ void addBusRegisterConnection(VMCoreGen* core, unsigned int bus, unsigned int re
 
     if(state == 0 || state == 1) {
         addCommand(core, (Command) {
-            .name = aprintf("%sTo%s", core->components[reg].name, core->components[bus].name),
+            .name = aprintf("%sTo%s", core->components[reg].internalName, core->components[bus].internalName),
             .file = "regToBus",
             ARGUMENTS(
-                ((Argument){.name = "BUS", .value = core->components[bus].name}),
-                ((Argument){.name = "REGISTER", .value = core->components[reg].name})),
+                ((Argument){.name = "BUS", .value = core->components[bus].internalName}),
+                ((Argument){.name = "REGISTER", .value = core->components[reg].internalName})),
             DEPENDS(reg),
             CHANGES(bus),
             BUS_WRITE(bus)

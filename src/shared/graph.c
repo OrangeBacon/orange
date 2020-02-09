@@ -46,10 +46,11 @@ void AddEdge(Graph* graph, unsigned int startVal, const char* startName, unsigne
         }
     }
 
-    PUSH_ARRAY(Edge, *graph, edge, ((Edge){
+    Edge e = {
         .start = start,
-        .end = end
-    }));
+        .end = end,
+    };
+    PUSH_ARRAY(Edge, *graph, edge, e);
 }
 
 NodeArray NodesNoInput(Graph* graph) {
@@ -112,9 +113,14 @@ NodeArray TopologicalSort(Graph* graph) {
 
 void printGraph(Graph* graph) {
     cOutPrintf(TextWhite, "digraph g {\n");
-    for(unsigned i = 0; i < graph->edgeCount; i++) {
+    for(unsigned int i = 0; i < graph->nodeCount; i++) {
+        Node* node = &graph->nodes[i];
+        cOutPrintf(TextWhite, "\t\"%s\";\n", node->name);
+    }
+
+    for(unsigned int i = 0; i < graph->edgeCount; i++) {
         Edge* edge = &graph->edges[i];
-        cOutPrintf(TextWhite, "\t\"%s\" -> \"%s\";\n", edge->start->name, edge->start->name);
+        cOutPrintf(TextWhite, "\t\"%s\" -> \"%s\";\n", edge->start->name, edge->end->name);
     }
     cOutPrintf(TextWhite, "}\n");
 }
