@@ -12,6 +12,9 @@ typedef struct Node {
     // does not affect node comparisons.
     const char* name;
 
+    // user-definable data for the node
+    void* data;
+
     // is the node still active, used in toposport
     bool removed;
 } Node;
@@ -22,10 +25,13 @@ typedef struct Edge {
     Node* end;
 } Edge;
 
+typedef void (*NodeDataPrintFn)(void*);
+
 // directional, cyclic graph
 typedef struct Graph {
     DEFINE_ARRAY(Node, node);
     DEFINE_ARRAY(Edge, edge);
+    NodeDataPrintFn nodeDataPrint;
 } Graph;
 
 // temporary array result
@@ -37,17 +43,16 @@ typedef struct NodeArray {
 } NodeArray;
 
 // create a new graph
-void InitGraph(Graph* graph);
+void InitGraph(Graph* graph, NodeDataPrintFn nodeDataPrint);
 
 // add and return a new node
 // if it finds a node with the same id, it will return that one, rather than
 // creating a new node.  In that case, the returned node's name will be
 // the one it already had, not what was passed to this function.
-Node* AddNode(Graph* graph, unsigned int node, const char* name);
+Node* AddNode(Graph* graph, unsigned int id, const char* name, void* data);
 
-// link two nodes
-// creates the nodes if they do not exist.
-void AddEdge(Graph* graph, unsigned int startVal, const char* startName, unsigned int endVal, const char* endName);
+// adds an edge between two already added nodes
+void AddEdge(Graph* graph, Node* start, Node* end);
 
 // return the array of active nodes with no edges directed inwards
 NodeArray NodesNoInput(Graph* graph);

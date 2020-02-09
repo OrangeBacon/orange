@@ -2,9 +2,10 @@
 #include "shared/platform.h"
 #include <stdlib.h>
 
-void InitGraph(Graph* graph) {
+void InitGraph(Graph* graph, NodeDataPrintFn print) {
     ARRAY_ALLOC(Node, *graph, node);
     ARRAY_ALLOC(Edge, *graph, edge);
+    graph->nodeDataPrint = print;
 }
 
 // is the provided node already in the graph?
@@ -17,31 +18,33 @@ static bool isInArray(Node* arr, unsigned int count, unsigned int value) {
     return false;
 }
 
-Node* AddNode(Graph* graph, unsigned int node, const char* name) {
-    Node newNode = {.value = node, .removed = false, .name = name};
+Node* AddNode(Graph* graph, unsigned int id, const char* name, void* data) {
+    Node newNode = {
+        .value = id,
+        .removed = false,
+        .name = name,
+        .data = data
+    };
 
     // add new node
-    if(!isInArray(graph->nodes, graph->nodeCount, node)) {
+    if(!isInArray(graph->nodes, graph->nodeCount, id)) {
         PUSH_ARRAY(void*, *graph, node, newNode);
         return &graph->nodes[graph->nodeCount - 1];
     }
 
     // search for already existing node and return it
     for(unsigned int i = 0; i < graph->nodeCount; i++) {
-        if(graph->nodes[i].value == node) {
+        if(graph->nodes[i].value == id) {
             return &graph->nodes[i];
         }
     }
     return NULL;
 }
 
-void AddEdge(Graph* graph, unsigned int startVal, const char* startName, unsigned int endVal, const char* endName) {
-    Node* start = AddNode(graph, startVal, startName);
-    Node* end = AddNode(graph, endVal, endName);
-
+void AddEdge(Graph* graph, Node* start, Node* end) {
     for(unsigned int i = 0; i < graph->edgeCount; i++) {
-        if(graph->edges[i].start->value == startVal &&
-           graph->edges[i].end->value == endVal) {
+        if(graph->edges[i].start == start &&
+           graph->edges[i].end == end) {
             return;
         }
     }
@@ -115,12 +118,18 @@ void printGraph(Graph* graph) {
     cOutPrintf(TextWhite, "digraph g {\n");
     for(unsigned int i = 0; i < graph->nodeCount; i++) {
         Node* node = &graph->nodes[i];
-        cOutPrintf(TextWhite, "\t\"%s\";\n", node->name);
+        cOutPrintf(TextWhite, "\t\"%s (", node->name);
+        graph->nodeDataPrint(node->data);
+        cOutPrintf(TextWhite, ")\";\n");
     }
 
     for(unsigned int i = 0; i < graph->edgeCount; i++) {
         Edge* edge = &graph->edges[i];
-        cOutPrintf(TextWhite, "\t\"%s\" -> \"%s\";\n", edge->start->name, edge->end->name);
+        cOutPrintf(TextWhite, "\t\"%s (", edge->start->name);
+        graph->nodeDataPrint(edge->start->data);
+        cOutPrintf(TextWhite, ")\" -> \"%s (", edge->end->name);
+        graph->nodeDataPrint(edge->end->data);
+        cOutPrintf(TextWhite, ")\";\n");
     }
     cOutPrintf(TextWhite, "}\n");
 }

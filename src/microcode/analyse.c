@@ -241,6 +241,18 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
     tableSet(&identifiers, key, (void*)value);
 }
 
+typedef enum {
+    GRAPH_STATE_COMPONENT,
+    GRAPH_STATE_COMMAND
+} GraphState;
+void printGraphState(void* g) {
+    if((GraphState)g == GRAPH_STATE_COMPONENT) {
+        cOutPrintf(TextWhite, "Component");
+    } else {
+        cOutPrintf(TextWhite, "Command");
+    }
+}
+
 // analyse an array of microcode bits
 // assumes that all the identifiers in the array exist and have the correct type
 static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
@@ -248,7 +260,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     CONTEXT(INFO, "Analysing line");
 
     Graph graph;
-    InitGraph(&graph);
+    InitGraph(&graph, printGraphState);
 
     for(unsigned int i = 0; i < line->dataCount; i++) {
         Identifier* bitIdent;
@@ -257,19 +269,23 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         unsigned int commandID = bitIdent->as.control.value;
         Command* coreCommand = &core->commands[commandID];
 
-        // add edge from every dependancy to everything this command changes
-        // each dependancy could change any of the components in changes
+        Node* commandNode = AddNode(&graph, core->componentCount + commandID,
+            coreCommand->name, (void*)GRAPH_STATE_COMMAND);
+
         for(unsigned int j = 0; j < coreCommand->dependsLength; j++) {
             unsigned int dependCompID = coreCommand->depends[j];
             Component* dependComp = &core->components[dependCompID];
+            Node* dependNode = AddNode(&graph, dependCompID,
+                dependComp->printName, (void*)GRAPH_STATE_COMPONENT);
+            AddEdge(&graph, dependNode, commandNode);
+        }
 
-            for(unsigned int k = 0; k < coreCommand->changesLength; k++) {
-                unsigned int changeCompID = coreCommand->changes[k];
-                Component* changeComp = &core->components[changeCompID];
-
-                AddEdge(&graph, dependCompID, dependComp->printName,
-                    changeCompID, changeComp->printName);
-            }
+        for(unsigned int j = 0; j < coreCommand->changesLength; j++) {
+            unsigned int changeCompID = coreCommand->changes[j];
+            Component* changeComp = &core->components[changeCompID];
+            Node* changeNode = AddNode(&graph, changeCompID,
+                changeComp->printName, (void*)GRAPH_STATE_COMPONENT);
+            AddEdge(&graph, commandNode, changeNode);
         }
     }
 
