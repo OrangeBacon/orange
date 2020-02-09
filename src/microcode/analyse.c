@@ -274,21 +274,26 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         unsigned int commandID = bitIdent->as.control.value;
         Command* coreCommand = &core->commands[commandID];
 
-        Node* commandNode = AddNode(&graph, core->componentCount + commandID,
+        Node* commandNode = AddNode(&graph, commandID,
             coreCommand->name, (void*)GRAPH_STATE_COMMAND);
 
+        // adds edge between dependancies and commandNode
+        // id has commandCount added so the component id does not clash with
+        // the command id
         for(unsigned int j = 0; j < coreCommand->dependsLength; j++) {
             unsigned int dependCompID = coreCommand->depends[j];
             Component* dependComp = &core->components[dependCompID];
-            Node* dependNode = AddNode(&graph, dependCompID,
+            Node* dependNode = AddNode(&graph, dependCompID+core->commandCount,
                 dependComp->printName, (void*)GRAPH_STATE_COMPONENT);
             AddEdge(&graph, dependNode, commandNode);
         }
 
+        // same as above loop but adds edge from commandNode to everything
+        // it changes
         for(unsigned int j = 0; j < coreCommand->changesLength; j++) {
             unsigned int changeCompID = coreCommand->changes[j];
             Component* changeComp = &core->components[changeCompID];
-            Node* changeNode = AddNode(&graph, changeCompID,
+            Node* changeNode = AddNode(&graph, changeCompID+core->commandCount,
                 changeComp->printName, (void*)GRAPH_STATE_COMPONENT);
             AddEdge(&graph, commandNode, changeNode);
         }
