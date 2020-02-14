@@ -354,7 +354,17 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         // todo - do not allow multiple writes to a bus
         for(unsigned int j = 0; j < command->writesLength; j++) {
             Component* bus = &core->components[command->writes[j]];
-            bus->busStatus = true;
+            if(bus->busStatus) {
+                Error* err = errNew(ERROR_SEMANTIC);
+                errAddText(err, TextRed, "Command writes to bus twice in line "
+                    "%u", lineNumber);
+                errAddSource(err, &opcodeName->range);
+                errAddText(err, TextBlue, "Command graph (graphviz dot):");
+                errAddGraph(err, &graph);
+                errEmit(err, parser);
+            } else {
+                bus->busStatus = true;
+            }
         }
     }
 

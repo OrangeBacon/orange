@@ -117,10 +117,8 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
     ARRAY_ALLOC(Token, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
-        bit.range.column = parser->current.range.column;
-        bit.range.line = parser->current.range.line;
-        bit.range.tokenStart = parser->current.range.tokenStart;
         bit.data = parser->previous;
+        bit.range = bit.data.range;
         ARRAY_ZERO(bit, param);
         if(match(parser, TOKEN_LEFT_PAREN)) {
             ARRAY_ALLOC(Token, bit, param);
