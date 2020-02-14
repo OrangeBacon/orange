@@ -111,9 +111,7 @@ static void syncronise(Parser* parser) {
 static BitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
     BitArray result;
-    result.range.column = parser->current.range.column;
-    result.range.line = parser->current.range.line;
-    result.range.tokenStart = parser->current.range.tokenStart;
+    result.range = parser->previous.range;
     ARRAY_ALLOC(Token, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
