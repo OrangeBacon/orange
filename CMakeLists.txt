@@ -33,6 +33,8 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     else()
         message(STATUS "IPO / LTO not supported: <${error}>")
     endif()
+else()
+	set(MY_C_FLAGS ${MY_C_FLAGS} -g -O0)
 endif()
 
 # function to setup default options on a new target
