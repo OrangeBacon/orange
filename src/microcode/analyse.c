@@ -507,7 +507,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         "phase", "opcode");
     if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value) -
-        firstHeader->as.parameter.value.data.value;
+        firstHeader->as.header.lineCount;
 
     Identifier* opsize = getParameter(parser, &opcode->name,
         "opsize", "opcode");
