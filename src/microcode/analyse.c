@@ -245,11 +245,11 @@ typedef enum {
     GRAPH_STATE_COMPONENT,
     GRAPH_STATE_COMMAND
 } GraphState;
-void printGraphState(void* g) {
+void printGraphState(void* g, graphPrintFn printFn) {
     if((GraphState)g == GRAPH_STATE_COMPONENT) {
-        cOutPrintf(TextWhite, "Component");
+        printFn(TextWhite, "Component");
     } else {
-        cOutPrintf(TextWhite, "Command");
+        printFn(TextWhite, "Command");
     }
 }
 

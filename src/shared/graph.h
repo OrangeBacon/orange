@@ -2,6 +2,7 @@
 #define GRAPH_H
 
 #include "shared/memory.h"
+#include "shared/platform.h"
 
 typedef struct Node {
     // unique id, can be any number user provided
@@ -25,7 +26,10 @@ typedef struct Edge {
     Node* end;
 } Edge;
 
-typedef void (*NodeDataPrintFn)(void*);
+
+typedef void(*graphPrintFn)(TextColor color, const char* msg, ...);
+
+typedef void (*NodeDataPrintFn)(void* data, graphPrintFn printFn);
 
 // directional, cyclic graph
 typedef struct Graph {
@@ -60,6 +64,6 @@ NodeArray NodesNoInput(Graph* graph);
 // sort the nodes
 NodeArray TopologicalSort(Graph* graph);
 
-void printGraph(Graph* graph);
+void printGraph(Graph* graph, graphPrintFn printFn);
 
 #endif

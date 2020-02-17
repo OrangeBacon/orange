@@ -114,22 +114,22 @@ NodeArray TopologicalSort(Graph* graph) {
     return ret;
 }
 
-void printGraph(Graph* graph) {
-    cOutPrintf(TextWhite, "digraph g {\n");
+void printGraph(Graph* graph, graphPrintFn printFn) {
+    printFn(TextWhite, "digraph g {\n");
     for(unsigned int i = 0; i < graph->nodeCount; i++) {
         Node* node = &graph->nodes[i];
-        cOutPrintf(TextWhite, "\t\"%s (", node->name);
-        graph->nodeDataPrint(node->data);
-        cOutPrintf(TextWhite, ")\";\n");
+        printFn(TextWhite, "\t\"%s (", node->name);
+        graph->nodeDataPrint(node->data, printFn);
+        printFn(TextWhite, ")\";\n");
     }
 
     for(unsigned int i = 0; i < graph->edgeCount; i++) {
         Edge* edge = &graph->edges[i];
-        cOutPrintf(TextWhite, "\t\"%s (", edge->start->name);
-        graph->nodeDataPrint(edge->start->data);
-        cOutPrintf(TextWhite, ")\" -> \"%s (", edge->end->name);
-        graph->nodeDataPrint(edge->end->data);
-        cOutPrintf(TextWhite, ")\";\n");
+        printFn(TextWhite, "\t\"%s (", edge->start->name);
+        graph->nodeDataPrint(edge->start->data, printFn);
+        printFn(TextWhite, ")\" -> \"%s (", edge->end->name);
+        graph->nodeDataPrint(edge->end->data, printFn);
+        printFn(TextWhite, ")\";\n");
     }
-    cOutPrintf(TextWhite, "}\n");
+    printFn(TextWhite, "}\n");
 }

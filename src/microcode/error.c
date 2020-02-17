@@ -140,9 +140,10 @@ void printErrors(Parser* parser) {
                     printMessage(&chunk->as.source, color);
                     break;
                 case ERROR_CHUNK_GRAPH:
-                    printGraph(&chunk->as.graph);
+                    printGraph(&chunk->as.graph, cErrPrintf);
             }
         }
+        cErrPrintf(TextWhite, "\n");
     }
 
     if(parser->errorCount > 0) {
