@@ -13,7 +13,7 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Debug
     - name: build
-      run: cmake --build build
+      run: make
 
   build-windows:
     runs-on: [windows-latest]
@@ -25,4 +25,4 @@ jobs:
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_SH="CMAKE_SH-NOTFOUND" -DCMAKE_BUILD_TYPE=Debug
     - name: build
-      run: cmake --build build
+      run: mingw32-make
