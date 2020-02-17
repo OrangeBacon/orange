@@ -41,6 +41,9 @@ static HANDLE HandleOut;
 static CONSOLE_SCREEN_BUFFER_INFO OutReset;
 #endif
 
+bool streamForce = false;
+FILE* forcedStream = NULL;
+
 // is color printing enabled?
 bool EnableColor = false;
 
@@ -72,11 +75,11 @@ void cErrPrintf(TextColor color, const char* format, ...) {
 void cErrVPrintf(TextColor color, const char* format, va_list args) {
 #ifdef _WIN32
     if(EnableColor) SetConsoleTextAttribute(HandleErr, color | FOREGROUND_INTENSITY);
-    vfprintf(stderr, format, args);
+    vfprintf(streamForce?forcedStream:stderr, format, args);
     if(EnableColor) SetConsoleTextAttribute(HandleErr, ErrReset.wAttributes);
 #else
     if(EnableColor) fprintf(stderr, "\x1B[1;%um", color);
-    vfprintf(stderr, format, args);
+    vfprintf(streamForce?forcedStream:stderr, format, args);
     if(EnableColor) fprintf(stderr, "\x1B[0m");
 #endif
 }
@@ -93,37 +96,23 @@ void cOutPrintf(TextColor color, const char* format, ...) {
 void cOutVPrintf(TextColor color, const char* format, va_list args) {
 #ifdef _WIN32
     if(EnableColor) SetConsoleTextAttribute(HandleOut, color | FOREGROUND_INTENSITY);
-    vfprintf(stdout, format, args);
+    vfprintf(streamForce?forcedStream:stdout, format, args);
     if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
 #else
     if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
-    vfprintf(stdout, format, args);
+    vfprintf(streamForce?forcedStream:stdout, format, args);
     if(EnableColor) fprintf(stdout, "\x1B[0m");
 #endif
 }
 
-void cErrPuts(TextColor color, const char* string) {
-#ifdef _WIN32
-    if(EnableColor) SetConsoleTextAttribute(HandleOut, color | FOREGROUND_INTENSITY);
-    fputs(string, stderr);
-    if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
-#else
-    if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
-    fputs(string, stderr);
-    if(EnableColor) fprintf(stdout, "\x1B[0m");
-#endif
+void printStreamForceOut() {
+    streamForce = true;
+    forcedStream = stdout;
 }
 
-void cOutPuts(TextColor color, const char* string) {
-#ifdef _WIN32
-    if(EnableColor) SetConsoleTextAttribute(HandleOut, color | FOREGROUND_INTENSITY);
-    fputs(string, stdout);
-    if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
-#else
-    if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
-    fputs(string, stdout);
-    if(EnableColor) fprintf(stdout, "\x1B[0m");
-#endif
+void printStreamForceErr() {
+    streamForce = true;
+    forcedStream = stderr;
 }
 
 // get a buffer containing the string contents of the file provided
