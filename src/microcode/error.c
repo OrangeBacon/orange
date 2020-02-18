@@ -40,27 +40,22 @@ static void printMessage(SourceRange* range, TextColor color) {
     // how far along the line the error token starts
     int startPos = range->tokenStart - range->sourceStart - start;
 
-    // buffer to store arrow to errored token
-    char* buf = malloc(length * sizeof(char));
-    if(buf != NULL) {
-        // space fill
-        for(int i = 0; i < length; i++) {
-            buf[i] = ' ';
-        }
-        // underline fill length below errored token
-        for(int i = startPos; i < startPos + range->length; i++) {
-            buf[i] = '^';
-        }
 
-        cErrPrintf(TextWhite, "  %*s | ", lineNumberLength, "");
-
-        cErrPrintf(color, "%.*s\n", length, buf);
+    cErrPrintf(TextWhite, "  %*s | ", lineNumberLength, "");
+    for(int i = 0; i < length; i++) {
+        if(i >= startPos && i < startPos + range->length) {
+            cErrPutchar(color, '^');
+        } else {
+            cErrPutchar(color, ' ');
+        }
     }
+
+    cErrPutchar(TextRed, '\n');
 
     // line after error token
     printLine(range, lineNumberLength, 1, &start, &length);
 
-    printf("\n");
+    cErrPutchar(TextRed, '\n');
 }
 
 Error* errNew(ErrorLevel level) {

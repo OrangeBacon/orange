@@ -17,7 +17,7 @@ const char* resolvePath(const char* path) {
     return _fullpath(NULL, path, _MAX_PATH);
 #else
     // realpath is defined in linux's stdlib.h
-    char* buf = malloc(PATH_MAX + 1);
+    char* buf = ArenaAlloc(PATH_MAX + 1);
     char* ret = realpath(path, buf);
     if(ret) {
         return buf;
@@ -101,6 +101,18 @@ void cOutVPrintf(TextColor color, const char* format, va_list args) {
 #else
     if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
     vfprintf(streamForce?forcedStream:stdout, format, args);
+    if(EnableColor) fprintf(stdout, "\x1B[0m");
+#endif
+}
+
+void cErrPutchar(TextColor color, char c) {
+    #ifdef _WIN32
+    if(EnableColor) SetConsoleTextAttribute(HandleOut, color | FOREGROUND_INTENSITY);
+    putc(c, streamForce?forcedStream:stdout);
+    if(EnableColor) SetConsoleTextAttribute(HandleOut, OutReset.wAttributes);
+#else
+    if(EnableColor) fprintf(stdout, "\x1B[1;%um", color);
+    putc(c, streamForce?forcedStream:stdout);
     if(EnableColor) fprintf(stdout, "\x1B[0m");
 #endif
 }
