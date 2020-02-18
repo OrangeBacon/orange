@@ -132,6 +132,10 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
         bit.range.length = parser->previous.range.tokenStart +
             parser->previous.range.length - bit.range.tokenStart;
         PUSH_ARRAY(Bit, result, data, bit);
+
+        if(!match(parser, TOKEN_COMMA)) {
+            break;
+        }
     }
     result.range.length = parser->previous.range.tokenStart +
         parser->previous.range.length - result.range.tokenStart;
