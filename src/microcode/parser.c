@@ -112,7 +112,7 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
     BitArray result;
     result.range = parser->current.range;
-    ARRAY_ALLOC(Token, result, data);
+    ARRAY_ALLOC(Bit, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
         bit.data = parser->previous;
@@ -131,10 +131,7 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
         }
         bit.range.length = parser->previous.range.tokenStart +
             parser->previous.range.length - bit.range.tokenStart;
-        PUSH_ARRAY(Token, result, data, bit);
-        if(!match(parser, TOKEN_COMMA)) {
-            break;
-        }
+        PUSH_ARRAY(Bit, result, data, bit);
     }
     result.range.length = parser->previous.range.tokenStart +
         parser->previous.range.length - result.range.tokenStart;
