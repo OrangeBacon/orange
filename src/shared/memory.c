@@ -90,7 +90,7 @@ void* ArenaAllocAlign(size_t size, size_t align) {
     }
 
     // align end pointer and ensure area's pointers are updated
-    int alignOffset = AlignForward(ptr, align);
+    int alignOffset = AlignForward((void*)((uintptr_t)arena.areas[i].end + size), align);
     arena.areas[i].end = (void*)((uintptr_t)arena.areas[i].end + size + alignOffset);
     arena.areas[i].bytesLeft -= size + alignOffset;
 
