@@ -111,7 +111,7 @@ static void syncronise(Parser* parser) {
 static BitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
     BitArray result;
-    result.range = parser->previous.range;
+    result.range = parser->current.range;
     ARRAY_ALLOC(Token, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
@@ -316,6 +316,8 @@ static void opcode(Parser* parser) {
     ASTStatement* s = newStatement(parser, AST_BLOCK_OPCODE);
     ARRAY_ALLOC(Line*, s->as.opcode, line);
 
+    s->as.opcode.range = parser->previous.range;
+
     consume(parser, TOKEN_IDENTIFIER, "Expected opcode name, got %s",
         TokenNames[parser->current.type]);
     s->as.opcode.name = parser->previous;
@@ -361,6 +363,8 @@ static void opcode(Parser* parser) {
     }
 
     consume(parser, TOKEN_RIGHT_BRACE, "Expected \"}\" at end of block");
+
+    s->as.opcode.range.length = parser->previous.range.tokenStart + parser->previous.range.length - s->as.opcode.range.tokenStart;
 
     s->isValid = !endErrorState(parser);
 }

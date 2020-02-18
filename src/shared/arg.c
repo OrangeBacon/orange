@@ -556,7 +556,7 @@ argParser* argMode(argParser* parser, const char* name) {
 
     // the name of a sub-parser is the main-parser's name and the sub-parsers
     // name concatenated
-    int len = snprintf(NULL, 0, "%s %s", parser->name, name);
+    int len = snprintf(NULL, 0, "%s %s", parser->name, name) + 1;
     char* nameArr = ArenaAlloc(sizeof(char) * len);
     sprintf(nameArr, "%s %s", parser->name, name);
 

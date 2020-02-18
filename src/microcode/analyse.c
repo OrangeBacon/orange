@@ -502,7 +502,19 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
     ASTOpcode *opcode = &s->as.opcode;
 
-    if(!parsedHeader) return;
+    static bool notParsedHeaderThrown = false;
+    if(!parsedHeader) {
+        if(!notParsedHeaderThrown) {
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "To parse an opcode, the header must be "
+                "defined");
+            errAddSource(err, &opcode->range);
+            errEmit(err, parser);
+        }
+        notParsedHeaderThrown = true;
+        return;
+    }
+
     Identifier* phase = getParameter(parser, &opcode->name,
         "phase", "opcode");
     if(phase == NULL) return;
