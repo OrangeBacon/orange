@@ -15,7 +15,7 @@ jobs:
     - name: build
       run: |
         cd build
-        make
+        make 2>&1
 
   build-windows:
     runs-on: [windows-latest]
@@ -29,4 +29,4 @@ jobs:
     - name: build
       run: |
         cd build
-        mingw32-make
+        mingw32-make 2>&1
