@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 FILE* logFile = NULL;
 
@@ -66,7 +67,7 @@ void logSetMinLevel(int level) {
     minumumLevel = level;
 }
 
-void logLog(int level, int line, const char* fmt, ...) {
+void logLog(int level, int line, const char* file, const char* fmt, ...) {
     if(level < minumumLevel || fmt[0] == '\0') {
         return;
     }
@@ -88,7 +89,13 @@ void logLog(int level, int line, const char* fmt, ...) {
         logWrittenContext = _log_current_context_;
     }
 
-    fprintf(logFile, "%*s&:%i ", logDepth * 2, "", line);
+    fprintf(logFile, "%*s", logDepth * 2, "");
+    if(strcmp(_log_current_context_->filename, file) == 0) {
+        fprintf(logFile, "&");
+    } else {
+        fprintf(logFile, "%s", file);
+    }
+    fprintf(logFile, ":%i ", line);
     if(level >= 1000) {
         fputs("FATAL", logFile);
     } else if(level >= 800) {

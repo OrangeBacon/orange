@@ -299,6 +299,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         }
     }
 
+    TRACE("Created command graph");
+
     // get execution order for the microcode bits
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {

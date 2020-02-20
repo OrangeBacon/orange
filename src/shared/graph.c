@@ -1,8 +1,10 @@
 #include "shared/graph.h"
 #include "shared/platform.h"
+#include "shared/log.h"
 #include <stdlib.h>
 
 void InitGraph(Graph* graph, NodeDataPrintFn print) {
+    CONTEXT(DEBUG, "Creating graph");
     ARRAY_ALLOC(Node, *graph, node);
     ARRAY_ALLOC(Edge, *graph, edge);
     graph->nodeDataPrint = print;
@@ -28,7 +30,7 @@ Node* AddNode(Graph* graph, unsigned int id, const char* name, void* data) {
 
     // add new node
     if(!isInArray(graph->nodes, graph->nodeCount, id)) {
-        PUSH_ARRAY(void*, *graph, node, newNode);
+        PUSH_ARRAY(Node, *graph, node, newNode);
         return &graph->nodes[graph->nodeCount - 1];
     }
 
@@ -42,6 +44,7 @@ Node* AddNode(Graph* graph, unsigned int id, const char* name, void* data) {
 }
 
 void AddEdge(Graph* graph, Node* start, Node* end) {
+    CONTEXT(TRACE, "Graph edge add");
     for(unsigned int i = 0; i < graph->edgeCount; i++) {
         if(graph->edges[i].start == start &&
            graph->edges[i].end == end) {
@@ -57,6 +60,7 @@ void AddEdge(Graph* graph, Node* start, Node* end) {
 }
 
 NodeArray NodesNoInput(Graph* graph) {
+    CONTEXT(TRACE, "graph NodesNoInput");
 
     // initialise return value
     NodeArray ret;
@@ -88,6 +92,8 @@ NodeArray NodesNoInput(Graph* graph) {
 }
 
 NodeArray TopologicalSort(Graph* graph) {
+    CONTEXT(TRACE, "Toposort");
+
     NodeArray ret;
     ARRAY_ALLOC(Node*, ret, node);
 
@@ -95,7 +101,7 @@ NodeArray TopologicalSort(Graph* graph) {
     NodeArray s = NodesNoInput(graph);
     while(s.nodeCount > 0) {
         Node* node = s.nodes[0];
-        PUSH_ARRAY(Node, ret, node, node);
+        PUSH_ARRAY(Node*, ret, node, node);
         node->removed = true;
         s = NodesNoInput(graph);
     }

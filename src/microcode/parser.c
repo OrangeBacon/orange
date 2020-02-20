@@ -357,7 +357,7 @@ static void opcode(Parser* parser) {
             break;
         }
         Line* line = microcodeLine(parser);
-        PUSH_ARRAY(Line, s->as.opcode, line, line);
+        PUSH_ARRAY(Line*, s->as.opcode, line, line);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
