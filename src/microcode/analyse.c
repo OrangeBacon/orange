@@ -662,7 +662,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         gencode->id = opcodeID+i;
         gencode->name = opcode->name.range.tokenStart;
         gencode->nameLen = opcode->name.range.length;
-        ARRAY_ALLOC(GenOpCodeLine, *gencode, line);
+        ARRAY_ALLOC(GenOpCodeLine*, *gencode, line);
 
         for(unsigned int j = 0; j < opcode->lineCount; j++) {
             Line* line = opcode->lines[j];
@@ -698,7 +698,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                 genline->highBitCapacity = genline->lowBitCapacity;
             }
 
-            PUSH_ARRAY(GenOpCodeLine, *gencode, line, genline);
+            PUSH_ARRAY(GenOpCodeLine*, *gencode, line, genline);
         }
 
         if(errored) {

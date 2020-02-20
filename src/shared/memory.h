@@ -94,6 +94,11 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
             " of size %u should not be assigned in array of element size %u", \
             sizeof(type), (container).name##ElementSize); \
         } \
+        if(sizeof(value) != sizeof(type)) { \
+            WARN("Push to array that has correct typing, but pushed item " \
+            "size (%u) does not equal type size (%u)", sizeof(value), \
+            sizeof(type)); \
+        } \
         if((container).name##Count == (container).name##Capacity) { \
             (container).name##s = ArenaReAlloc((container).name##s, \
                 sizeof(type) * (container).name##Capacity, \

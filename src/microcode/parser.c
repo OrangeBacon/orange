@@ -12,7 +12,7 @@
 
 static void newErrorState(Parser* parser) {
     CONTEXT(DEBUG, "New error state");
-    PUSH_ARRAY(bool, *parser, errorStack, false);
+    PUSH_ARRAY(bool, *parser, errorStack, (bool)false);
 }
 
 static bool endErrorState(Parser* parser) {
@@ -540,7 +540,7 @@ bool Parse(Parser* parser, Scanner* scan, AST* ast) {
     parser->hadError = false;
     parser->panicMode = false;
     ARRAY_ALLOC(bool, *parser, errorStack);
-    ARRAY_ALLOC(Error, *parser, error);
+    ARRAY_ALLOC(Error*, *parser, error);
     parser->ast = ast;
 
     return runParser(parser);

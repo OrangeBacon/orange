@@ -110,7 +110,7 @@ void errEmit(Error* err, struct Parser* parser) {
     }
     setErrorState(parser);
 
-    PUSH_ARRAY(Error, *parser, error, err);
+    PUSH_ARRAY(Error*, *parser, error, err);
 }
 
 void printErrors(Parser* parser) {
