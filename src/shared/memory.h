@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include "shared/log.h"
 
 // section of memory
 typedef struct Area {
@@ -33,27 +34,76 @@ void* ArenaAllocAlign(size_t size, size_t align);
 void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
 
 // declare a new array in the current scope
+#ifdef DEBUG_BUILD
+#define DEFINE_ARRAY(type, name) \
+    type* name##s; \
+    unsigned int name##Count; \
+    unsigned int name##Capacity; \
+    unsigned int name##ElementSize
+#else
 #define DEFINE_ARRAY(type, name) \
     type* name##s; \
     unsigned int name##Count; \
     unsigned int name##Capacity
+#endif
 
 // initialise an array with 0 capacity
+#ifdef DEBUG_BUILD
 #define ARRAY_ZERO(container, name) \
     do { \
-        (container).name##Count = 0;\
+        (container).name##s = NULL; \
+        (container).name##Count = 0; \
+        (container).name##Capacity = 0; \
+        (container).name##ElementSize = 0; \
+    } while(0)
+#else
+#define ARRAY_ZERO(container, name) \
+    do { \
+        (container).name##s = NULL; \
+        (container).name##Count = 0; \
         (container).name##Capacity = 0; \
     } while(0)
+#endif
 
 // initialise the array
+#ifdef DEBUG_BUILD
+#define ARRAY_ALLOC(type, container, name) \
+    do { \
+        (container).name##Count = 0; \
+        (container).name##Capacity = 8; \
+        (container).name##s = ArenaAlloc(sizeof(type) * (container).name##Capacity); \
+        (container).name##ElementSize = sizeof(type); \
+    } while(0)
+#else
 #define ARRAY_ALLOC(type, container, name) \
     do { \
         (container).name##Count = 0;\
         (container).name##Capacity = 8; \
         (container).name##s = ArenaAlloc(sizeof(type) * (container).name##Capacity); \
     } while(0)
+#endif
+
+#define MEMQUOTE(x) #x
 
 // push value to array and expand it to fit the new value if necessary
+#ifdef DEBUG_BUILD
+#define PUSH_ARRAY(type, container, name, value) \
+    do { \
+        if(sizeof(type) != (container).name##ElementSize) { \
+            WARN("Push to array with wrong size of type: "MEMQUOTE(type) \
+            " of size %u should not be assigned in array of element size %u", \
+            sizeof(type), (container).name##ElementSize); \
+        } \
+        if((container).name##Count == (container).name##Capacity) { \
+            (container).name##s = ArenaReAlloc((container).name##s, \
+                sizeof(type) * (container).name##Capacity, \
+                sizeof(type) * (container).name##Capacity * 2);\
+            (container).name##Capacity *= 2; \
+        } \
+        (container).name##s[(container).name##Count] = (value); \
+        (container).name##Count++; \
+    } while(0)
+#else
 #define PUSH_ARRAY(type, container, name, value) \
     do { \
         if((container).name##Count == (container).name##Capacity) { \
@@ -65,15 +115,16 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
         (container).name##s[(container).name##Count] = (value); \
         (container).name##Count++; \
     } while(0)
+#endif
 
 // return and remove the last item in an array
 #define POP_ARRAY(container, name) \
     ((container).name##Count--,(container).name##s[(container).name##Count])
-
-#endif
 
 // format a string into a newly allocated buffer valid for the life of
 // the compiler - avoids storing va_list
 char* aprintf(const char* format, ...);
 
 char* vaprintf(const char* format, va_list args);
+
+#endif

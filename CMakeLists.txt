@@ -109,7 +109,7 @@ set(MICROCODE_COMPILE_SOURCES
 
 add_custom_command(
     OUTPUT switch.c
-    COMMAND generator codegen -s stdout "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
+    COMMAND generator codegen -s stdout -l log.txt "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
     DEPENDS generator ${MICROCODE_COMPILE_SOURCES}
 )
 

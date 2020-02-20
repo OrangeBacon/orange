@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "shared/memory.h"
-#include "shared/log.h"
 
 // global instance of arena,
 // only place memory is stored in the program
