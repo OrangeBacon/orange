@@ -256,7 +256,7 @@ void printGraphState(void* g, graphPrintFn printFn) {
 // analyse an array of microcode bits
 // assumes that all the identifiers in the array exist and have the correct type
 static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
-    Token* opcodeName, unsigned int lineNumber) {
+    SourceRange* location) {
     CONTEXT(INFO, "Analysing line");
 
     Graph graph;
@@ -305,9 +305,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
         Error* err = errNew(ERROR_SEMANTIC);
-        errAddText(err, TextRed, "Unable to order microcode bits in line %u",
-            lineNumber);
-        errAddSource(err, &opcodeName->range);
+        errAddText(err, TextRed, "Unable to order microcode bits");
+        errAddSource(err, location);
         errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
         errAddGraph(err, &graph);
         errEmit(err, parser);
@@ -343,8 +342,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
             if(!bus->busStatus) {
                 Error* err = errNew(ERROR_SEMANTIC);
                 errAddText(err, TextRed, "Command reads from bus before it was "
-                    "written in line %u", lineNumber);
-                errAddSource(err, &opcodeName->range);
+                    "written");
+                errAddSource(err, location);
                 errAddText(err, TextBlue, "Command graph (graphviz dot):");
                 errAddGraph(err, &graph);
                 errEmit(err, parser);
@@ -358,9 +357,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
             Component* bus = &core->components[command->writes[j]];
             if(bus->busStatus) {
                 Error* err = errNew(ERROR_SEMANTIC);
-                errAddText(err, TextRed, "Command writes to bus twice in line "
-                    "%u", lineNumber);
-                errAddSource(err, &opcodeName->range);
+                errAddText(err, TextRed, "Command writes to bus twice");
+                errAddSource(err, location);
                 errAddText(err, TextBlue, "Command graph (graphviz dot):");
                 errAddGraph(err, &graph);
                 errEmit(err, parser);
@@ -382,6 +380,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
     for(unsigned int i = 0; i < arr->dataCount; i++) {
         Bit* bit = &arr->datas[i];
 
+        // look up to check the identifier is defined
         Identifier* val;
         if(!tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val)) {
             Error* err = errNew(ERROR_SEMANTIC);
@@ -395,6 +394,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
         if(val->type == TYPE_VM_CONTROL_BIT) {
             continue;
         } else if(val->type == TYPE_BITGROUP) {
+            // check that there is only 1 parameter passed to a bitgroup
             if(bit->paramCount != 1) {
                 passed = false;
                 Error* err = errNew(ERROR_SEMANTIC);
@@ -402,6 +402,8 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
                 errAddSource(err, &bit->data.range);
                 errEmit(err, parser);
             }
+            // check all of the parameters of the bitgroup, regardless of how
+            // many should have been passed
             for(unsigned int j = 0; j < bit->paramCount; j++) {
                 Token* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
@@ -433,6 +435,7 @@ static ASTStatement* firstHeader = NULL;
 static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing header");
 
+    // duplicate header checking
     if(parsedHeader) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Cannot have more than one header statement "
@@ -443,6 +446,8 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         errEmit(err, parser);
         return;
     }
+
+    // assign global variables (ew, should change)
     parsedHeader = true;
     firstHeader = s;
 
@@ -468,7 +473,7 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         }
 
         NodeArray nodes = analyseLine(core, parser, line,
-            &s->as.header.errorPoint, i);
+            &s->as.header.range);
         for(unsigned int j = 0; j < nodes.nodeCount; j++) {
             PUSH_ARRAY(unsigned int, *core, headBit, nodes.nodes[j]->value);
         }
@@ -496,7 +501,7 @@ static NodeArray genlinePush(BitArray* bits, VMCoreGen* core, Parser* parser, AS
         }
     }
 
-    return analyseLine(core, parser, &subsLine, &opcode->name, lineNumber);
+    return analyseLine(core, parser, &subsLine, &opcode->lines[lineNumber]->range);
 }
 
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {

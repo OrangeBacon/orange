@@ -10,10 +10,10 @@ header {
 opcode nop 0b0000000000000000() {}
 
 opcode jmp 0b0110010010(Reg rega, Reg regb) {
-    IPToAddress, memReadToInst, iRegSet, iRegSet;
-    #RegToAddress(rega), memReadToInst;
-    #RegToAddress(rega), memReadToInst;
-    #AToAddress, memReadToData, DataToB;
+    IPToAddress, memReadToInst, iRegSet;
+    RegToAddress(rega), memReadToInst;
+    RegToAddress(rega), memReadToInst;
+    AToAddress, memReadToData, DataToB;
 }
 
 opcode mov 0b0000000011(Reg dst, Reg src) {

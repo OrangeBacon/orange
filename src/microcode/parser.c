@@ -148,6 +148,7 @@ static Line* microcodeLine(Parser* parser) {
     CONTEXT(INFO, "Parsing single microcode line");
     Line* line = ArenaAlloc(sizeof(Line));
     line->conditionErrorToken = (Token){.type = TOKEN_NULL};
+    line->range = parser->current.range;
 
     if(check(parser, TOKEN_NUMBER)) {
         INFO("Microcode line has a condition");
@@ -203,6 +204,9 @@ static Line* microcodeLine(Parser* parser) {
         line->hasCondition = false;
         line->bitsHigh = line->bitsLow = parseMicrocodeBitArray(parser);
     }
+
+    line->range.length = parser->previous.range.tokenStart +
+        parser->previous.range.length - line->range.tokenStart;
 
     return line;
 }
