@@ -7,9 +7,14 @@
 
 struct Parser;
 
+typedef struct BitParameter {
+    Token name;
+    int argID;
+} BitParameter;
+
 typedef struct Bit {
     Token data;
-    DEFINE_ARRAY(Token, param);
+    DEFINE_ARRAY(BitParameter, param);
     SourceRange range;
 } Bit;
 

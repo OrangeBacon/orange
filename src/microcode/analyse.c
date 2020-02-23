@@ -405,14 +405,14 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
             // check all of the parameters of the bitgroup, regardless of how
             // many should have been passed
             for(unsigned int j = 0; j < bit->paramCount; j++) {
-                Token* param = &bit->params[j];
+                BitParameter* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
                     passed = false;
                     Error* err = errNew(ERROR_SEMANTIC);
                     errAddText(err, TextRed,
                         "Could not resolve argument name \"%s\"",
-                        param->data.string);
-                    errAddSource(err, &param->range);
+                        param->name.data.string);
+                    errAddSource(err, &param->name.range);
                     errEmit(err, parser);
                 }
             }
@@ -480,18 +480,24 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 }
 
-static NodeArray genlinePush(BitArray* bits, VMCoreGen* core, Parser* parser, ASTOpcode* opcode, unsigned int possibility, unsigned int lineNumber, unsigned int* tests) {
+static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
+    Parser* parser, ASTOpcode* opcode, unsigned int possibility,
+    unsigned int lineNumber, unsigned int* tests)
+{
     BitArray subsLine;
     ARRAY_ALLOC(Bit, subsLine, data);
     for(unsigned int i = 0; i < bits->dataCount; i++) {
-        Bit bit = bits->datas[i];
+        Bit* bit = &bits->datas[i];
         Identifier* val;
-        tableGet(&identifiers, (char*)bit.data.data.string, (void**)&val);
+        tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val);
         if(val->type == TYPE_VM_CONTROL_BIT) {
-            PUSH_ARRAY(Bit, subsLine, data, bit);
+            PUSH_ARRAY(Bit, subsLine, data, *bit);
         } else {
-            for(unsigned int j = 0; j < opcode->paramCount; j++) {
-                ASTParameter* param = &opcode->params[j];
+            // assume bitarray checks have been done before, so
+            // bit->paramCount is always 1
+
+            for(unsigned int j = 0; j < bit->paramCount; j++) {
+                BitParameter* param = &bit->params[j];
                 Identifier* paramType;
                 tableGet(&identifiers, (char*)param->name.data.string, (void**)&paramType);
                 Bit newbit;
@@ -640,9 +646,9 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     // allows an int to be converted into a value to substitute
     unsigned int ncycles = possibilities;
     unsigned int* tests = ArenaAlloc(sizeof(unsigned int) * opcode->paramCount * possibilities);
-    for(unsigned int i = 0; i < opcode->paramCount; i++) {
+    for(unsigned int parameter = 0; parameter < opcode->paramCount; parameter++) {
         ASTParameter* typeName;
-        tableGet(&paramNames, &opcode->params[i].value, (void**)&typeName);
+        tableGet(&paramNames, &opcode->params[parameter].value, (void**)&typeName);
         Identifier* type;
         tableGet(&identifiers, (char*)typeName->name.data.string, (void**)&type);
         unsigned int level =
@@ -653,7 +659,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         for(unsigned int cycle = 0; cycle < ncycles; cycle++) {
             for(unsigned int num = 0; num < level; num++) {
                 for(unsigned int rep = 0; rep < nreps; rep++) {
-                    tests[count*opcode->paramCount+i] = num;
+                    tests[count*opcode->paramCount+parameter] = num;
                     count += 1;
                 }
             }
@@ -661,10 +667,10 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 
     bool errored = false;
-    for(unsigned int i = 0; i < possibilities; i++) {
-        GenOpCode* gencode = &core->opcodes[opcodeID+i];
+    for(unsigned int possibility = 0; possibility < possibilities; possibility++) {
+        GenOpCode* gencode = &core->opcodes[opcodeID+possibility];
         gencode->isValid = true;
-        gencode->id = opcodeID+i;
+        gencode->id = opcodeID+possibility;
         gencode->name = opcode->name.range.tokenStart;
         gencode->nameLen = opcode->name.range.length;
         ARRAY_ALLOC(GenOpCodeLine*, *gencode, line);
@@ -675,20 +681,20 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
 
-            NodeArray low = genlinePush(&line->bitsLow, core, parser, opcode, i, j, tests);
+            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j, tests);
             if(!low.validArray) {
                 INFO("Leaving opcode analysis due to errors");
                 errored = true;
                 break;
             }
             for(unsigned int k = 0; k < low.nodeCount; k++) {
-                TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+i);
+                TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+possibility);
                 PUSH_ARRAY(unsigned int, *genline, lowBit, low.nodes[k]->value);
             }
 
             if(line->hasCondition) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
-                NodeArray high = genlinePush(&line->bitsHigh, core, parser, opcode, i, j, tests);
+                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j, tests);
                 if(!high.validArray) {
                     INFO("Leaving opcode analysis due to errors");
                     errored = true;

@@ -119,9 +119,12 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
         bit.range = bit.data.range;
         ARRAY_ZERO(bit, param);
         if(match(parser, TOKEN_LEFT_PAREN)) {
-            ARRAY_ALLOC(Token, bit, param);
+            ARRAY_ALLOC(BitParameter, bit, param);
             while(match(parser, TOKEN_IDENTIFIER)) {
-                PUSH_ARRAY(Token, bit, param, parser->previous);
+                BitParameter param;
+                param.name = parser->previous;
+                param.argID = -1;
+                PUSH_ARRAY(BitParameter, bit, param, param);
                 if(!match(parser, TOKEN_COMMA)) {
                     break;
                 }

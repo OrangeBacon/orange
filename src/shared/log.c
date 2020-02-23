@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include "shared/platform.h"
 
 FILE* logFile = NULL;
 
@@ -22,10 +23,17 @@ bool logInit() {
     return true;
 }
 
+static int errorWarnCount = 0;
 void logClose() {
     if(logFile != NULL) {
         fclose(logFile);
     }
+#ifdef DEBUG_BUILD
+    if(errorWarnCount > 0) {
+        cErrPrintf(TextRed, "Encountered %u logged internal errors or "
+            "warnings\n", errorWarnCount);
+    }
+#endif
 }
 
 void fileCopy(FILE* a, FILE* b) {
@@ -71,6 +79,11 @@ void logLog(int level, int line, const char* file, const char* fmt, ...) {
     if(level < minumumLevel || fmt[0] == '\0') {
         return;
     }
+
+    if(level >= 600) {
+        errorWarnCount++;
+    }
+
     va_list args;
     va_start(args, fmt);
 
