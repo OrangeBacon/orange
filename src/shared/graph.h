@@ -33,14 +33,14 @@ typedef void (*NodeDataPrintFn)(void* data, graphPrintFn printFn);
 
 // directional, cyclic graph
 typedef struct Graph {
-    DEFINE_ARRAY(Node, node);
-    DEFINE_ARRAY(Edge, edge);
+    ARRAY_DEFINE(Node, node);
+    ARRAY_DEFINE(Edge, edge);
     NodeDataPrintFn nodeDataPrint;
 } Graph;
 
 // temporary array result
 typedef struct NodeArray {
-    DEFINE_ARRAY(Node*, node);
+    ARRAY_DEFINE(Node*, node);
 
     // did the operation producing this result succeed
     bool validArray;

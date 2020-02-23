@@ -60,7 +60,7 @@ Argument* AllocArgument(unsigned int itemCount, ...) {
 }
 
 void addCommand(VMCoreGen* core, Command command) {
-    PUSH_ARRAY(Command, *core, command, command);
+    ARRAY_PUSH(*core, command, command);
 }
 
 void addHeader(VMCoreGen* core, const char* header) {
@@ -81,7 +81,7 @@ void addVariable(VMCoreGen* core, const char* format, ...) {
 
     va_end(args);
 
-    PUSH_ARRAY(const char*, *core, variable, buf);
+    ARRAY_PUSH(*core, variable, buf);
 }
 
 void addLoopVariable(VMCoreGen* core, const char* format, ...) {
@@ -98,13 +98,13 @@ void addLoopVariable(VMCoreGen* core, const char* format, ...) {
 
     va_end(args);
 
-    PUSH_ARRAY(const char*, *core, loopVariable, buf);
+    ARRAY_PUSH(*core, loopVariable, buf);
 }
 
 unsigned int addRegister(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
-    PUSH_ARRAY(Component, *core, component, ((Component){
+    ARRAY_PUSH(*core, component, ((Component){
         .internalName = name,
         .printName = aprintf("Register %s", name),
         .type = COMPONENT_REGISTER
@@ -115,7 +115,7 @@ unsigned int addRegister(VMCoreGen* core, const char* name) {
 unsigned int addBus(VMCoreGen* core, const char* name) {
     addHeader(core, "<stdint.h>");
     addVariable(core, "uint16_t %s", name);
-    PUSH_ARRAY(Component, *core, component, ((Component){
+    ARRAY_PUSH(*core, component, ((Component){
         .internalName = name,
         .printName = aprintf("Bus %s", name),
         .type = COMPONENT_BUS
@@ -143,7 +143,7 @@ void addInstructionRegister(VMCoreGen* core, unsigned int iBus) {
     addVariable(core, "uint16_t arg3");
     addVariable(core, "uint16_t arg12");
     addVariable(core, "uint16_t arg123");
-    PUSH_ARRAY(Component, *core, component, ((Component){
+    ARRAY_PUSH(*core, component, ((Component){
         .internalName = "IReg",
         .printName = "Instruction Register",
         .type = COMPONENT_OTHER
@@ -174,7 +174,7 @@ Memory addMemory64k(VMCoreGen* core, unsigned int address, unsigned int data) {
     }
 
     addHeader(core, "<stdint.h>");
-    PUSH_ARRAY(Component, *core, component, ((Component){
+    ARRAY_PUSH(*core, component, ((Component){
         .internalName = "Memory64",
         .printName = "Linear 64K Memory",
         .type = COMPONENT_OTHER

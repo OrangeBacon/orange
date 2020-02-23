@@ -11,15 +11,15 @@ typedef struct Argument {
 
 typedef struct GenOpCodeLine {
     bool hasCondition;
-    DEFINE_ARRAY(unsigned int, highBit);
-    DEFINE_ARRAY(unsigned int, lowBit);
+    ARRAY_DEFINE(unsigned int, highBit);
+    ARRAY_DEFINE(unsigned int, lowBit);
 } GenOpCodeLine;
 
 typedef struct GenOpCode {
     unsigned int id;
     const char* name;
     unsigned int nameLen;
-    DEFINE_ARRAY(GenOpCodeLine*, line);
+    ARRAY_DEFINE(GenOpCodeLine*, line);
     bool isValid;
 } GenOpCode;
 
@@ -64,18 +64,18 @@ typedef struct Component {
 } Component;
 
 typedef struct VMCoreGen {
-    DEFINE_ARRAY(Component, component);
+    ARRAY_DEFINE(Component, component);
 
     Table headers;
-    DEFINE_ARRAY(const char*, variable);
-    DEFINE_ARRAY(const char*, loopVariable);
+    ARRAY_DEFINE(const char*, variable);
+    ARRAY_DEFINE(const char*, loopVariable);
 
-    DEFINE_ARRAY(Command, command);
+    ARRAY_DEFINE(Command, command);
 
     GenOpCode* opcodes;
     unsigned int opcodeCount;
 
-    DEFINE_ARRAY(unsigned int, headBit);
+    ARRAY_DEFINE(unsigned int, headBit);
 
     const char* codeIncludeBase;
 } VMCoreGen;

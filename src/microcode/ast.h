@@ -14,12 +14,12 @@ typedef struct BitParameter {
 
 typedef struct Bit {
     Token data;
-    DEFINE_ARRAY(BitParameter, param);
+    ARRAY_DEFINE(BitParameter, param);
     SourceRange range;
 } Bit;
 
 typedef struct BitArray {
-    DEFINE_ARRAY(Bit, data);
+    ARRAY_DEFINE(Bit, data);
     SourceRange range;
 } BitArray;
 
@@ -32,7 +32,7 @@ typedef struct Line {
 } Line;
 
 typedef struct ASTHeader {
-    DEFINE_ARRAY(BitArray, line);
+    ARRAY_DEFINE(BitArray, line);
     Token errorPoint;
     SourceRange range;
 } ASTHeader;
@@ -46,14 +46,14 @@ typedef struct ASTParameter {
 typedef struct ASTOpcode {
     Token id;
     Token name;
-    DEFINE_ARRAY(Line*, line);
-    DEFINE_ARRAY(ASTParameter, param);
+    ARRAY_DEFINE(Line*, line);
+    ARRAY_DEFINE(ASTParameter, param);
     SourceRange range;
 } ASTOpcode;
 
 typedef struct ASTTypeEnum {
     Token width;
-    DEFINE_ARRAY(Token, member);
+    ARRAY_DEFINE(Token, member);
     SourceRange range;
 } ASTTypeEnum;
 
@@ -84,8 +84,8 @@ typedef struct ASTBitGroupIdentifier {
 
 typedef struct ASTBitGroup {
     Token name;
-    DEFINE_ARRAY(ASTParameter, param);
-    DEFINE_ARRAY(ASTBitGroupIdentifier, segment);
+    ARRAY_DEFINE(ASTParameter, param);
+    ARRAY_DEFINE(ASTBitGroupIdentifier, segment);
     SourceRange range;
 } ASTBitGroup;
 
@@ -112,9 +112,9 @@ typedef struct ASTStatement {
 } ASTStatement;
 
 typedef struct AST {
-    DEFINE_ARRAY(const char*, fileName);
+    ARRAY_DEFINE(const char*, fileName);
 
-    DEFINE_ARRAY(ASTStatement, statement);
+    ARRAY_DEFINE(ASTStatement, statement);
 } AST;
 
 void InitAST(AST* mcode);

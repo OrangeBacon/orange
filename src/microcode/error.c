@@ -81,7 +81,7 @@ void vErrAddText(Error* err, TextColor color, const char* text, va_list args) {
     chunk.type = ERROR_CHUNK_TEXT;
     chunk.as.text.message = vaprintf(text, args);
     chunk.as.text.color = color;
-    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+    ARRAY_PUSH(*err, chunk, chunk);
 }
 
 void errAddSource(Error* err, SourceRange* loc) {
@@ -89,7 +89,7 @@ void errAddSource(Error* err, SourceRange* loc) {
     ErrorChunk chunk;
     chunk.type = ERROR_CHUNK_SOURCE;
     chunk.as.source = *loc;
-    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+    ARRAY_PUSH(*err, chunk, chunk);
 }
 
 void errAddGraph(Error* err, Graph* graph) {
@@ -97,7 +97,7 @@ void errAddGraph(Error* err, Graph* graph) {
     ErrorChunk chunk;
     chunk.type = ERROR_CHUNK_GRAPH;
     chunk.as.graph = *graph;
-    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+    ARRAY_PUSH(*err, chunk, chunk);
 }
 
 void errEmit(Error* err, struct Parser* parser) {
@@ -110,7 +110,7 @@ void errEmit(Error* err, struct Parser* parser) {
     }
     setErrorState(parser);
 
-    PUSH_ARRAY(Error*, *parser, error, err);
+    ARRAY_PUSH(*parser, error, err);
 }
 
 void printErrors(Parser* parser) {

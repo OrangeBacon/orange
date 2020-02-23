@@ -18,7 +18,7 @@ typedef struct IdentifierEnum {
     Token* definition;
 
     // null terminated strings for each name in the enum
-    DEFINE_ARRAY(Token*, member);
+    ARRAY_DEFINE(Token*, member);
 
     // maximum length of each member name
     unsigned int identifierLength;
@@ -319,7 +319,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     for(unsigned int i = 0; i < nodes.nodeCount; i++) {
         Node* node = nodes.nodes[i];
         if((GraphState)node->data == GRAPH_STATE_COMMAND) {
-            PUSH_ARRAY(Node*, commands, node, node);
+            ARRAY_PUSH(commands, node, node);
         }
     }
 
@@ -475,7 +475,7 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         NodeArray nodes = analyseLine(core, parser, line,
             &s->as.header.range);
         for(unsigned int j = 0; j < nodes.nodeCount; j++) {
-            PUSH_ARRAY(unsigned int, *core, headBit, nodes.nodes[j]->value);
+            ARRAY_PUSH(*core, headBit, nodes.nodes[j]->value);
         }
     }
 }
@@ -491,7 +491,7 @@ static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
         Identifier* val;
         tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val);
         if(val->type == TYPE_VM_CONTROL_BIT) {
-            PUSH_ARRAY(Bit, subsLine, data, *bit);
+            ARRAY_PUSH(subsLine, data, *bit);
         } else {
             // assume bitarray checks have been done before, so
             // bit->paramCount is always 1
@@ -502,7 +502,7 @@ static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
                 tableGet(&identifiers, (char*)param->name.data.string, (void**)&paramType);
                 Bit newbit;
                 newbit.data = createStrToken(&val->as.bitgroup.substitutedIdentifiers[val->as.bitgroup.lineLength*tests[possibility*opcode->paramCount+j]]);
-                PUSH_ARRAY(Bit, subsLine, data, newbit);
+                ARRAY_PUSH(subsLine, data, newbit);
             }
         }
     }
@@ -689,7 +689,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             }
             for(unsigned int k = 0; k < low.nodeCount; k++) {
                 TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+possibility);
-                PUSH_ARRAY(unsigned int, *genline, lowBit, low.nodes[k]->value);
+                ARRAY_PUSH(*genline, lowBit, low.nodes[k]->value);
             }
 
             if(line->hasCondition) {
@@ -701,7 +701,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                     break;
                 }
                 for(unsigned int k = 0; k < high.nodeCount; k++) {
-                    PUSH_ARRAY(unsigned int, *genline, highBit, high.nodes[k]->value);
+                    ARRAY_PUSH(*genline, highBit, high.nodes[k]->value);
                 }
             } else {
                 genline->highBits = genline->lowBits;
@@ -709,7 +709,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                 genline->highBitCapacity = genline->lowBitCapacity;
             }
 
-            PUSH_ARRAY(GenOpCodeLine*, *gencode, line, genline);
+            ARRAY_PUSH(*gencode, line, genline);
         }
 
         if(errored) {
@@ -781,7 +781,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
             errEmit(err, parser);
         } else {
             tableSet(&membersTable, tok, NULL);
-            PUSH_ARRAY(Token*, *enumIdent, member, tok);
+            ARRAY_PUSH(*enumIdent, member, tok);
             enumIdent->identifierLength =
                 max(enumIdent->identifierLength, tok->range.length);
         }

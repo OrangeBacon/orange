@@ -30,7 +30,7 @@ Node* AddNode(Graph* graph, unsigned int id, const char* name, void* data) {
 
     // add new node
     if(!isInArray(graph->nodes, graph->nodeCount, id)) {
-        PUSH_ARRAY(Node, *graph, node, newNode);
+        ARRAY_PUSH(*graph, node, newNode);
         return &graph->nodes[graph->nodeCount - 1];
     }
 
@@ -56,7 +56,7 @@ void AddEdge(Graph* graph, Node* start, Node* end) {
         .start = start,
         .end = end,
     };
-    PUSH_ARRAY(Edge, *graph, edge, e);
+    ARRAY_PUSH(*graph, edge, e);
 }
 
 NodeArray NodesNoInput(Graph* graph) {
@@ -85,7 +85,7 @@ NodeArray NodesNoInput(Graph* graph) {
             }
         }
         if(!incoming) {
-            PUSH_ARRAY(Node*, ret, node, node);
+            ARRAY_PUSH(ret, node, node);
         }
     }
     return ret;
@@ -101,7 +101,7 @@ NodeArray TopologicalSort(Graph* graph) {
     NodeArray s = NodesNoInput(graph);
     while(s.nodeCount > 0) {
         Node* node = s.nodes[0];
-        PUSH_ARRAY(Node*, ret, node, node);
+        ARRAY_PUSH(ret, node, node);
         node->removed = true;
         s = NodesNoInput(graph);
     }

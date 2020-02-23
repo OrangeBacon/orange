@@ -27,9 +27,9 @@ typedef struct Parser {
     // the ast that is being constructed currently
     AST* ast;
 
-    DEFINE_ARRAY(bool, errorStack);
+    ARRAY_DEFINE(bool, errorStack);
 
-    DEFINE_ARRAY(struct Error*, error);
+    ARRAY_DEFINE(struct Error*, error);
 } Parser;
 
 // run the parser

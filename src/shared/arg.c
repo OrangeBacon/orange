@@ -26,16 +26,16 @@ static void argInternalError(argParser* parser, const char* message, ...) {
 
 // list of characters
 typedef struct charArr {
-    DEFINE_ARRAY(char, char);
+    ARRAY_DEFINE(char, char);
 } charArr;
 
 // list of argument parsers
 typedef struct argParserArr {
-    DEFINE_ARRAY(argParser*, parser);
+    ARRAY_DEFINE(argParser*, parser);
 } argParserArr;
 
 typedef struct optionArgArr {
-    DEFINE_ARRAY(optionArg*, option);
+    ARRAY_DEFINE(optionArg*, option);
 } optionArgArr;
 
 typedef struct charOpt {
@@ -43,7 +43,7 @@ typedef struct charOpt {
     optionArg* arg;
 } charOpt;
 typedef struct charOptArr {
-    DEFINE_ARRAY(charOpt, option);
+    ARRAY_DEFINE(charOpt, option);
 } charOptArr;
 
 typedef struct strOpt {
@@ -51,7 +51,7 @@ typedef struct strOpt {
     optionArg* arg;
 } strOpt;
 typedef struct strOptArr {
-    DEFINE_ARRAY(strOpt, option);
+    ARRAY_DEFINE(strOpt, option);
 } strOptArr;
 
 // sorting function for character list
@@ -123,7 +123,7 @@ static void argUsage(argParser* parser) {
             }
             optionArg* arg = entry->value;
             if(arg->type == OPT_NO_ARG && arg->hasShortName) {
-                PUSH_ARRAY(char, shortOpts, char, arg->shortName);
+                ARRAY_PUSH(shortOpts, char, arg->shortName);
             }
         }
 
@@ -146,7 +146,7 @@ static void argUsage(argParser* parser) {
             }
             optionArg* arg = entry->value;
             if(arg->type != OPT_NO_ARG && arg->hasShortName) {
-                PUSH_ARRAY(charOpt, shortArgOpts, option, ((charOpt) {
+                ARRAY_PUSH(shortArgOpts, option, ((charOpt) {
                     .c = arg->shortName,
                     .arg = arg
                 }));
@@ -174,7 +174,7 @@ static void argUsage(argParser* parser) {
             }
             optionArg* arg = entry->value;
             if(arg->type != OPT_NO_ARG && !arg->hasShortName) {
-                PUSH_ARRAY(strOpt, longArgOpts, option, ((strOpt) {
+                ARRAY_PUSH(longArgOpts, option, ((strOpt) {
                     .str = arg->longName,
                     .arg = arg
                 }));
@@ -217,7 +217,7 @@ static void argUsage(argParser* parser) {
         if(entry->key.value == NULL) {
             continue;
         }
-        PUSH_ARRAY(argParser*, parsers, parser, entry->value);
+        ARRAY_PUSH(parsers, parser, entry->value);
     }
 
     // sort the sub-parsers by name, alphabeticaly
@@ -316,7 +316,7 @@ static void argHelp(argParser* parser) {
             if(arg->isUniversal) {
                 continue;
             }
-            PUSH_ARRAY(optionArg, args, option, arg);
+            ARRAY_PUSH(args, option, arg);
         }
         qsort(args.options, args.optionCount, sizeof(optionArg*), optionArgSort);
         for(unsigned int i = 0; i < args.optionCount; i++) {
@@ -329,7 +329,7 @@ static void argHelp(argParser* parser) {
     for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
         optionArg* arg = parser->universalOptions[i];
         if(!arg->universalChildrenOnly && (arg->universalRoot == parser || !arg->printed)) {
-            PUSH_ARRAY(optionArg*, universalOptions, option, arg);
+            ARRAY_PUSH(universalOptions, option, arg);
         }
     }
 
@@ -347,7 +347,7 @@ static void argHelp(argParser* parser) {
     for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
         optionArg* arg = parser->universalOptions[i];
         if(arg->universalChildrenOnly && (arg->universalRoot == parser || !arg->printed)) {
-            PUSH_ARRAY(optionArg*, childOptions, option, arg);
+            ARRAY_PUSH(childOptions, option, arg);
         }
     }
 
@@ -369,7 +369,7 @@ static void argHelp(argParser* parser) {
         if(entry->key.value == NULL) {
             continue;
         }
-        PUSH_ARRAY(argParser*, parsers, parser, entry->value);
+        ARRAY_PUSH(parsers, parser, entry->value);
     }
 
     // sort the sub-parsers by name, alphabeticaly
@@ -424,7 +424,7 @@ static void argError(argParser* parser, const char* message, ...) {
     char* buf = ArenaAlloc(sizeof(char) * len);
     vsprintf(buf, message, args);
 
-    PUSH_ARRAY(const char*, *parser, errorMessage, buf);
+    ARRAY_PUSH(*parser, errorMessage, buf);
 
     va_end(args);
 }
@@ -524,7 +524,7 @@ optionArg* argUniversalOption(argParser* parser, char shortName, const char* lon
     arg->universalRoot = parser;
     arg->universalChildrenOnly = childrenOnly;
 
-    PUSH_ARRAY(optionArg*, *parser, universalOption, arg);
+    ARRAY_PUSH(*parser, universalOption, arg);
     if(childrenOnly) {
         tableRemove(&parser->options, (void*)longName);
     }
@@ -569,7 +569,7 @@ argParser* argMode(argParser* parser, const char* name) {
     ARRAY_ALLOC(optionArg*, *new, universalOption);
     for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
         optionArg* arg = parser->universalOptions[i];
-        PUSH_ARRAY(optionArg*, *new, universalOption, arg);
+        ARRAY_PUSH(*new, universalOption, arg);
         tableSet(&new->options, (void*)arg->longName, arg);
     }
 
@@ -582,7 +582,7 @@ posArg* argString(argParser* parser, const char* name) {
     arg.description = name;
     arg.type = POS_STRING;
     arg.helpMessage = "No help message found";
-    PUSH_ARRAY(posArg, *parser, posArg, arg);
+    ARRAY_PUSH(*parser, posArg, arg);
     return &parser->posArgs[parser->posArgCount - 1];
 }
 
@@ -818,7 +818,7 @@ void argParse(argParser* parser) {
             parser->versionOption->found |= new->versionOption->found;
 
             for(unsigned int i = 0; i < new->errorMessageCount; i++) {
-                PUSH_ARRAY(const char*, *parser, errorMessage, new->errorMessages[i]);
+                ARRAY_PUSH(*parser, errorMessage, new->errorMessages[i]);
             }
 
             if(parser->errorRoot == NULL || new->helpOption->found) {

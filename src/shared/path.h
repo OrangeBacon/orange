@@ -6,7 +6,7 @@
 #include "shared/memory.h"
 
 typedef struct PathStack {
-    DEFINE_ARRAY(const char*, path);
+    ARRAY_DEFINE(const char*, path);
 } PathStack;
 
 void pathStackInit(PathStack* stack);

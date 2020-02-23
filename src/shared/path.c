@@ -9,11 +9,11 @@ void pathStackInit(PathStack* stack) {
 
 void pathStackAddFolderSection(PathStack* stack, const char* path) {
     size_t len = pathGetFolderLength(path);
-    
+
     char* buf = ArenaAlloc(sizeof(char) * len + 1);
     strncpy(buf, path, len);
     buf[len] = '\0';
-    PUSH_ARRAY(const char*, *stack, path, resolvePath(buf));
+    ARRAY_PUSH(*stack, path, resolvePath(buf));
 }
 
 FILE* pathStackSearchFile(PathStack* stack, const char* fileName, char** foundName) {
