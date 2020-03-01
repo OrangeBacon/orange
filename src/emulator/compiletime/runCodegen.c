@@ -22,9 +22,9 @@ int runCodegen(const char* in, const char* out) {
     VMCoreGen core;
     createEmulator(&core);
     Analyse(&parse, &core);
+    printErrors(&parse);
 
     if(parse.hadError) {
-        printErrors(&parse);
         return 1;
     } else {
         coreCodegen(&core, out);

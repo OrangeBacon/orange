@@ -63,6 +63,7 @@ Error* errNew(ErrorLevel level) {
     Error* err = ArenaAlloc(sizeof(Error));
 
     err->level = level;
+    err->severity = ERROR_ERROR;
     ARRAY_ALLOC(ErrorChunk, *err, chunk);
 
     return err;
@@ -102,24 +103,35 @@ void errAddGraph(Error* err, Graph* graph) {
 
 void errEmit(Error* err, struct Parser* parser) {
     CONTEXT(INFO, "Emitting created error");
-    if(parser->panicMode) return;
-    parser->hadError = true;
+    if(err->severity == ERROR_ERROR) {
+        if(parser->panicMode) return;
+        parser->hadError = true;
 
-    if(err->level == ERROR_SYNTAX) {
-        parser->panicMode = true;
+        if(err->level == ERROR_SYNTAX) {
+            parser->panicMode = true;
+        }
+        setErrorState(parser);
     }
-    setErrorState(parser);
 
     ARRAY_PUSH(*parser, error, err);
 }
 
 void printErrors(Parser* parser) {
+    int errors = 0;
+    int warnings = 0;
     for(unsigned int i = 0; i < parser->errorCount; i++) {
         Error* err = parser->errors[i];
         if(err->level == ERROR_SYNTAX) {
-            cErrPrintf(TextWhite, "Syntax Error:\n");
+            cErrPrintf(TextWhite, "Syntax ");
         } else if(err->level == ERROR_SEMANTIC) {
-            cErrPrintf(TextWhite, "Semantic Error:\n");
+            cErrPrintf(TextWhite, "Semantic ");
+        }
+        if(err->severity == ERROR_ERROR) {
+            cErrPrintf(TextWhite, "Error:\n");
+            errors++;
+        } else if(err->severity == ERROR_WARN) {
+            cErrPrintf(TextWhite, "Warning:\n");
+            warnings++;
         }
 
         TextColor color = TextWhite;
@@ -141,8 +153,13 @@ void printErrors(Parser* parser) {
         cErrPrintf(TextWhite, "\n");
     }
 
-    if(parser->errorCount > 0) {
+    if(warnings > 0) {
+        cErrPrintf(TextYellow, "Encountered %d warnings, continuing\n",
+            warnings);
+    }
+
+    if(errors > 0) {
         cErrPrintf(TextRed, "Build Failed due to %d previous messages\n",
-            parser->errorCount);
+            errors);
     }
 }

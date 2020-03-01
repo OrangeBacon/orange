@@ -31,6 +31,11 @@ typedef struct ErrorChunk {
 typedef struct Error {
     ErrorLevel level;
     ARRAY_DEFINE(ErrorChunk, chunk);
+
+    enum {
+        ERROR_ERROR,
+        ERROR_WARN
+    } severity;
 } Error;
 
 Error* errNew(ErrorLevel level);

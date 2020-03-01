@@ -305,7 +305,8 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
         Error* err = errNew(ERROR_SEMANTIC);
-        errAddText(err, TextRed, "Unable to order microcode bits");
+        err->severity = ERROR_WARN;
+        errAddText(err, TextYellow, "Unable to order microcode bits");
         errAddSource(err, location);
         errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
         errAddGraph(err, &graph);
@@ -315,6 +316,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
 
     // filter graph results for only commands, not components
     NodeArray commands;
+    commands.validArray = true;
     ARRAY_ALLOC(Node*, commands, node);
     for(unsigned int i = 0; i < nodes.nodeCount; i++) {
         Node* node = nodes.nodes[i];
@@ -368,7 +370,7 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         }
     }
 
-    return nodes;
+    return commands;
 }
 
 // check if all identifers in the array reperesent a control bit
@@ -666,8 +668,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         }
     }
 
-    bool errored = false;
     for(unsigned int possibility = 0; possibility < possibilities; possibility++) {
+        bool errored = false;
         GenOpCode* gencode = &core->opcodes[opcodeID+possibility];
         gencode->isValid = true;
         gencode->id = opcodeID+possibility;
@@ -683,7 +685,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
             NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j, tests);
             if(!low.validArray) {
-                INFO("Leaving opcode analysis due to errors");
+                WARN("Leaving opcode analysis due to errors");
                 errored = true;
                 break;
             }
@@ -696,7 +698,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
                 NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j, tests);
                 if(!high.validArray) {
-                    INFO("Leaving opcode analysis due to errors");
+                    WARN("Leaving opcode analysis due to errors");
                     errored = true;
                     break;
                 }
@@ -713,7 +715,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         }
 
         if(errored) {
-            break;
+            gencode->isValid = false;
         }
     }
 }
