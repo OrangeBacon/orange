@@ -123,7 +123,6 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
             while(match(parser, TOKEN_IDENTIFIER)) {
                 BitParameter param;
                 param.name = parser->previous;
-                param.argID = -1;
                 ARRAY_PUSH(bit, param, param);
                 if(!match(parser, TOKEN_COMMA)) {
                     break;

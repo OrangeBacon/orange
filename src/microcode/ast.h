@@ -9,7 +9,6 @@ struct Parser;
 
 typedef struct BitParameter {
     Token name;
-    int argID;
 } BitParameter;
 
 typedef struct Bit {

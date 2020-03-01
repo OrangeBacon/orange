@@ -310,6 +310,12 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         errAddSource(err, location);
         errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
         errAddGraph(err, &graph);
+        errAddText(err, TextBlue, "Substitutions: ");
+        for(unsigned int i = 0; i < line->dataCount; i++) {
+            if(line->datas[i].paramCount > 0) {
+                errAddText(err, TextWhite, line->datas[i].data.data.string);
+            }
+        }
         errEmit(err, parser);
         return nodes;
     }
@@ -484,7 +490,7 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
 static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
     Parser* parser, ASTOpcode* opcode, unsigned int possibility,
-    unsigned int lineNumber, unsigned int* tests)
+    unsigned int lineNumber)
 {
     BitArray subsLine;
     ARRAY_ALLOC(Bit, subsLine, data);
@@ -497,14 +503,35 @@ static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
         } else {
             // assume bitarray checks have been done before, so
             // bit->paramCount is always 1
+            // and val is a bitgroup
 
-            for(unsigned int j = 0; j < bit->paramCount; j++) {
-                BitParameter* param = &bit->params[j];
+            // iterate through parameters in reverse order, eg regb, rega, ...
+            for(int j = opcode->paramCount - 1; j >= 0; j--) {
+
+                // get the type specified in the opcode's header
                 Identifier* paramType;
-                tableGet(&identifiers, (char*)param->name.data.string, (void**)&paramType);
-                Bit newbit;
-                newbit.data = createStrToken(&val->as.bitgroup.substitutedIdentifiers[val->as.bitgroup.lineLength*tests[possibility*opcode->paramCount+j]]);
-                ARRAY_PUSH(subsLine, data, newbit);
+                tableGet(&identifiers,
+                    (char*)opcode->params[j].name.data.string,
+                    (void**)&paramType);
+
+                // possibility is a number outof the member counts of all
+                // parameters multiplied together.  Therefore, dividing
+                // possibility by the member count gives the number of
+                // possibilities of all remaining members.  Modulo used to
+                // get the state of the current parameter (remainder from
+                // division) and subtract used to ensure possibility is a
+                // multiple of the member count.
+                // This means currentNumber is an index into the substituted
+                // identifiers from the specified bitgroup (stored in val)
+                unsigned int currentNumber = possibility % paramType->as.userType.as.enumType.memberCount;
+                possibility -= currentNumber;
+                possibility /= paramType->as.userType.as.enumType.memberCount;
+
+                if(strcmp(bit->params[0].name.data.string, opcode->params[j].value.data.string) == 0) {
+                    Bit newBit;
+                    newBit.data = createStrToken((char*)&val->as.bitgroup.substitutedIdentifiers[currentNumber*val->as.bitgroup.lineLength]);
+                    ARRAY_PUSH(subsLine, data, newBit);
+                }
             }
         }
     }
@@ -644,30 +671,6 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         return;
     }
 
-    // algorithm based off of fullfact from MATLAB's stats toolkit,
-    // allows an int to be converted into a value to substitute
-    unsigned int ncycles = possibilities;
-    unsigned int* tests = ArenaAlloc(sizeof(unsigned int) * opcode->paramCount * possibilities);
-    for(unsigned int parameter = 0; parameter < opcode->paramCount; parameter++) {
-        ASTParameter* typeName;
-        tableGet(&paramNames, &opcode->params[parameter].value, (void**)&typeName);
-        Identifier* type;
-        tableGet(&identifiers, (char*)typeName->name.data.string, (void**)&type);
-        unsigned int level =
-            type->as.userType.as.enumType.memberCount;
-        unsigned int nreps = possibilities / ncycles;
-        ncycles /= level;
-        unsigned int count = 0;
-        for(unsigned int cycle = 0; cycle < ncycles; cycle++) {
-            for(unsigned int num = 0; num < level; num++) {
-                for(unsigned int rep = 0; rep < nreps; rep++) {
-                    tests[count*opcode->paramCount+parameter] = num;
-                    count += 1;
-                }
-            }
-        }
-    }
-
     for(unsigned int possibility = 0; possibility < possibilities; possibility++) {
         bool errored = false;
         GenOpCode* gencode = &core->opcodes[opcodeID+possibility];
@@ -683,7 +686,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
 
-            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j, tests);
+            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j);
             if(!low.validArray) {
                 WARN("Leaving opcode analysis due to errors");
                 errored = true;
@@ -696,7 +699,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
             if(line->hasCondition) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
-                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j, tests);
+                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j);
                 if(!high.validArray) {
                     WARN("Leaving opcode analysis due to errors");
                     errored = true;
