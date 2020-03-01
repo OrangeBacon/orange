@@ -1,10 +1,13 @@
 #include "shared/graph.h"
 #include "shared/platform.h"
+#include "shared/log.h"
 #include <stdlib.h>
 
-void InitGraph(Graph* graph) {
+void InitGraph(Graph* graph, NodeDataPrintFn print) {
+    CONTEXT(DEBUG, "Creating graph");
     ARRAY_ALLOC(Node, *graph, node);
     ARRAY_ALLOC(Edge, *graph, edge);
+    graph->nodeDataPrint = print;
 }
 
 // is the provided node already in the graph?
@@ -17,42 +20,47 @@ static bool isInArray(Node* arr, unsigned int count, unsigned int value) {
     return false;
 }
 
-Node* AddNode(Graph* graph, unsigned int node, const char* name) {
-    Node newNode = {.value = node, .removed = false, .name = name};
+Node* AddNode(Graph* graph, unsigned int id, const char* name, void* data) {
+    Node newNode = {
+        .value = id,
+        .removed = false,
+        .name = name,
+        .data = data
+    };
 
     // add new node
-    if(!isInArray(graph->nodes, graph->nodeCount, node)) {
-        PUSH_ARRAY(void*, *graph, node, newNode);
+    if(!isInArray(graph->nodes, graph->nodeCount, id)) {
+        ARRAY_PUSH(*graph, node, newNode);
         return &graph->nodes[graph->nodeCount - 1];
     }
 
     // search for already existing node and return it
     for(unsigned int i = 0; i < graph->nodeCount; i++) {
-        if(graph->nodes[i].value == node) {
+        if(graph->nodes[i].value == id) {
             return &graph->nodes[i];
         }
     }
     return NULL;
 }
 
-void AddEdge(Graph* graph, unsigned int startVal, const char* startName, unsigned int endVal, const char* endName) {
-    Node* start = AddNode(graph, startVal, startName);
-    Node* end = AddNode(graph, endVal, endName);
-
+void AddEdge(Graph* graph, Node* start, Node* end) {
+    CONTEXT(TRACE, "Graph edge add");
     for(unsigned int i = 0; i < graph->edgeCount; i++) {
-        if(graph->edges[i].start->value == startVal &&
-           graph->edges[i].end->value == endVal) {
+        if(graph->edges[i].start == start &&
+           graph->edges[i].end == end) {
             return;
         }
     }
 
-    PUSH_ARRAY(Edge, *graph, edge, ((Edge){
+    Edge e = {
         .start = start,
-        .end = end
-    }));
+        .end = end,
+    };
+    ARRAY_PUSH(*graph, edge, e);
 }
 
 NodeArray NodesNoInput(Graph* graph) {
+    CONTEXT(TRACE, "graph NodesNoInput");
 
     // initialise return value
     NodeArray ret;
@@ -77,13 +85,15 @@ NodeArray NodesNoInput(Graph* graph) {
             }
         }
         if(!incoming) {
-            PUSH_ARRAY(Node*, ret, node, node);
+            ARRAY_PUSH(ret, node, node);
         }
     }
     return ret;
 }
 
 NodeArray TopologicalSort(Graph* graph) {
+    CONTEXT(TRACE, "Toposort");
+
     NodeArray ret;
     ARRAY_ALLOC(Node*, ret, node);
 
@@ -91,7 +101,7 @@ NodeArray TopologicalSort(Graph* graph) {
     NodeArray s = NodesNoInput(graph);
     while(s.nodeCount > 0) {
         Node* node = s.nodes[0];
-        PUSH_ARRAY(Node, ret, node, node);
+        ARRAY_PUSH(ret, node, node);
         node->removed = true;
         s = NodesNoInput(graph);
     }
@@ -110,11 +120,22 @@ NodeArray TopologicalSort(Graph* graph) {
     return ret;
 }
 
-void printGraph(Graph* graph) {
-    cOutPrintf(TextWhite, "digraph g {\n");
-    for(unsigned i = 0; i < graph->edgeCount; i++) {
-        Edge* edge = &graph->edges[i];
-        cOutPrintf(TextWhite, "\t\"%s\" -> \"%s\";\n", edge->start->name, edge->start->name);
+void printGraph(Graph* graph, graphPrintFn printFn) {
+    printFn(TextWhite, "digraph g {\n");
+    for(unsigned int i = 0; i < graph->nodeCount; i++) {
+        Node* node = &graph->nodes[i];
+        printFn(TextWhite, "\t\"%s (", node->name);
+        graph->nodeDataPrint(node->data, printFn);
+        printFn(TextWhite, ")\";\n");
     }
-    cOutPrintf(TextWhite, "}\n");
+
+    for(unsigned int i = 0; i < graph->edgeCount; i++) {
+        Edge* edge = &graph->edges[i];
+        printFn(TextWhite, "\t\"%s (", edge->start->name);
+        graph->nodeDataPrint(edge->start->data, printFn);
+        printFn(TextWhite, ")\" -> \"%s (", edge->end->name);
+        graph->nodeDataPrint(edge->end->data, printFn);
+        printFn(TextWhite, ")\";\n");
+    }
+    printFn(TextWhite, "}\n");
 }

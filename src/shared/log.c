@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
+#include "shared/platform.h"
 
 FILE* logFile = NULL;
 
@@ -21,10 +23,17 @@ bool logInit() {
     return true;
 }
 
+static int errorWarnCount = 0;
 void logClose() {
     if(logFile != NULL) {
         fclose(logFile);
     }
+#ifdef DEBUG_BUILD
+    if(errorWarnCount > 0) {
+        cErrPrintf(TextRed, "Encountered %u logged internal errors or "
+            "warnings\n", errorWarnCount);
+    }
+#endif
 }
 
 void fileCopy(FILE* a, FILE* b) {
@@ -66,10 +75,15 @@ void logSetMinLevel(int level) {
     minumumLevel = level;
 }
 
-void logLog(int level, int line, const char* fmt, ...) {
+void logLog(int level, int line, const char* file, const char* fmt, ...) {
     if(level < minumumLevel || fmt[0] == '\0') {
         return;
     }
+
+    if(level >= 600) {
+        errorWarnCount++;
+    }
+
     va_list args;
     va_start(args, fmt);
 
@@ -88,7 +102,13 @@ void logLog(int level, int line, const char* fmt, ...) {
         logWrittenContext = _log_current_context_;
     }
 
-    fprintf(logFile, "%*s&:%i ", logDepth * 2, "", line);
+    fprintf(logFile, "%*s", logDepth * 2, "");
+    if(strcmp(_log_current_context_->filename, file) == 0) {
+        fprintf(logFile, "&");
+    } else {
+        fprintf(logFile, "%s", file);
+    }
+    fprintf(logFile, ":%i ", line);
     if(level >= 1000) {
         fputs("FATAL", logFile);
     } else if(level >= 800) {

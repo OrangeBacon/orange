@@ -33,13 +33,15 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     else()
         message(STATUS "IPO / LTO not supported: <${error}>")
     endif()
+else()
+	set(MY_C_FLAGS ${MY_C_FLAGS} -g -O0)
 endif()
 
 # function to setup default options on a new target
 function(setup_target target stage)
     string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
     target_compile_definitions(
-        ${target} PRIVATE 
+        ${target} PRIVATE
             SOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}
             BUILD_STAGE=${stage}
             $<$<OR:$<CONFIG:debug>,$<CONFIG:relwithdebinfo>>:DEBUG_BUILD>
@@ -49,7 +51,7 @@ function(setup_target target stage)
     target_include_directories(${target} PRIVATE src)
     target_compile_options(${target} PRIVATE ${MY_C_FLAGS})
     set_property(TARGET ${target} PROPERTY C_STANDARD 11)
-    
+
     if(supported)
         set_property(TARGET ${target} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
@@ -107,7 +109,7 @@ set(MICROCODE_COMPILE_SOURCES
 
 add_custom_command(
     OUTPUT switch.c
-    COMMAND generator codegen "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
+    COMMAND generator codegen -s stdout -l log.txt "${CMAKE_CURRENT_SOURCE_DIR}/src/emulator/microcode.uasm" "${CMAKE_CURRENT_BINARY_DIR}/switch.c"
     DEPENDS generator ${MICROCODE_COMPILE_SOURCES}
 )
 

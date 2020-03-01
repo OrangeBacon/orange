@@ -18,7 +18,7 @@ typedef struct IdentifierEnum {
     Token* definition;
 
     // null terminated strings for each name in the enum
-    DEFINE_ARRAY(Token*, member);
+    ARRAY_DEFINE(Token*, member);
 
     // maximum length of each member name
     unsigned int identifierLength;
@@ -241,53 +241,94 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
     tableSet(&identifiers, key, (void*)value);
 }
 
+typedef enum {
+    GRAPH_STATE_COMPONENT,
+    GRAPH_STATE_COMMAND
+} GraphState;
+void printGraphState(void* g, graphPrintFn printFn) {
+    if((GraphState)g == GRAPH_STATE_COMPONENT) {
+        printFn(TextWhite, "Component");
+    } else {
+        printFn(TextWhite, "Command");
+    }
+}
+
 // analyse an array of microcode bits
 // assumes that all the identifiers in the array exist and have the correct type
 static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
-    Token* opcodeName, unsigned int lineNumber) {
+    SourceRange* location) {
     CONTEXT(INFO, "Analysing line");
 
     Graph graph;
-    InitGraph(&graph);
+    InitGraph(&graph, printGraphState);
 
-    // This works. Dont ask how, I cannot remember
-    // creates dependancy graph for all the microcode bits, based on what they
-    // change and what values they depend on.
     for(unsigned int i = 0; i < line->dataCount; i++) {
-        Identifier* value;
+        // adds a command to the graph
+        // the command gets a node in the graph
+        // add edge command -> everything it changes
+        // add edge everything it depends on -> command
+
+        Identifier* bitIdent;
         tableGet(&identifiers, (char*)line->datas[i].data.data.string,
-            (void**)&value);
-        unsigned int command = value->as.control.value;
-        AddNode(&graph, command, aprintf("command %d", command));
-        for(unsigned int j = 0;
-            j < core->commands[command].changesLength; j++) {
-            unsigned int changed = core->commands[command].changes[j];
-            for(unsigned int k = 0; k < line->dataCount; k++) {
-                Identifier* value;
-                tableGet(&identifiers, (char*)line->datas[k].data.data.string,
-                    (void**)&value);
-                unsigned int comm = value->as.control.value;
-                for(unsigned int l = 0;
-                    l < core->commands[comm].dependsLength; l++) {
-                    unsigned int depended = core->commands[comm].depends[l];
-                    if(changed == depended) {
-                        AddEdge(&graph, command, aprintf("command %d", command), comm, aprintf("command %d", comm));
-                    }
-                }
-            }
+            (void**)&bitIdent);
+        unsigned int commandID = bitIdent->as.control.value;
+        Command* coreCommand = &core->commands[commandID];
+
+        Node* commandNode = AddNode(&graph, commandID,
+            coreCommand->name, (void*)GRAPH_STATE_COMMAND);
+
+        // adds edge between dependancies and commandNode
+        // id has commandCount added so the component id does not clash with
+        // the command id
+        for(unsigned int j = 0; j < coreCommand->dependsLength; j++) {
+            unsigned int dependCompID = coreCommand->depends[j];
+            Component* dependComp = &core->components[dependCompID];
+            Node* dependNode = AddNode(&graph, dependCompID+core->commandCount,
+                dependComp->printName, (void*)GRAPH_STATE_COMPONENT);
+            AddEdge(&graph, dependNode, commandNode);
+        }
+
+        // same as above loop but adds edge from commandNode to everything
+        // it changes
+        for(unsigned int j = 0; j < coreCommand->changesLength; j++) {
+            unsigned int changeCompID = coreCommand->changes[j];
+            Component* changeComp = &core->components[changeCompID];
+            Node* changeNode = AddNode(&graph, changeCompID+core->commandCount,
+                changeComp->printName, (void*)GRAPH_STATE_COMPONENT);
+            AddEdge(&graph, commandNode, changeNode);
         }
     }
+
+    TRACE("Created command graph");
 
     // get execution order for the microcode bits
     NodeArray nodes = TopologicalSort(&graph);
     if(!nodes.validArray) {
         Error* err = errNew(ERROR_SEMANTIC);
-        errAddText(err, TextRed, "Unable to order microcode bits in line %u",
-            lineNumber);
-        errAddSource(err, &opcodeName->range);
-        errAddText(err, TextBlue, "Instruction graph: ");
+        err->severity = ERROR_WARN;
+        errAddText(err, TextYellow, "Unable to order microcode bits");
+        errAddSource(err, location);
+        errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
         errAddGraph(err, &graph);
+        errAddText(err, TextBlue, "Substitutions: ");
+        for(unsigned int i = 0; i < line->dataCount; i++) {
+            if(line->datas[i].paramCount > 0) {
+                errAddText(err, TextWhite, line->datas[i].data.data.string);
+            }
+        }
         errEmit(err, parser);
+        return nodes;
+    }
+
+    // filter graph results for only commands, not components
+    NodeArray commands;
+    commands.validArray = true;
+    ARRAY_ALLOC(Node*, commands, node);
+    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
+        Node* node = nodes.nodes[i];
+        if((GraphState)node->data == GRAPH_STATE_COMMAND) {
+            ARRAY_PUSH(commands, node, node);
+        }
     }
 
     // checking if any bus reads happen when the bus has not been written to
@@ -299,8 +340,9 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
     }
 
     // loop through all commands in execution order
-    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
-        Command* command = &core->commands[nodes.nodes[i]->value];
+    for(unsigned int i = 0; i < commands.nodeCount; i++) {
+
+        Command* command = &core->commands[commands.nodes[i]->value];
 
         // read from bus and check if possible
         for(unsigned int j = 0; j < command->readsLength; j++) {
@@ -308,9 +350,12 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
             if(!bus->busStatus) {
                 Error* err = errNew(ERROR_SEMANTIC);
                 errAddText(err, TextRed, "Command reads from bus before it was "
-                    "written in line %u", lineNumber);
-                errAddSource(err, &opcodeName->range);
+                    "written");
+                errAddSource(err, location);
+                errAddText(err, TextBlue, "Command graph (graphviz dot):");
+                errAddGraph(err, &graph);
                 errEmit(err, parser);
+                nodes.validArray = false;
             }
         }
 
@@ -318,11 +363,20 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
         // todo - do not allow multiple writes to a bus
         for(unsigned int j = 0; j < command->writesLength; j++) {
             Component* bus = &core->components[command->writes[j]];
-            bus->busStatus = true;
+            if(bus->busStatus) {
+                Error* err = errNew(ERROR_SEMANTIC);
+                errAddText(err, TextRed, "Command writes to bus twice");
+                errAddSource(err, location);
+                errAddText(err, TextBlue, "Command graph (graphviz dot):");
+                errAddGraph(err, &graph);
+                errEmit(err, parser);
+            } else {
+                bus->busStatus = true;
+            }
         }
     }
 
-    return nodes;
+    return commands;
 }
 
 // check if all identifers in the array reperesent a control bit
@@ -334,6 +388,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
     for(unsigned int i = 0; i < arr->dataCount; i++) {
         Bit* bit = &arr->datas[i];
 
+        // look up to check the identifier is defined
         Identifier* val;
         if(!tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val)) {
             Error* err = errNew(ERROR_SEMANTIC);
@@ -347,6 +402,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
         if(val->type == TYPE_VM_CONTROL_BIT) {
             continue;
         } else if(val->type == TYPE_BITGROUP) {
+            // check that there is only 1 parameter passed to a bitgroup
             if(bit->paramCount != 1) {
                 passed = false;
                 Error* err = errNew(ERROR_SEMANTIC);
@@ -354,15 +410,17 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
                 errAddSource(err, &bit->data.range);
                 errEmit(err, parser);
             }
+            // check all of the parameters of the bitgroup, regardless of how
+            // many should have been passed
             for(unsigned int j = 0; j < bit->paramCount; j++) {
-                Token* param = &bit->params[j];
+                BitParameter* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
                     passed = false;
                     Error* err = errNew(ERROR_SEMANTIC);
                     errAddText(err, TextRed,
                         "Could not resolve argument name \"%s\"",
-                        param->data.string);
-                    errAddSource(err, &param->range);
+                        param->name.data.string);
+                    errAddSource(err, &param->name.range);
                     errEmit(err, parser);
                 }
             }
@@ -385,6 +443,7 @@ static ASTStatement* firstHeader = NULL;
 static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing header");
 
+    // duplicate header checking
     if(parsedHeader) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Cannot have more than one header statement "
@@ -395,6 +454,8 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         errEmit(err, parser);
         return;
     }
+
+    // assign global variables (ew, should change)
     parsedHeader = true;
     firstHeader = s;
 
@@ -420,35 +481,62 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         }
 
         NodeArray nodes = analyseLine(core, parser, line,
-            &s->as.header.errorPoint, i);
+            &s->as.header.range);
         for(unsigned int j = 0; j < nodes.nodeCount; j++) {
-            PUSH_ARRAY(unsigned int, *core, headBit, nodes.nodes[j]->value);
+            ARRAY_PUSH(*core, headBit, nodes.nodes[j]->value);
         }
     }
 }
 
-static NodeArray genlinePush(BitArray* bits, VMCoreGen* core, Parser* parser, ASTOpcode* opcode, unsigned int possibility, unsigned int lineNumber, unsigned int* tests) {
+static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
+    Parser* parser, ASTOpcode* opcode, unsigned int possibility,
+    unsigned int lineNumber)
+{
     BitArray subsLine;
     ARRAY_ALLOC(Bit, subsLine, data);
     for(unsigned int i = 0; i < bits->dataCount; i++) {
-        Bit bit = bits->datas[i];
+        Bit* bit = &bits->datas[i];
         Identifier* val;
-        tableGet(&identifiers, (char*)bit.data.data.string, (void**)&val);
+        tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val);
         if(val->type == TYPE_VM_CONTROL_BIT) {
-            PUSH_ARRAY(Bit, subsLine, data, bit);
+            ARRAY_PUSH(subsLine, data, *bit);
         } else {
-            for(unsigned int j = 0; j < opcode->paramCount; j++) {
-                ASTParameter* param = &opcode->params[j];
+            // assume bitarray checks have been done before, so
+            // bit->paramCount is always 1
+            // and val is a bitgroup
+
+            // iterate through parameters in reverse order, eg regb, rega, ...
+            for(int j = opcode->paramCount - 1; j >= 0; j--) {
+
+                // get the type specified in the opcode's header
                 Identifier* paramType;
-                tableGet(&identifiers, (char*)param->name.data.string, (void**)&paramType);
-                Bit newbit;
-                newbit.data = createStrToken(&val->as.bitgroup.substitutedIdentifiers[val->as.bitgroup.lineLength*tests[possibility*opcode->paramCount+j]]);
-                PUSH_ARRAY(Bit, subsLine, data, newbit);
+                tableGet(&identifiers,
+                    (char*)opcode->params[j].name.data.string,
+                    (void**)&paramType);
+
+                // possibility is a number outof the member counts of all
+                // parameters multiplied together.  Therefore, dividing
+                // possibility by the member count gives the number of
+                // possibilities of all remaining members.  Modulo used to
+                // get the state of the current parameter (remainder from
+                // division) and subtract used to ensure possibility is a
+                // multiple of the member count.
+                // This means currentNumber is an index into the substituted
+                // identifiers from the specified bitgroup (stored in val)
+                unsigned int currentNumber = possibility % paramType->as.userType.as.enumType.memberCount;
+                possibility -= currentNumber;
+                possibility /= paramType->as.userType.as.enumType.memberCount;
+
+                if(strcmp(bit->params[0].name.data.string, opcode->params[j].value.data.string) == 0) {
+                    Bit newBit;
+                    newBit.data = createStrToken((char*)&val->as.bitgroup.substitutedIdentifiers[currentNumber*val->as.bitgroup.lineLength]);
+                    ARRAY_PUSH(subsLine, data, newBit);
+                }
             }
         }
     }
 
-    return analyseLine(core, parser, &subsLine, &opcode->name, lineNumber);
+    return analyseLine(core, parser, &subsLine, &opcode->lines[lineNumber]->range);
 }
 
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
@@ -456,12 +544,24 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
     ASTOpcode *opcode = &s->as.opcode;
 
-    if(!parsedHeader) return;
+    static bool notParsedHeaderThrown = false;
+    if(!parsedHeader) {
+        if(!notParsedHeaderThrown) {
+            Error* err = errNew(ERROR_SEMANTIC);
+            errAddText(err, TextRed, "To parse an opcode, the header must be "
+                "defined");
+            errAddSource(err, &opcode->range);
+            errEmit(err, parser);
+        }
+        notParsedHeaderThrown = true;
+        return;
+    }
+
     Identifier* phase = getParameter(parser, &opcode->name,
         "phase", "opcode");
     if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value) -
-        firstHeader->as.parameter.value.data.value;
+        firstHeader->as.header.lineCount;
 
     Identifier* opsize = getParameter(parser, &opcode->name,
         "opsize", "opcode");
@@ -571,38 +671,14 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         return;
     }
 
-    // algorithm based off of fullfact from MATLAB's stats toolkit,
-    // allows an int to be converted into a value to substitute
-    unsigned int ncycles = possibilities;
-    unsigned int* tests = ArenaAlloc(sizeof(unsigned int) * opcode->paramCount * possibilities);
-    for(unsigned int i = 0; i < opcode->paramCount; i++) {
-        ASTParameter* typeName;
-        tableGet(&paramNames, &opcode->params[i].value, (void**)&typeName);
-        Identifier* type;
-        tableGet(&identifiers, (char*)typeName->name.data.string, (void**)&type);
-        unsigned int level =
-            type->as.userType.as.enumType.memberCount;
-        unsigned int nreps = possibilities / ncycles;
-        ncycles /= level;
-        unsigned int count = 0;
-        for(unsigned int cycle = 0; cycle < ncycles; cycle++) {
-            for(unsigned int num = 0; num < level; num++) {
-                for(unsigned int rep = 0; rep < nreps; rep++) {
-                    tests[count*opcode->paramCount+i] = num;
-                    count += 1;
-                }
-            }
-        }
-    }
-
-    bool errored = false;
-    for(unsigned int i = 0; i < possibilities; i++) {
-        GenOpCode* gencode = &core->opcodes[opcodeID+i];
+    for(unsigned int possibility = 0; possibility < possibilities; possibility++) {
+        bool errored = false;
+        GenOpCode* gencode = &core->opcodes[opcodeID+possibility];
         gencode->isValid = true;
-        gencode->id = opcodeID+i;
+        gencode->id = opcodeID+possibility;
         gencode->name = opcode->name.range.tokenStart;
         gencode->nameLen = opcode->name.range.length;
-        ARRAY_ALLOC(GenOpCodeLine, *gencode, line);
+        ARRAY_ALLOC(GenOpCodeLine*, *gencode, line);
 
         for(unsigned int j = 0; j < opcode->lineCount; j++) {
             Line* line = opcode->lines[j];
@@ -610,29 +686,27 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
 
-            unsigned int errorCount = parser->errorCount;
-            NodeArray low = genlinePush(&line->bitsLow, core, parser, opcode, i, j, tests);
-            if(parser->errorCount > errorCount) {
-                INFO("Leaving opcode analysis due to errors");
+            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j);
+            if(!low.validArray) {
+                WARN("Leaving opcode analysis due to errors");
                 errored = true;
                 break;
             }
             for(unsigned int k = 0; k < low.nodeCount; k++) {
-                TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+i);
-                PUSH_ARRAY(unsigned int, *genline, lowBit, low.nodes[k]->value);
+                TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+possibility);
+                ARRAY_PUSH(*genline, lowBit, low.nodes[k]->value);
             }
 
             if(line->hasCondition) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
-                unsigned int errorCount = parser->errorCount;
-                NodeArray high = genlinePush(&line->bitsHigh, core, parser, opcode, i, j, tests);
-                if(parser->errorCount > errorCount) {
-                    INFO("Leaving opcode analysis due to errors");
+                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j);
+                if(!high.validArray) {
+                    WARN("Leaving opcode analysis due to errors");
                     errored = true;
                     break;
                 }
                 for(unsigned int k = 0; k < high.nodeCount; k++) {
-                    PUSH_ARRAY(unsigned int, *genline, highBit, high.nodes[k]->value);
+                    ARRAY_PUSH(*genline, highBit, high.nodes[k]->value);
                 }
             } else {
                 genline->highBits = genline->lowBits;
@@ -640,11 +714,11 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
                 genline->highBitCapacity = genline->lowBitCapacity;
             }
 
-            PUSH_ARRAY(GenOpCodeLine, *gencode, line, genline);
+            ARRAY_PUSH(*gencode, line, genline);
         }
 
         if(errored) {
-            break;
+            gencode->isValid = false;
         }
     }
 }
@@ -712,7 +786,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
             errEmit(err, parser);
         } else {
             tableSet(&membersTable, tok, NULL);
-            PUSH_ARRAY(Token*, *enumIdent, member, tok);
+            ARRAY_PUSH(*enumIdent, member, tok);
             enumIdent->identifierLength =
                 max(enumIdent->identifierLength, tok->range.length);
         }
@@ -875,7 +949,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 "while substituting into bitgroup");
             errAddSource(err, &value->as.bitgroup.definition->range);
             errEmit(err, parser);
-            passed = false;
+            return;
         }
         if(val->type != TYPE_VM_CONTROL_BIT) {
             Error* err = errNew(ERROR_SEMANTIC);
@@ -884,10 +958,6 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 IdentifierTypeNames[val->type]);
             errAddSource(err, &value->as.bitgroup.definition->range);
             errEmit(err, parser);
-            passed = false;
-        }
-
-        if(!passed) {
             return;
         }
     }

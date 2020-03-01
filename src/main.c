@@ -1,3 +1,4 @@
+#include <string.h>
 #include "shared/platform.h"
 #include "shared/memory.h"
 #include "shared/arg.h"
@@ -26,6 +27,11 @@ int main(int argc, char** argv){
     logLevel->helpMessage = "Minimum level of importance for log messages to be written. "
         "Fatal is 1000, error is 800, warn is 600, info is 400, debug is 200, trace is 0. "
         "Default value is 0.  Debug and trace logging are disabled when in release mode.";
+    optionArg* outputStream = argUniversalOptionString(&parser, 's', "output-stream", false);
+    outputStream->helpMessage = "Which stream the output should be written to. "
+        "Default value is undefined, \"stdout\" is stdout and \"stderr\" is "
+        "stderr.  Useful so errors are not mixed with output from make.  Does "
+        "not apply to anything printed from the argument parser.";
 
     argParser* analyse = argMode(&parser, "analyse");
     analyse->helpMessage = "Parse and analyse a microcode description file";
@@ -59,6 +65,17 @@ int main(int argc, char** argv){
     if(!argSuccess(&parser)) {
         logClose();
         return -1;
+    }
+
+    if(outputStream->found) {
+        if(strcmp(outputStream->value.as_string, "stdout") == 0 ) {
+            printStreamForceOut();
+        } else if(strcmp(outputStream->value.as_string, "stderr") == 0) {
+            printStreamForceErr();
+        } else {
+            cErrPrintf(TextRed, "Unable to recognise selected output stream. "
+                "Ignoring, using default value.\n");
+        }
     }
 
     if(logLevel->found) {

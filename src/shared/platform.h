@@ -34,6 +34,9 @@ typedef enum TextColor {
 // is terminal output in color
 extern bool EnableColor;
 
+void printStreamForceOut();
+void printStreamForceErr();
+
 // setup color terminal output
 void startColor();
 
@@ -49,8 +52,8 @@ void cOutPrintf(TextColor color, const char* format, ...);
 // printf a forat string and arguments with a given color to stdout
 void cOutVPrintf(TextColor color, const char* format, va_list args);
 
-void cErrPuts(TextColor color, const char* string);
-void cOutPuts(TextColor color, const char* string);
+// putchar a character with a given color to stderr
+void cErrPutchar(TextColor color, char c);
 
 // get a buffer containing the string contents of the filename provided
 const char* readFile(const char* fileName);

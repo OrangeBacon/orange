@@ -12,12 +12,12 @@
 
 static void newErrorState(Parser* parser) {
     CONTEXT(DEBUG, "New error state");
-    PUSH_ARRAY(bool, *parser, errorStack, false);
+    ARRAY_PUSH(*parser, errorStack, (bool)false);
 }
 
 static bool endErrorState(Parser* parser) {
     CONTEXT(DEBUG, "Exited error state");
-    return POP_ARRAY(*parser, errorStack);
+    return ARRAY_POP(*parser, errorStack);
 }
 
 void setErrorState(Parser* parser) {
@@ -111,21 +111,19 @@ static void syncronise(Parser* parser) {
 static BitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
     BitArray result;
-    result.range.column = parser->current.range.column;
-    result.range.line = parser->current.range.line;
-    result.range.tokenStart = parser->current.range.tokenStart;
-    ARRAY_ALLOC(Token, result, data);
+    result.range = parser->current.range;
+    ARRAY_ALLOC(Bit, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
         Bit bit;
-        bit.range.column = parser->current.range.column;
-        bit.range.line = parser->current.range.line;
-        bit.range.tokenStart = parser->current.range.tokenStart;
         bit.data = parser->previous;
+        bit.range = bit.data.range;
         ARRAY_ZERO(bit, param);
         if(match(parser, TOKEN_LEFT_PAREN)) {
-            ARRAY_ALLOC(Token, bit, param);
+            ARRAY_ALLOC(BitParameter, bit, param);
             while(match(parser, TOKEN_IDENTIFIER)) {
-                PUSH_ARRAY(Token, bit, param, parser->previous);
+                BitParameter param;
+                param.name = parser->previous;
+                ARRAY_PUSH(bit, param, param);
                 if(!match(parser, TOKEN_COMMA)) {
                     break;
                 }
@@ -135,7 +133,8 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
         }
         bit.range.length = parser->previous.range.tokenStart +
             parser->previous.range.length - bit.range.tokenStart;
-        PUSH_ARRAY(Token, result, data, bit);
+        ARRAY_PUSH(result, data, bit);
+
         if(!match(parser, TOKEN_COMMA)) {
             break;
         }
@@ -151,6 +150,7 @@ static Line* microcodeLine(Parser* parser) {
     CONTEXT(INFO, "Parsing single microcode line");
     Line* line = ArenaAlloc(sizeof(Line));
     line->conditionErrorToken = (Token){.type = TOKEN_NULL};
+    line->range = parser->current.range;
 
     if(check(parser, TOKEN_NUMBER)) {
         INFO("Microcode line has a condition");
@@ -207,6 +207,9 @@ static Line* microcodeLine(Parser* parser) {
         line->bitsHigh = line->bitsLow = parseMicrocodeBitArray(parser);
     }
 
+    line->range.length = parser->previous.range.tokenStart +
+        parser->previous.range.length - line->range.tokenStart;
+
     return line;
 }
 
@@ -224,7 +227,7 @@ static void typeEnum(Parser* parser, ASTStatement* s) {
 
     ARRAY_ALLOC(Token, s->as.type.as.enumType, member);
     while(match(parser, TOKEN_IDENTIFIER)) {
-        PUSH_ARRAY(Token, s->as.type.as.enumType, member, parser->previous);
+        ARRAY_PUSH(s->as.type.as.enumType, member, parser->previous);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
@@ -302,7 +305,7 @@ static void header(Parser* parser) {
             errEmit(err, parser);
         }
 
-        PUSH_ARRAY(BitArray, s->as.header, line, line->bitsLow);
+        ARRAY_PUSH(s->as.header, line, line->bitsLow);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
@@ -319,6 +322,8 @@ static void opcode(Parser* parser) {
 
     ASTStatement* s = newStatement(parser, AST_BLOCK_OPCODE);
     ARRAY_ALLOC(Line*, s->as.opcode, line);
+
+    s->as.opcode.range = parser->previous.range;
 
     consume(parser, TOKEN_IDENTIFIER, "Expected opcode name, got %s",
         TokenNames[parser->current.type]);
@@ -338,7 +343,7 @@ static void opcode(Parser* parser) {
             "Expecting the name of a parameter after its type");
         param.value = parser->previous;
 
-        PUSH_ARRAY(ASTParameter, s->as.opcode, param, param);
+        ARRAY_PUSH(s->as.opcode, param, param);
 
         if(!match(parser, TOKEN_COMMA)) {
             break;
@@ -358,13 +363,15 @@ static void opcode(Parser* parser) {
             break;
         }
         Line* line = microcodeLine(parser);
-        PUSH_ARRAY(Line, s->as.opcode, line, line);
+        ARRAY_PUSH(s->as.opcode, line, line);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
     }
 
     consume(parser, TOKEN_RIGHT_BRACE, "Expected \"}\" at end of block");
+
+    s->as.opcode.range.length = parser->previous.range.tokenStart + parser->previous.range.length - s->as.opcode.range.tokenStart;
 
     s->isValid = !endErrorState(parser);
 }
@@ -400,7 +407,7 @@ static void include(Parser* parser) {
         if(newParser->hadError){
             parser->hadError = true;
             for(unsigned int i = 0; i < newParser->errorCount; i++) {
-                PUSH_ARRAY(Error, *parser, error, newParser->errors[i]);
+                ARRAY_PUSH(*parser, error, newParser->errors[i]);
             }
         }
 
@@ -434,7 +441,7 @@ static void bitgroup(Parser* parser) {
             "Expecting the name of a parameter after its type");
         param.value = parser->previous;
 
-        PUSH_ARRAY(ASTParameter, s->as.bitGroup, param, param);
+        ARRAY_PUSH(s->as.bitGroup, param, param);
 
         if(!match(parser, TOKEN_COMMA)) {
             break;
@@ -470,7 +477,7 @@ static void bitgroup(Parser* parser) {
             errEmit(err, parser);
             break;
         }
-        PUSH_ARRAY(ASTBitGroupIdentifier, s->as.bitGroup, segment, id);
+        ARRAY_PUSH(s->as.bitGroup, segment, id);
     }
 
     s->isValid = !endErrorState(parser);
@@ -519,7 +526,7 @@ static bool runParser(Parser* parser) {
             return false;
         }
     }
-    PUSH_ARRAY(const char*, *parser->ast, fileName, parser->scanner->fileName);
+    ARRAY_PUSH(*parser->ast, fileName, parser->scanner->fileName);
     DEBUG("Filename checks passed");
 
     INFO("Starting parsing");
@@ -539,7 +546,7 @@ bool Parse(Parser* parser, Scanner* scan, AST* ast) {
     parser->hadError = false;
     parser->panicMode = false;
     ARRAY_ALLOC(bool, *parser, errorStack);
-    ARRAY_ALLOC(Error, *parser, error);
+    ARRAY_ALLOC(Error*, *parser, error);
     parser->ast = ast;
 
     return runParser(parser);

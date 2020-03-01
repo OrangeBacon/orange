@@ -82,7 +82,7 @@ struct argParser {
     bool usedSubParser;
 
     // positional arguments required
-    DEFINE_ARRAY(posArg, posArg);
+    ARRAY_DEFINE(posArg, posArg);
 
     // which positional argument is next to be parsed
     unsigned int currentPosArg;
@@ -90,7 +90,7 @@ struct argParser {
     // the name of the current parser, including executable name (and mode name(s))
     const char* name;
 
-    DEFINE_ARRAY(const char*, errorMessage);
+    ARRAY_DEFINE(const char*, errorMessage);
 
     bool isSubParser;
 
@@ -104,7 +104,7 @@ struct argParser {
 
     bool printUsage;
 
-    DEFINE_ARRAY(optionArg*, universalOption);
+    ARRAY_DEFINE(optionArg*, universalOption);
 };
 
 // setup a new argument parser

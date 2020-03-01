@@ -40,27 +40,22 @@ static void printMessage(SourceRange* range, TextColor color) {
     // how far along the line the error token starts
     int startPos = range->tokenStart - range->sourceStart - start;
 
-    // buffer to store arrow to errored token
-    char* buf = malloc(length * sizeof(char));
-    if(buf != NULL) {
-        // space fill
-        for(int i = 0; i < length; i++) {
-            buf[i] = ' ';
-        }
-        // underline fill length below errored token
-        for(int i = startPos; i < startPos + range->length; i++) {
-            buf[i] = '^';
-        }
 
-        cErrPrintf(TextWhite, "  %*s | ", lineNumberLength, "");
-
-        cErrPrintf(color, "%.*s\n", length, buf);
+    cErrPrintf(TextWhite, "  %*s | ", lineNumberLength, "");
+    for(int i = 0; i < length; i++) {
+        if(i >= startPos && i < startPos + range->length) {
+            cErrPutchar(color, '^');
+        } else {
+            cErrPutchar(color, ' ');
+        }
     }
+
+    cErrPutchar(TextRed, '\n');
 
     // line after error token
     printLine(range, lineNumberLength, 1, &start, &length);
 
-    printf("\n");
+    cErrPutchar(TextRed, '\n');
 }
 
 Error* errNew(ErrorLevel level) {
@@ -68,6 +63,7 @@ Error* errNew(ErrorLevel level) {
     Error* err = ArenaAlloc(sizeof(Error));
 
     err->level = level;
+    err->severity = ERROR_ERROR;
     ARRAY_ALLOC(ErrorChunk, *err, chunk);
 
     return err;
@@ -86,7 +82,7 @@ void vErrAddText(Error* err, TextColor color, const char* text, va_list args) {
     chunk.type = ERROR_CHUNK_TEXT;
     chunk.as.text.message = vaprintf(text, args);
     chunk.as.text.color = color;
-    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+    ARRAY_PUSH(*err, chunk, chunk);
 }
 
 void errAddSource(Error* err, SourceRange* loc) {
@@ -94,7 +90,7 @@ void errAddSource(Error* err, SourceRange* loc) {
     ErrorChunk chunk;
     chunk.type = ERROR_CHUNK_SOURCE;
     chunk.as.source = *loc;
-    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+    ARRAY_PUSH(*err, chunk, chunk);
 }
 
 void errAddGraph(Error* err, Graph* graph) {
@@ -102,29 +98,40 @@ void errAddGraph(Error* err, Graph* graph) {
     ErrorChunk chunk;
     chunk.type = ERROR_CHUNK_GRAPH;
     chunk.as.graph = *graph;
-    PUSH_ARRAY(ErrorChunk, *err, chunk, chunk);
+    ARRAY_PUSH(*err, chunk, chunk);
 }
 
 void errEmit(Error* err, struct Parser* parser) {
     CONTEXT(INFO, "Emitting created error");
-    if(parser->panicMode) return;
-    parser->hadError = true;
+    if(err->severity == ERROR_ERROR) {
+        if(parser->panicMode) return;
+        parser->hadError = true;
 
-    if(err->level == ERROR_SYNTAX) {
-        parser->panicMode = true;
+        if(err->level == ERROR_SYNTAX) {
+            parser->panicMode = true;
+        }
+        setErrorState(parser);
     }
-    setErrorState(parser);
 
-    PUSH_ARRAY(Error, *parser, error, err);
+    ARRAY_PUSH(*parser, error, err);
 }
 
 void printErrors(Parser* parser) {
+    int errors = 0;
+    int warnings = 0;
     for(unsigned int i = 0; i < parser->errorCount; i++) {
         Error* err = parser->errors[i];
         if(err->level == ERROR_SYNTAX) {
-            cErrPrintf(TextWhite, "Syntax Error:\n");
+            cErrPrintf(TextWhite, "Syntax ");
         } else if(err->level == ERROR_SEMANTIC) {
-            cErrPrintf(TextWhite, "Semantic Error:\n");
+            cErrPrintf(TextWhite, "Semantic ");
+        }
+        if(err->severity == ERROR_ERROR) {
+            cErrPrintf(TextWhite, "Error:\n");
+            errors++;
+        } else if(err->severity == ERROR_WARN) {
+            cErrPrintf(TextWhite, "Warning:\n");
+            warnings++;
         }
 
         TextColor color = TextWhite;
@@ -140,13 +147,19 @@ void printErrors(Parser* parser) {
                     printMessage(&chunk->as.source, color);
                     break;
                 case ERROR_CHUNK_GRAPH:
-                    printGraph(&chunk->as.graph);
+                    printGraph(&chunk->as.graph, cErrPrintf);
             }
         }
+        cErrPrintf(TextWhite, "\n");
     }
 
-    if(parser->errorCount > 0) {
+    if(warnings > 0) {
+        cErrPrintf(TextYellow, "Encountered %d warnings, continuing\n",
+            warnings);
+    }
+
+    if(errors > 0) {
         cErrPrintf(TextRed, "Build Failed due to %d previous messages\n",
-            parser->errorCount);
+            errors);
     }
 }

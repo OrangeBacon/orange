@@ -28,24 +28,24 @@ extern int _log_current_context_depth_;
     logger(__VA_ARGS__)
 
 #ifdef DEBUG_BUILD
-    #define TRACE(...) logLog(0, __LINE__, ##__VA_ARGS__)
-    #define DEBUG(...) logLog(200, __LINE__, ##__VA_ARGS__)
+    #define TRACE(...) logLog(0, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
+    #define DEBUG(...) logLog(200, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
 #else
     #define TRACE(...)
     #define DEBUG(...)
 #endif
-#define INFO(...) logLog(400, __LINE__, ##__VA_ARGS__)
-#define WARN(...) logLog(600, __LINE__, ##__VA_ARGS__)
-#define ERROR(...) logLog(800, __LINE__, ##__VA_ARGS__)
-#define FATAL(...) logLog(1000, __LINE__, ##__VA_ARGS__)
-#define LOG(level, ...) logLog(level, __LINE__, ##__VA_ARGS__)
+#define INFO(...) logLog(400, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
+#define WARN(...) logLog(600, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
+#define ERROR(...) logLog(800, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
+#define FATAL(...) logLog(1000, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
+#define LOG(level, ...) logLog(level, __LINE__, __FILE__ + SOURCE_PATH_SIZE, ##__VA_ARGS__)
 
 bool logInit();
 void logClose();
 bool logSetFile(FILE* file);
 
 void logContextEnd(LogContext* ctx);
-void logLog(int level, int line, const char* fmt, ...);
+void logLog(int level, int line, const char* file, const char* fmt, ...);
 
 void logSetMinLevel(int level);
 
