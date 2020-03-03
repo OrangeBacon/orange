@@ -7,48 +7,48 @@
 
 struct Parser;
 
-typedef struct BitParameter {
+typedef struct ASTBitParameter {
     Token name;
-} BitParameter;
+} ASTBitParameter;
 
-typedef struct Bit {
+typedef struct ASTBit {
     Token data;
-    ARRAY_DEFINE(BitParameter, param);
+    ARRAY_DEFINE(ASTBitParameter, param);
     SourceRange range;
-} Bit;
+} ASTBit;
 
-typedef struct BitArray {
-    ARRAY_DEFINE(Bit, data);
+typedef struct ASTBitArray {
+    ARRAY_DEFINE(ASTBit, data);
     SourceRange range;
-} BitArray;
+} ASTBitArray;
 
-typedef struct Line {
+typedef struct ASTMicrocodeLine {
     bool hasCondition;
-    BitArray bitsLow;
-    BitArray bitsHigh;
+    ASTBitArray bitsLow;
+    ASTBitArray bitsHigh;
     Token conditionErrorToken;
     SourceRange range;
-} Line;
+} ASTMicrocodeLine;
 
-typedef struct ASTHeader {
-    ARRAY_DEFINE(BitArray, line);
+typedef struct ASTStatementHeader {
+    ARRAY_DEFINE(ASTBitArray, line);
     Token errorPoint;
     SourceRange range;
-} ASTHeader;
+} ASTStatementHeader;
 
-typedef struct ASTParameter {
+typedef struct ASTStatementParameter {
     Token name;
     Token value;
     SourceRange range;
-} ASTParameter;
+} ASTStatementParameter;
 
-typedef struct ASTOpcode {
+typedef struct ASTStatementOpcode {
     Token id;
     Token name;
-    ARRAY_DEFINE(Line*, line);
-    ARRAY_DEFINE(ASTParameter, param);
+    ARRAY_DEFINE(ASTMicrocodeLine*, line);
+    ARRAY_DEFINE(ASTStatementParameter, param);
     SourceRange range;
-} ASTOpcode;
+} ASTStatementOpcode;
 
 typedef struct ASTTypeEnum {
     Token width;
@@ -56,55 +56,57 @@ typedef struct ASTTypeEnum {
     SourceRange range;
 } ASTTypeEnum;
 
-typedef enum UserType {
-    USER_TYPE_ANY,
-    USER_TYPE_ENUM
-} UserType;
+typedef enum ASTTypeStatementType {
+    AST_TYPE_STATEMENT_ANY,
+    AST_TYPE_STATEMENT_ENUM
+} ASTTypeStatementType;
 
-typedef struct ASTType {
+typedef struct ASTStatementType {
     Token name;
 
-    UserType type;
+    ASTTypeStatementType type;
 
     union {
         ASTTypeEnum enumType;
     } as;
     SourceRange range;
-} ASTType;
+} ASTStatementType;
+
+typedef enum AstBitGroupIdentifierType {
+    AST_BIT_GROUP_IDENTIFIER_SUBST,
+    AST_BIT_GROUP_IDENTIFIER_LITERAL
+} AstBitGroupIdentifierType;
 
 typedef struct ASTBitGroupIdentifier {
-    enum {
-        AST_BIT_GROUP_IDENTIFIER_SUBST,
-        AST_BIT_GROUP_IDENTIFIER_LITERAL
-    } type;
+    AstBitGroupIdentifierType type;
     Token identifier;
     SourceRange range;
 } ASTBitGroupIdentifier;
 
-typedef struct ASTBitGroup {
+typedef struct ASTStatementBitGroup {
     Token name;
-    ARRAY_DEFINE(ASTParameter, param);
+    ARRAY_DEFINE(ASTStatementParameter, param);
     ARRAY_DEFINE(ASTBitGroupIdentifier, segment);
     SourceRange range;
-} ASTBitGroup;
+} ASTStatementBitGroup;
 
-typedef enum ASTStatementType {
+typedef enum ASTStatementBlockType {
     AST_BLOCK_HEADER,
     AST_BLOCK_OPCODE,
     AST_BLOCK_PARAMETER,
     AST_BLOCK_TYPE,
     AST_BLOCK_BITGROUP
-} ASTStatementType;
+} ASTStatementBlockType;
 
 typedef struct ASTStatement {
-    ASTStatementType type;
+    ASTStatementBlockType type;
 
     union {
-        ASTHeader header;
-        ASTOpcode opcode;
-        ASTParameter parameter;
-        ASTType type;
-        ASTBitGroup bitGroup;
+        ASTStatementHeader header;
+        ASTStatementOpcode opcode;
+        ASTStatementParameter parameter;
+        ASTStatementType type;
+        ASTStatementBitGroup bitGroup;
     } as;
 
     bool isValid;
@@ -118,6 +120,6 @@ typedef struct AST {
 
 void InitAST(AST* mcode);
 
-ASTStatement* newStatement(struct Parser* parser, ASTStatementType type);
+ASTStatement* newStatement(struct Parser* parser, ASTStatementBlockType type);
 
 #endif

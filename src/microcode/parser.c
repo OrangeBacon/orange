@@ -108,20 +108,20 @@ static void syncronise(Parser* parser) {
     INFO("Could not detect valid parser state");
 }
 
-static BitArray parseMicrocodeBitArray(Parser* parser) {
+static ASTBitArray parseMicrocodeBitArray(Parser* parser) {
     CONTEXT(INFO, "Parsing microcode bit array");
-    BitArray result;
+    ASTBitArray result;
     result.range = parser->current.range;
-    ARRAY_ALLOC(Bit, result, data);
+    ARRAY_ALLOC(ASTBit, result, data);
     while(match(parser, TOKEN_IDENTIFIER)) {
-        Bit bit;
+        ASTBit bit;
         bit.data = parser->previous;
         bit.range = bit.data.range;
         ARRAY_ZERO(bit, param);
         if(match(parser, TOKEN_LEFT_PAREN)) {
-            ARRAY_ALLOC(BitParameter, bit, param);
+            ARRAY_ALLOC(ASTBitParameter, bit, param);
             while(match(parser, TOKEN_IDENTIFIER)) {
-                BitParameter param;
+                ASTBitParameter param;
                 param.name = parser->previous;
                 ARRAY_PUSH(bit, param, param);
                 if(!match(parser, TOKEN_COMMA)) {
@@ -146,9 +146,9 @@ static BitArray parseMicrocodeBitArray(Parser* parser) {
 
 // parses a line of microcode commands with conditions
 // returns the line ast representing what was parsed
-static Line* microcodeLine(Parser* parser) {
+static ASTMicrocodeLine* microcodeLine(Parser* parser) {
     CONTEXT(INFO, "Parsing single microcode line");
-    Line* line = ArenaAlloc(sizeof(Line));
+    ASTMicrocodeLine* line = ArenaAlloc(sizeof(ASTMicrocodeLine));
     line->conditionErrorToken = (Token){.type = TOKEN_NULL};
     line->range = parser->current.range;
 
@@ -197,7 +197,7 @@ static Line* microcodeLine(Parser* parser) {
         line->bitsLow = parseMicrocodeBitArray(parser);
 
         if(swap) {
-            BitArray temp = line->bitsHigh;
+            ASTBitArray temp = line->bitsHigh;
             line->bitsHigh = line->bitsLow;
             line->bitsLow = temp;
         }
@@ -216,7 +216,7 @@ static Line* microcodeLine(Parser* parser) {
 static void typeEnum(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Parsing enum type expression");
 
-    s->as.type.type = USER_TYPE_ENUM;
+    s->as.type.type = AST_TYPE_STATEMENT_ENUM;
 
     consume(parser, TOKEN_LEFT_PAREN, "Expected \"(\" before width of enum");
     consume(parser, TOKEN_NUMBER, "Expected enum width to be a number");
@@ -286,7 +286,7 @@ static void header(Parser* parser) {
     newErrorState(parser);
 
     ASTStatement* s = newStatement(parser, AST_BLOCK_HEADER);
-    ARRAY_ALLOC(BitArray, s->as.header, line);
+    ARRAY_ALLOC(ASTBitArray, s->as.header, line);
     s->as.header.errorPoint = parser->previous;
 
     consume(parser, TOKEN_LEFT_BRACE, "Expected \"{\" at start of block");
@@ -295,7 +295,7 @@ static void header(Parser* parser) {
         if(check(parser, TOKEN_RIGHT_BRACE)) {
             break;
         }
-        Line* line = microcodeLine(parser);
+        ASTMicrocodeLine* line = microcodeLine(parser);
 
         if(line->hasCondition) {
             INFO("Found condition in header statement");
@@ -321,7 +321,7 @@ static void opcode(Parser* parser) {
     newErrorState(parser);
 
     ASTStatement* s = newStatement(parser, AST_BLOCK_OPCODE);
-    ARRAY_ALLOC(Line*, s->as.opcode, line);
+    ARRAY_ALLOC(ASTMicrocodeLine*, s->as.opcode, line);
 
     s->as.opcode.range = parser->previous.range;
 
@@ -332,11 +332,11 @@ static void opcode(Parser* parser) {
         TokenNames[parser->current.type]);
     s->as.opcode.id = parser->previous;
 
-    ARRAY_ALLOC(ASTParameter, s->as.opcode, param);
+    ARRAY_ALLOC(ASTStatementParameter, s->as.opcode, param);
     consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s",
         TokenNames[parser->current.type]);
     while(match(parser, TOKEN_IDENTIFIER)) {
-        ASTParameter param = {0};
+        ASTStatementParameter param = {0};
         param.name = parser->previous;
 
         consume(parser, TOKEN_IDENTIFIER,
@@ -362,7 +362,7 @@ static void opcode(Parser* parser) {
         if(check(parser, TOKEN_RIGHT_BRACE)) {
             break;
         }
-        Line* line = microcodeLine(parser);
+        ASTMicrocodeLine* line = microcodeLine(parser);
         ARRAY_PUSH(s->as.opcode, line, line);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
@@ -430,11 +430,11 @@ static void bitgroup(Parser* parser) {
     consume(parser, TOKEN_IDENTIFIER, "A bitgroup statement requires a name");
     s->as.bitGroup.name = parser->previous;
 
-    ARRAY_ALLOC(ASTParameter, s->as.bitGroup, param);
+    ARRAY_ALLOC(ASTStatementParameter, s->as.bitGroup, param);
     consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s",
         TokenNames[parser->current.type]);
     while(match(parser, TOKEN_IDENTIFIER)) {
-        ASTParameter param = {0};
+        ASTStatementParameter param = {0};
         param.name = parser->previous;
 
         consume(parser, TOKEN_IDENTIFIER,

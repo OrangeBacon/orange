@@ -32,8 +32,8 @@ typedef struct IdentifierEnum {
 
 // for error formatting
 char* UserTypeNames[] = {
-    [USER_TYPE_ANY] = "any",
-    [USER_TYPE_ENUM] = "enum"
+    [AST_TYPE_STATEMENT_ANY] = "any",
+    [AST_TYPE_STATEMENT_ENUM] = "enum"
 };
 
 
@@ -54,7 +54,7 @@ typedef struct IdentifierControlBit {
 
 // user defined type
 typedef struct IdentifierUserType {
-    UserType type;
+    ASTTypeStatementType type;
     union {
         IdentifierEnum enumType;
     } as;
@@ -186,8 +186,8 @@ static void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
 
 // check if a type name has the required user defined type
 // if not, report an error
-static bool userTypeCheck(Parser* parser, UserType typeRequired,
-    ASTParameter *typePair) {
+static bool userTypeCheck(Parser* parser, ASTTypeStatementType typeRequired,
+    ASTStatementParameter *typePair) {
     Identifier* ident;
     if(!tableGet(&identifiers, (char*)typePair->name.data.string,
         (void**)&ident))
@@ -206,7 +206,7 @@ static bool userTypeCheck(Parser* parser, UserType typeRequired,
         return false;
     }
 
-    if(typeRequired == USER_TYPE_ANY) {
+    if(typeRequired == AST_TYPE_STATEMENT_ANY) {
         return true;
     }
 
@@ -255,7 +255,7 @@ void printGraphState(void* g, graphPrintFn printFn) {
 
 // analyse an array of microcode bits
 // assumes that all the identifiers in the array exist and have the correct type
-static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
+static NodeArray analyseLine(VMCoreGen* core, Parser* parser, ASTBitArray* line,
     SourceRange* location) {
     CONTEXT(INFO, "Analysing line");
 
@@ -380,13 +380,13 @@ static NodeArray analyseLine(VMCoreGen* core, Parser* parser, BitArray* line,
 }
 
 // check if all identifers in the array reperesent a control bit
-static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames) {
+static bool mcodeBitArrayCheck(Parser* parser, ASTBitArray* arr, Table* paramNames) {
     CONTEXT(INFO, "Checking bit array");
 
     bool passed = true;
 
     for(unsigned int i = 0; i < arr->dataCount; i++) {
-        Bit* bit = &arr->datas[i];
+        ASTBit* bit = &arr->datas[i];
 
         // look up to check the identifier is defined
         Identifier* val;
@@ -413,7 +413,7 @@ static bool mcodeBitArrayCheck(Parser* parser, BitArray* arr, Table* paramNames)
             // check all of the parameters of the bitgroup, regardless of how
             // many should have been passed
             for(unsigned int j = 0; j < bit->paramCount; j++) {
-                BitParameter* param = &bit->params[j];
+                ASTBitParameter* param = &bit->params[j];
                 if(!tableHas(paramNames, param)) {
                     passed = false;
                     Error* err = errNew(ERROR_SEMANTIC);
@@ -473,7 +473,7 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 
     for(unsigned int i = 0; i < s->as.header.lineCount; i++) {
-        BitArray* line = &s->as.header.lines[i];
+        ASTBitArray* line = &s->as.header.lines[i];
 
         Table noParams;
         if(!mcodeBitArrayCheck(parser, line, &noParams)) {
@@ -488,14 +488,14 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 }
 
-static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
-    Parser* parser, ASTOpcode* opcode, unsigned int possibility,
+static NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
+    Parser* parser, ASTStatementOpcode* opcode, unsigned int possibility,
     unsigned int lineNumber)
 {
-    BitArray subsLine;
-    ARRAY_ALLOC(Bit, subsLine, data);
+    ASTBitArray subsLine;
+    ARRAY_ALLOC(ASTBit, subsLine, data);
     for(unsigned int i = 0; i < bits->dataCount; i++) {
-        Bit* bit = &bits->datas[i];
+        ASTBit* bit = &bits->datas[i];
         Identifier* val;
         tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val);
         if(val->type == TYPE_VM_CONTROL_BIT) {
@@ -528,7 +528,7 @@ static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
                 possibility /= paramType->as.userType.as.enumType.memberCount;
 
                 if(strcmp(bit->params[0].name.data.string, opcode->params[j].value.data.string) == 0) {
-                    Bit newBit;
+                    ASTBit newBit;
                     newBit.data = createStrToken((char*)&val->as.bitgroup.substitutedIdentifiers[currentNumber*val->as.bitgroup.lineLength]);
                     ARRAY_PUSH(subsLine, data, newBit);
                 }
@@ -542,7 +542,7 @@ static NodeArray substituteAnalyseLine(BitArray* bits, VMCoreGen* core,
 static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     CONTEXT(INFO, "Analysing opcode statement");
 
-    ASTOpcode *opcode = &s->as.opcode;
+    ASTStatementOpcode *opcode = &s->as.opcode;
 
     static bool notParsedHeaderThrown = false;
     if(!parsedHeader) {
@@ -590,8 +590,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
     headerBitLength += opcode->id.range.length - 2;
     for(unsigned int i = 0; i < opcode->paramCount; i++) {
-        ASTParameter* pair = &opcode->params[i];
-        passed &= userTypeCheck(parser, USER_TYPE_ANY, pair);
+        ASTStatementParameter* pair = &opcode->params[i];
+        passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ANY, pair);
 
         bool checkLength = true;
         if(tableHas(&paramNames, &pair->value)) {
@@ -646,7 +646,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 
     for(unsigned int i = 0; i < opcode->lineCount; i++) {
-        Line* line = opcode->lines[i];
+        ASTMicrocodeLine* line = opcode->lines[i];
         GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
         genline->hasCondition = line->hasCondition;
 
@@ -681,7 +681,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         ARRAY_ALLOC(GenOpCodeLine*, *gencode, line);
 
         for(unsigned int j = 0; j < opcode->lineCount; j++) {
-            Line* line = opcode->lines[j];
+            ASTMicrocodeLine* line = opcode->lines[j];
             GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
@@ -726,7 +726,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 static void analyseEnum(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Analysing enum statement");
 
-    ASTType* typeStatement = &s->as.type;
+    ASTStatementType* typeStatement = &s->as.type;
     ASTTypeEnum* enumStatement = &typeStatement->as.enumType;
 
     Token* type = &s->as.type.name;
@@ -738,7 +738,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
 
     value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_USER_TYPE;
-    value->as.userType.type = USER_TYPE_ENUM;
+    value->as.userType.type = AST_TYPE_STATEMENT_ENUM;
     IdentifierEnum* enumIdent = &value->as.userType.as.enumType;
     enumIdent->definition = &s->as.type.name;
     tableSet(&identifiers, (char*)type->data.string, (void*)value);
@@ -799,8 +799,8 @@ static void analyseType(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Analysing type statement");
 
     switch(s->as.type.type) {
-        case USER_TYPE_ENUM: analyseEnum(parser, s); break;
-        case USER_TYPE_ANY:
+        case AST_TYPE_STATEMENT_ENUM: analyseEnum(parser, s); break;
+        case AST_TYPE_STATEMENT_ANY:
             // Unreachable - should not be able to construct an any type
             // in the parser, only used for analysis
             break;
@@ -831,8 +831,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
     // check that all parameters are valid enums and that the assigned names
     // are not duplicated
     for(unsigned int i = 0; i < s->as.bitGroup.paramCount; i++) {
-        ASTParameter* pair = &s->as.bitGroup.params[i];
-        passed &= userTypeCheck(parser, USER_TYPE_ENUM, pair);
+        ASTStatementParameter* pair = &s->as.bitGroup.params[i];
+        passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ENUM, pair);
 
         if(tableHas(&paramNames, &pair->value)) {
             Error* err = errNew(ERROR_SEMANTIC);

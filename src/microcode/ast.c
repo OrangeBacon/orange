@@ -9,7 +9,7 @@ void InitAST(AST* mcode) {
     ARRAY_ALLOC(ASTStatement, *mcode, statement);
 }
 
-ASTStatement* newStatement(Parser* parser, ASTStatementType type) {
+ASTStatement* newStatement(Parser* parser, ASTStatementBlockType type) {
     CONTEXT(DEBUG, "Creating new statement");
     if(parser->ast->statementCount == parser->ast->statementCapacity) {
         parser->ast->statements = ArenaReAlloc(parser->ast->statements,
