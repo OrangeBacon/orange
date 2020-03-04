@@ -1,9 +1,9 @@
 #ifndef ANALYSE_H
 #define ANALYSE_H
 
-struct Parser;
-struct VMCoreGen;
+#include "microcode/parser.h"
+#include "emulator/compiletime/create.h"
 
-void Analyse(struct Parser* parser, struct VMCoreGen* core);
+void Analyse(Parser* parser, VMCoreGen* core);
 
 #endif

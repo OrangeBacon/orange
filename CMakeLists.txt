@@ -77,6 +77,8 @@ set(STAGE_0_BUILD
     src/microcode/error.c
     src/microcode/test.c
     src/microcode/analyse.c
+    src/microcode/analysisTypes.c
+    src/microcode/analyseMicrocode.c
 
     src/emulator/compiletime/template.c
     src/emulator/compiletime/create.c

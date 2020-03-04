@@ -1,6 +1,5 @@
 #include "microcode/analyse.h"
 
-#include <math.h>
 #include <string.h>
 #include "shared/table.h"
 #include "shared/memory.h"
@@ -11,104 +10,13 @@
 #include "microcode/ast.h"
 #include "microcode/parser.h"
 #include "microcode/error.h"
-
-// User defined types
-
-typedef struct IdentifierEnum {
-    Token* definition;
-
-    // null terminated strings for each name in the enum
-    ARRAY_DEFINE(Token*, member);
-
-    // maximum length of each member name
-    unsigned int identifierLength;
-
-    // those names, but in a hash map
-    Table membersTable;
-
-    // number of bits this enum takes
-    unsigned int bitWidth;
-} IdentifierEnum;
-
-// for error formatting
-char* UserTypeNames[] = {
-    [AST_TYPE_STATEMENT_ANY] = "any",
-    [AST_TYPE_STATEMENT_ENUM] = "enum"
-};
-
-
-// Base types
-
-// parameter, eg "phase: 4"
-typedef struct IdentifierParameter {
-    // name of the parameter
-    Token* definition;
-
-    unsigned int value;
-} IdentifierParameter;
-
-// bit defined by structure of VM, not found in code
-typedef struct IdentifierControlBit {
-    unsigned int value;
-} IdentifierControlBit;
-
-// user defined type
-typedef struct IdentifierUserType {
-    ASTTypeStatementType type;
-    union {
-        IdentifierEnum enumType;
-    } as;
-} IdentifierUserType;
-
-// group of control bits
-typedef struct IdentifierBitGroup {
-    Token* definition;
-
-    // maximum length of all identifiers in group + null byte
-    unsigned int lineLength;
-
-    // list of null terminated strings of length lineLength
-    char* substitutedIdentifiers;
-} IdentifierBitGroup;
-
-// all possible types
-typedef enum IdentifierType {
-    TYPE_PARAMETER,
-    TYPE_VM_CONTROL_BIT,
-    TYPE_USER_TYPE,
-    TYPE_BITGROUP
-} IdentifierType;
-
-// for error formatting
-char *IdentifierTypeNames[] = {
-    [TYPE_PARAMETER] = "parameter",
-    [TYPE_VM_CONTROL_BIT] = "vm control bit",
-    [TYPE_USER_TYPE] = "user type",
-    [TYPE_BITGROUP] = "bitgroup"
-};
-
-// so a name can be mapped to a type
-typedef struct Identifier {
-    IdentifierType type;
-    union {
-        IdentifierParameter parameter;
-        IdentifierControlBit control;
-        IdentifierUserType userType;
-        IdentifierBitGroup bitgroup;
-    } as;
-} Identifier;
-
+#include "microcode/analysisTypes.h"
+#include "microcode/analyseMicrocode.h"
 
 // why does c not define this in math.h?
 static int max(int a, int b) {
     return a > b ? a : b;
 }
-
-// table mapping names to types, probably shouldnt be a global - but is.  Sorry.
-Table identifiers;
-
-Table erroredParameters;
-bool erroredParametersInitialized = false;
 
 // lookup a name as an identifier, check
 //   if the name exists
@@ -116,24 +24,24 @@ bool erroredParametersInitialized = false;
 // if either check fails, emit error
 //   unless error already emitted about that name
 static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
-    char* usage)
+    char* usage, AnalysisState* state)
 {
-    if(!erroredParametersInitialized) {
-        initTable(&erroredParameters, strHash, strCmp);
+    if(!state->erroredParametersInitialized) {
+        initTable(&state->erroredParameters, strHash, strCmp);
     }
 
-    if(tableHas(&erroredParameters, name)) {
+    if(tableHas(&state->erroredParameters, name)) {
         return NULL;
     }
 
     Identifier* value;
-    if(!tableGet(&identifiers, name, (void**)&value)) {
+    if(!tableGet(&state->identifiers, name, (void**)&value)) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Parameter '%s' required to parse %s not "
             "found", name, usage);
         errAddSource(err, &errPoint->range);
         errEmit(err, parser);
-        tableSet(&erroredParameters, name, (void*)1);
+        tableSet(&state->erroredParameters, name, (void*)1);
         return NULL;
     }
 
@@ -148,7 +56,7 @@ static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
     errAddSource(err, &errPoint->range);
     errEmit(err, parser);
 
-    tableSet(&erroredParameters, name, (void*)1);
+    tableSet(&state->erroredParameters, name, (void*)1);
     return NULL;
 }
 
@@ -173,7 +81,7 @@ static void alreadyDefined(Parser* parser, char* name, Identifier* current,
 }
 
 // wrapper to make reporting type errors easier
-static void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
+void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
     Identifier* val)
 {
     Error* err = errNew(ERROR_SEMANTIC);
@@ -187,9 +95,9 @@ static void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
 // check if a type name has the required user defined type
 // if not, report an error
 static bool userTypeCheck(Parser* parser, ASTTypeStatementType typeRequired,
-    ASTStatementParameter *typePair) {
+    ASTStatementParameter *typePair, AnalysisState* state) {
     Identifier* ident;
-    if(!tableGet(&identifiers, (char*)typePair->name.data.string,
+    if(!tableGet(&state->identifiers, (char*)typePair->name.data.string,
         (void**)&ident))
     {
         Error* err = errNew(ERROR_SEMANTIC);
@@ -223,13 +131,13 @@ static bool userTypeCheck(Parser* parser, ASTTypeStatementType typeRequired,
 }
 
 // check a parameter and add it to the identifiers map
-static void analyseParameter(Parser* parser, ASTStatement* s) {
+static void analyseParameter(Parser* parser, ASTStatement* s, AnalysisState* state) {
     CONTEXT(INFO, "Analysing parameter");
 
     char* key = (char*)s->as.parameter.name.data.string;
 
     Identifier* current;
-    if(tableGet(&identifiers, key, (void**)&current)) {
+    if(tableGet(&state->identifiers, key, (void**)&current)) {
         alreadyDefined(parser, key, current, s);
         return;
     }
@@ -238,229 +146,31 @@ static void analyseParameter(Parser* parser, ASTStatement* s) {
     value->type = TYPE_PARAMETER;
     value->as.parameter.definition = &s->as.parameter.name;
     value->as.parameter.value = s->as.parameter.value.data.value;
-    tableSet(&identifiers, key, (void*)value);
+    tableSet(&state->identifiers, key, (void*)value);
 }
-
-typedef enum {
-    GRAPH_STATE_COMPONENT,
-    GRAPH_STATE_COMMAND
-} GraphState;
-void printGraphState(void* g, graphPrintFn printFn) {
-    if((GraphState)g == GRAPH_STATE_COMPONENT) {
-        printFn(TextWhite, "Component");
-    } else {
-        printFn(TextWhite, "Command");
-    }
-}
-
-// analyse an array of microcode bits
-// assumes that all the identifiers in the array exist and have the correct type
-static NodeArray analyseLine(VMCoreGen* core, Parser* parser, ASTBitArray* line,
-    SourceRange* location) {
-    CONTEXT(INFO, "Analysing line");
-
-    Graph graph;
-    InitGraph(&graph, printGraphState);
-
-    for(unsigned int i = 0; i < line->dataCount; i++) {
-        // adds a command to the graph
-        // the command gets a node in the graph
-        // add edge command -> everything it changes
-        // add edge everything it depends on -> command
-
-        Identifier* bitIdent;
-        tableGet(&identifiers, (char*)line->datas[i].data.data.string,
-            (void**)&bitIdent);
-        unsigned int commandID = bitIdent->as.control.value;
-        Command* coreCommand = &core->commands[commandID];
-
-        Node* commandNode = AddNode(&graph, commandID,
-            coreCommand->name, (void*)GRAPH_STATE_COMMAND);
-
-        // adds edge between dependancies and commandNode
-        // id has commandCount added so the component id does not clash with
-        // the command id
-        for(unsigned int j = 0; j < coreCommand->dependsLength; j++) {
-            unsigned int dependCompID = coreCommand->depends[j];
-            Component* dependComp = &core->components[dependCompID];
-            Node* dependNode = AddNode(&graph, dependCompID+core->commandCount,
-                dependComp->printName, (void*)GRAPH_STATE_COMPONENT);
-            AddEdge(&graph, dependNode, commandNode);
-        }
-
-        // same as above loop but adds edge from commandNode to everything
-        // it changes
-        for(unsigned int j = 0; j < coreCommand->changesLength; j++) {
-            unsigned int changeCompID = coreCommand->changes[j];
-            Component* changeComp = &core->components[changeCompID];
-            Node* changeNode = AddNode(&graph, changeCompID+core->commandCount,
-                changeComp->printName, (void*)GRAPH_STATE_COMPONENT);
-            AddEdge(&graph, commandNode, changeNode);
-        }
-    }
-
-    TRACE("Created command graph");
-
-    // get execution order for the microcode bits
-    NodeArray nodes = TopologicalSort(&graph);
-    if(!nodes.validArray) {
-        Error* err = errNew(ERROR_SEMANTIC);
-        err->severity = ERROR_WARN;
-        errAddText(err, TextYellow, "Unable to order microcode bits");
-        errAddSource(err, location);
-        errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
-        errAddGraph(err, &graph);
-        errAddText(err, TextBlue, "Substitutions: ");
-        for(unsigned int i = 0; i < line->dataCount; i++) {
-            if(line->datas[i].paramCount > 0) {
-                errAddText(err, TextWhite, line->datas[i].data.data.string);
-            }
-        }
-        errEmit(err, parser);
-        return nodes;
-    }
-
-    // filter graph results for only commands, not components
-    NodeArray commands;
-    commands.validArray = true;
-    ARRAY_ALLOC(Node*, commands, node);
-    for(unsigned int i = 0; i < nodes.nodeCount; i++) {
-        Node* node = nodes.nodes[i];
-        if((GraphState)node->data == GRAPH_STATE_COMMAND) {
-            ARRAY_PUSH(commands, node, node);
-        }
-    }
-
-    // checking if any bus reads happen when the bus has not been written to
-
-    // set all busses to not set
-    for(unsigned int i = 0; i < core->componentCount; i++) {
-        Component* component = &core->components[i];
-        component->busStatus = false;
-    }
-
-    // loop through all commands in execution order
-    for(unsigned int i = 0; i < commands.nodeCount; i++) {
-
-        Command* command = &core->commands[commands.nodes[i]->value];
-
-        // read from bus and check if possible
-        for(unsigned int j = 0; j < command->readsLength; j++) {
-            Component* bus = &core->components[command->reads[j]];
-            if(!bus->busStatus) {
-                Error* err = errNew(ERROR_SEMANTIC);
-                errAddText(err, TextRed, "Command reads from bus before it was "
-                    "written");
-                errAddSource(err, location);
-                errAddText(err, TextBlue, "Command graph (graphviz dot):");
-                errAddGraph(err, &graph);
-                errEmit(err, parser);
-                nodes.validArray = false;
-            }
-        }
-
-        // write to bus, allow it to be read from
-        // todo - do not allow multiple writes to a bus
-        for(unsigned int j = 0; j < command->writesLength; j++) {
-            Component* bus = &core->components[command->writes[j]];
-            if(bus->busStatus) {
-                Error* err = errNew(ERROR_SEMANTIC);
-                errAddText(err, TextRed, "Command writes to bus twice");
-                errAddSource(err, location);
-                errAddText(err, TextBlue, "Command graph (graphviz dot):");
-                errAddGraph(err, &graph);
-                errEmit(err, parser);
-            } else {
-                bus->busStatus = true;
-            }
-        }
-    }
-
-    return commands;
-}
-
-// check if all identifers in the array reperesent a control bit
-static bool mcodeBitArrayCheck(Parser* parser, ASTBitArray* arr, Table* paramNames) {
-    CONTEXT(INFO, "Checking bit array");
-
-    bool passed = true;
-
-    for(unsigned int i = 0; i < arr->dataCount; i++) {
-        ASTBit* bit = &arr->datas[i];
-
-        // look up to check the identifier is defined
-        Identifier* val;
-        if(!tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val)) {
-            Error* err = errNew(ERROR_SEMANTIC);
-            errAddText(err, TextRed, "Identifier was not defined");
-            errAddSource(err, &bit->range);
-            errEmit(err, parser);
-            passed = false;
-            continue;
-        }
-
-        if(val->type == TYPE_VM_CONTROL_BIT) {
-            continue;
-        } else if(val->type == TYPE_BITGROUP) {
-            // check that there is only 1 parameter passed to a bitgroup
-            if(bit->paramCount != 1) {
-                passed = false;
-                Error* err = errNew(ERROR_SEMANTIC);
-                errAddText(err, TextRed, "Only one parameter accepted by enum");
-                errAddSource(err, &bit->data.range);
-                errEmit(err, parser);
-            }
-            // check all of the parameters of the bitgroup, regardless of how
-            // many should have been passed
-            for(unsigned int j = 0; j < bit->paramCount; j++) {
-                ASTBitParameter* param = &bit->params[j];
-                if(!tableHas(paramNames, param)) {
-                    passed = false;
-                    Error* err = errNew(ERROR_SEMANTIC);
-                    errAddText(err, TextRed,
-                        "Could not resolve argument name \"%s\"",
-                        param->name.data.string);
-                    errAddSource(err, &param->name.range);
-                    errEmit(err, parser);
-                }
-            }
-        } else {
-            wrongType(parser, &bit->data, TYPE_VM_CONTROL_BIT, val);
-            passed = false;
-        }
-    }
-
-    return passed;
-}
-
-// has a header statement been analysed yet?
-static bool parsedHeader = false;
-
-// the header statement AST, used for emitting duplicate header errors
-static ASTStatement* firstHeader = NULL;
 
 // check a header statement and put results into codegen
-static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
+static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core, AnalysisState* state) {
     CONTEXT(INFO, "Analysing header");
 
     // duplicate header checking
-    if(parsedHeader) {
+    if(state->parsedHeader) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Cannot have more than one header statement "
             "in a microcode");
         errAddSource(err, &s->as.header.errorPoint.range);
         errAddText(err, TextBlue, "Header first included here");
-        errAddSource(err, &firstHeader->as.header.errorPoint.range);
+        errAddSource(err, &state->firstHeader->as.header.errorPoint.range);
         errEmit(err, parser);
         return;
     }
 
     // assign global variables (ew, should change)
-    parsedHeader = true;
-    firstHeader = s;
+    state->parsedHeader = true;
+    state->firstHeader = s;
 
     Identifier* phase = getParameter(parser, &s->as.header.errorPoint,
-        "phase", "header");
+        "phase", "header", state);
     if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value);
 
@@ -476,76 +186,25 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         ASTBitArray* line = &s->as.header.lines[i];
 
         Table noParams;
-        if(!mcodeBitArrayCheck(parser, line, &noParams)) {
+        if(!mcodeBitArrayCheck(parser, line, &noParams, state)) {
             continue;
         }
 
         NodeArray nodes = analyseLine(core, parser, line,
-            &s->as.header.range);
+            &s->as.header.range, state);
         for(unsigned int j = 0; j < nodes.nodeCount; j++) {
             ARRAY_PUSH(*core, headBit, nodes.nodes[j]->value);
         }
     }
 }
 
-static NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
-    Parser* parser, ASTStatementOpcode* opcode, unsigned int possibility,
-    unsigned int lineNumber)
-{
-    ASTBitArray subsLine;
-    ARRAY_ALLOC(ASTBit, subsLine, data);
-    for(unsigned int i = 0; i < bits->dataCount; i++) {
-        ASTBit* bit = &bits->datas[i];
-        Identifier* val;
-        tableGet(&identifiers, (char*)bit->data.data.string, (void**)&val);
-        if(val->type == TYPE_VM_CONTROL_BIT) {
-            ARRAY_PUSH(subsLine, data, *bit);
-        } else {
-            // assume bitarray checks have been done before, so
-            // bit->paramCount is always 1
-            // and val is a bitgroup
-
-            // iterate through parameters in reverse order, eg regb, rega, ...
-            for(int j = opcode->paramCount - 1; j >= 0; j--) {
-
-                // get the type specified in the opcode's header
-                Identifier* paramType;
-                tableGet(&identifiers,
-                    (char*)opcode->params[j].name.data.string,
-                    (void**)&paramType);
-
-                // possibility is a number outof the member counts of all
-                // parameters multiplied together.  Therefore, dividing
-                // possibility by the member count gives the number of
-                // possibilities of all remaining members.  Modulo used to
-                // get the state of the current parameter (remainder from
-                // division) and subtract used to ensure possibility is a
-                // multiple of the member count.
-                // This means currentNumber is an index into the substituted
-                // identifiers from the specified bitgroup (stored in val)
-                unsigned int currentNumber = possibility % paramType->as.userType.as.enumType.memberCount;
-                possibility -= currentNumber;
-                possibility /= paramType->as.userType.as.enumType.memberCount;
-
-                if(strcmp(bit->params[0].name.data.string, opcode->params[j].value.data.string) == 0) {
-                    ASTBit newBit;
-                    newBit.data = createStrToken((char*)&val->as.bitgroup.substitutedIdentifiers[currentNumber*val->as.bitgroup.lineLength]);
-                    ARRAY_PUSH(subsLine, data, newBit);
-                }
-            }
-        }
-    }
-
-    return analyseLine(core, parser, &subsLine, &opcode->lines[lineNumber]->range);
-}
-
-static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
+static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, AnalysisState* state) {
     CONTEXT(INFO, "Analysing opcode statement");
 
     ASTStatementOpcode *opcode = &s->as.opcode;
 
     static bool notParsedHeaderThrown = false;
-    if(!parsedHeader) {
+    if(!state->parsedHeader) {
         if(!notParsedHeaderThrown) {
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "To parse an opcode, the header must be "
@@ -558,13 +217,13 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 
     Identifier* phase = getParameter(parser, &opcode->name,
-        "phase", "opcode");
+        "phase", "opcode", state);
     if(phase == NULL) return;
     unsigned int maxLines = (1 << phase->as.parameter.value) -
-        firstHeader->as.header.lineCount;
+        state->firstHeader->as.header.lineCount;
 
     Identifier* opsize = getParameter(parser, &opcode->name,
-        "opsize", "opcode");
+        "opsize", "opcode", state);
     if(opsize == NULL) return;
     unsigned int maxHeaderBitLength = opsize->as.parameter.value;
 
@@ -591,7 +250,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     headerBitLength += opcode->id.range.length - 2;
     for(unsigned int i = 0; i < opcode->paramCount; i++) {
         ASTStatementParameter* pair = &opcode->params[i];
-        passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ANY, pair);
+        passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ANY, pair, state);
 
         bool checkLength = true;
         if(tableHas(&paramNames, &pair->value)) {
@@ -606,7 +265,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
         if(checkLength) {
             Identifier* ident;
-            tableGet(&identifiers, (char*)pair->name.data.string, (void**)&ident);
+            tableGet(&state->identifiers, (char*)pair->name.data.string, (void**)&ident);
             unsigned int width = ident->as.userType.as.enumType.bitWidth;
             headerBitLength += width;
             opcodeID <<= width;
@@ -652,7 +311,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
         // by default analyse low bits
         // are all of the bits valid
-        if(!mcodeBitArrayCheck(parser, &line->bitsLow, &paramNames)) {
+        if(!mcodeBitArrayCheck(parser, &line->bitsLow, &paramNames, state)) {
             passed = false;
             continue;
         }
@@ -660,7 +319,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
         if(line->hasCondition) {
             // only check high bits if there is a condition,
             // otherwise they are identical
-            if(!mcodeBitArrayCheck(parser, &line->bitsHigh, &paramNames)) {
+            if(!mcodeBitArrayCheck(parser, &line->bitsHigh, &paramNames, state)) {
                 passed = false;
                 continue;
             }
@@ -686,7 +345,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
             ARRAY_ALLOC(unsigned int, *genline, lowBit);
             genline->hasCondition = line->hasCondition;
 
-            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j);
+            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j, state);
             if(!low.validArray) {
                 WARN("Leaving opcode analysis due to errors");
                 errored = true;
@@ -699,7 +358,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
 
             if(line->hasCondition) {
                 ARRAY_ALLOC(unsigned int, *genline, highBit);
-                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j);
+                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j, state);
                 if(!high.validArray) {
                     WARN("Leaving opcode analysis due to errors");
                     errored = true;
@@ -723,7 +382,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core) {
     }
 }
 
-static void analyseEnum(Parser* parser, ASTStatement* s) {
+static void analyseEnum(Parser* parser, ASTStatement* s, AnalysisState* state) {
     CONTEXT(INFO, "Analysing enum statement");
 
     ASTStatementType* typeStatement = &s->as.type;
@@ -731,7 +390,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
 
     Token* type = &s->as.type.name;
     Identifier* value;
-    if(tableGet(&identifiers, (char*)type->data.string, (void**)&value)) {
+    if(tableGet(&state->identifiers, (char*)type->data.string, (void**)&value)) {
         alreadyDefined(parser, (char*)type->data.string, value, s);
         return;
     }
@@ -741,7 +400,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     value->as.userType.type = AST_TYPE_STATEMENT_ENUM;
     IdentifierEnum* enumIdent = &value->as.userType.as.enumType;
     enumIdent->definition = &s->as.type.name;
-    tableSet(&identifiers, (char*)type->data.string, (void*)value);
+    tableSet(&state->identifiers, (char*)type->data.string, (void*)value);
 
     // check the correct number of members are present
     unsigned int size = enumStatement->width.data.value;
@@ -795,11 +454,11 @@ static void analyseEnum(Parser* parser, ASTStatement* s) {
     enumIdent->membersTable = membersTable;
 }
 
-static void analyseType(Parser* parser, ASTStatement* s) {
+static void analyseType(Parser* parser, ASTStatement* s, AnalysisState* state) {
     CONTEXT(INFO, "Analysing type statement");
 
     switch(s->as.type.type) {
-        case AST_TYPE_STATEMENT_ENUM: analyseEnum(parser, s); break;
+        case AST_TYPE_STATEMENT_ENUM: analyseEnum(parser, s, state); break;
         case AST_TYPE_STATEMENT_ANY:
             // Unreachable - should not be able to construct an any type
             // in the parser, only used for analysis
@@ -807,11 +466,11 @@ static void analyseType(Parser* parser, ASTStatement* s) {
     }
 }
 
-static void analyseBitgroup(Parser* parser, ASTStatement* s) {
+static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* state) {
     CONTEXT(INFO, "Analysing type statement");
 
     Identifier* value;
-    if(tableGet(&identifiers, (char*)s->as.bitGroup.name.data.string,
+    if(tableGet(&state->identifiers, (char*)s->as.bitGroup.name.data.string,
                 (void**)&value)) {
         alreadyDefined(parser, (char*)s->as.bitGroup.name.data.string,
             value, s);
@@ -821,7 +480,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
     value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_BITGROUP;
     value->as.bitgroup.definition = &s->as.type.name;
-    tableSet(&identifiers, (char*)s->as.type.name.data.string, (void*)value);
+    tableSet(&state->identifiers, (char*)s->as.type.name.data.string, (void*)value);
 
     Table paramNames;
     initTable(&paramNames, tokenHash, tokenCmp);
@@ -832,7 +491,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
     // are not duplicated
     for(unsigned int i = 0; i < s->as.bitGroup.paramCount; i++) {
         ASTStatementParameter* pair = &s->as.bitGroup.params[i];
-        passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ENUM, pair);
+        passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ENUM, pair, state);
 
         if(tableHas(&paramNames, &pair->value)) {
             Error* err = errNew(ERROR_SEMANTIC);
@@ -866,7 +525,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 passed = false;
             } else {
                 Identifier* type;
-                tableGet(&identifiers, (char*)typeName->data.string,
+                tableGet(&state->identifiers, (char*)typeName->data.string,
                     (void**)&type);
                 IdentifierEnum* enumType = &type->as.userType.as.enumType;
                 lineLength += enumType->identifierLength;
@@ -892,7 +551,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
             Token* typeName;
             tableGet(&paramNames, &seg->identifier, (void**)&typeName);
             Identifier* type;
-            tableGet(&identifiers, (char*)typeName->data.string, (void**)&type);
+            tableGet(&state->identifiers, (char*)typeName->data.string, (void**)&type);
             unsigned int level =
                 type->as.userType.as.enumType.memberCount;
             unsigned int nreps = possibilities / ncycles;
@@ -925,7 +584,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
                 Token* typeName;
                 tableGet(&paramNames, &seg->identifier, (void**)&typeName);
                 Identifier* type;
-                tableGet(&identifiers, (char*)typeName->data.string,
+                tableGet(&state->identifiers, (char*)typeName->data.string,
                     (void**)&type);
                 IdentifierEnum* enumIdent = &type->as.userType.as.enumType;
 
@@ -943,7 +602,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s) {
         // check that after the substitutions have completed, a valid
         // control bit was formed
         Identifier* val;
-        if(!tableGet(&identifiers, currentIdent, (void**)&val)) {
+        if(!tableGet(&state->identifiers, currentIdent, (void**)&val)) {
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "Found undefined resultant identifier "
                 "while substituting into bitgroup");
@@ -971,25 +630,26 @@ void Analyse(Parser* parser, VMCoreGen* core) {
 
     if(parser->hadError)return;
 
-    initTable(&identifiers, strHash, strCmp);
+    AnalysisState state;
+    AnalysisStateInit(&state);
 
     for(unsigned int i = 0; i < core->commandCount; i++) {
         char* key = (char*)core->commands[i].name;
         Identifier* value = ArenaAlloc(sizeof(Identifier));
         value->type = TYPE_VM_CONTROL_BIT;
         value->as.control.value = i;
-        tableSet(&identifiers, key, (void*)value);
+        tableSet(&state.identifiers, key, (void*)value);
     }
 
     for(unsigned int i = 0; i < parser->ast->statementCount; i++) {
         ASTStatement* s = &parser->ast->statements[i];
         if(!s->isValid) continue;
         switch(s->type) {
-            case AST_BLOCK_PARAMETER: analyseParameter(parser, s); break;
-            case AST_BLOCK_HEADER: analyseHeader(parser, s, core); break;
-            case AST_BLOCK_OPCODE: analyseOpcode(parser, s, core); break;
-            case AST_BLOCK_TYPE: analyseType(parser, s); break;
-            case AST_BLOCK_BITGROUP: analyseBitgroup(parser, s); break;
+            case AST_BLOCK_PARAMETER: analyseParameter(parser, s, &state); break;
+            case AST_BLOCK_HEADER: analyseHeader(parser, s, core, &state); break;
+            case AST_BLOCK_OPCODE: analyseOpcode(parser, s, core, &state); break;
+            case AST_BLOCK_TYPE: analyseType(parser, s, &state); break;
+            case AST_BLOCK_BITGROUP: analyseBitgroup(parser, s, &state); break;
         }
     }
 
