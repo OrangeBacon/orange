@@ -14,7 +14,6 @@ project(Orange)
 set(MY_C_FLAGS
     -Wall
     -Wextra
-    -pedantic
     -Werror
     -Wno-missing-field-initializers
 )
@@ -69,6 +68,7 @@ set(STAGE_0_BUILD
     src/shared/graph.c
     src/shared/path.c
     src/shared/log.c
+    src/shared/table2.c
 
     src/microcode/scanner.c
     src/microcode/token.c
