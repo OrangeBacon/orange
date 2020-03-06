@@ -40,19 +40,21 @@ typedef struct Table2 {
     ARRAY_DEFINE(Entry2, entry);
 
 #ifdef DEBUG_BUILD
-    const char* keyType;
-    const char* valueType;
+    unsigned int keyType;
+    unsigned int valueType;
 #endif
 } Table2;
 
 #define TABLE2_STRING(x) #x
 
+void adjustCapacity(Table2* table, unsigned int capacity);
+
 #ifdef DEBUG_BUILD
 #define TABLE2_INIT(table, hashFn, cmpFn, kType, vType) \
     do { \
-        table.keyType = TABLE2_STRING(typeof(kType)); \
-        table.valueType = TABLE2_STRING(typeof(vType)); \
-        ARRAY_ALLOC(Entry2, (table), entry); \
+        table.keyType = sizeof(kType); \
+        table.valueType = sizeof(vType); \
+        adjustCapacity(&(table), 8); \
         table.hash = (hashFn); \
         table.cmp = (cmpFn); \
     } while(0)
@@ -71,67 +73,62 @@ bool table2Has(Table2* table, void* key);
 void table2Remove(Table2* table, void* key);
 
 #ifdef DEBUG_BUILD
-#define TABLE_SET(table, key, value) \
+#define TABLE2_SET(table, key, value) \
     do { \
-        if(strcmp(TABLE2_STRING(typeof(key)), (table).keyType) != 0) { \
-            WARN("Seting table member based on incorrect key type, correct " \
-                "is %s, got %s", (table).keyType, \
-                TABLE2_STRING(typeof(key))); \
+        if(sizeof(key) != (table).keyType) { \
+            WARN("Seting table member based on incorrect key size, correct " \
+                "is %u, got %u", (table).keyType, sizeof(key)); \
         } \
-        if(strcmp(TABLE2_STRING(typeof(value)), (table).valueType) != 0) { \
-            WARN("Seting table member based on incorrect value type, correct " \
-                "is %s, got %s", (table).valueType, \
-                TABLE2_STRING(typeof(value))); \
+        if(sizeof(value) != (table).valueType) { \
+            WARN("Seting table member based on incorrect value size, correct " \
+                "is %u, got %u", (table).valueType, sizeof(value)); \
         } \
         table2Set(&table, (void*)key, (void*)value); \
     } while(0)
 #else
-#define TABLE_SET(table, key, value) \
+#define TABLE2_SET(table, key, value) \
     table2Set(&(table), (void*)(key), (void*)(value))
 #endif
 
 #ifdef DEBUG_BUILD
-#define TABLE_GET(table, key) \
-    ({ \
-        if(strcmp(TABLE2_STRING(typeof(key)), (table).keyType) != 0) { \
-            WARN("Getting table member based on incorrect key type, correct " \
-                "is %s, got %s", (table).keyType, \
-                TABLE2_STRING(typeof(key))); \
+#define TABLE2_GET(table, key) \
+    __extension__ ({ \
+        if(sizeof(key) != (table).keyType) { \
+            WARN("Getting table member based on incorrect key size, correct " \
+                "is %u, got %u", (table).keyType, sizeof(key)); \
         } \
         table2Get(&(table), (void*)key); \
     })
 #else
-#define TABLE_GET(table, key) \
+#define TABLE2_GET(table, key) \
     table2Get(&(table), (void*)key)
 #endif
 
 #ifdef DEBUG_BUILD
-#define TABLE_HAS(table, key) \
-    ({ \
-        if(strcmp(TABLE2_STRING(typeof(key)), (table).keyType) != 0) { \
-            WARN("Checking table member based on incorrect key type, correct " \
-                "is %s, got %s", (table).keyType, \
-                TABLE2_STRING(typeof(key))); \
+#define TABLE2_HAS(table, key) \
+    __extension__ ({ \
+        if(sizeof(key) != (table).keyType) { \
+            WARN("Checking table member based on incorrect key size, correct " \
+                "is %u, got %u", (table).keyType, sizeof(key)); \
         } \
         table2Has(&(table), (void*)key); \
     })
 #else
-#define TABLE_HAS(table, key) \
+#define TABLE2_HAS(table, key) \
     table2Has(&(table), (void*)key)
 #endif
 
 #ifdef DEBUG_BUILD
-#define TABLE_REMOVE(table, key) \
+#define TABLE2_REMOVE(table, key) \
     do { \
-        if(strcmp(TABLE2_STRING(typeof(key)), (table).keyType) != 0) { \
-            WARN("Removing table member based on incorrect key type, correct " \
-                "is %s, got %s", (table).keyType, \
-                TABLE2_STRING(typeof(key))); \
+        if(sizeof(key) != (table).keyType) { \
+            WARN("Removing table member based on incorrect key size, correct " \
+                "is %u, got %u", (table).keyType, sizeof(key)); \
         } \
         table2Remove(&(table), (void*)key); \
     } while(0)
 #else
-#define TABLE_REMOVE(table, key) \
+#define TABLE2_REMOVE(table, key) \
     table2Remove(&(table), (void*)key)
 #endif
 

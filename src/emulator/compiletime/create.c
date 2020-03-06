@@ -24,7 +24,7 @@ void initCore(VMCoreGen* core) {
     core->opcodes = NULL;
     core->opcodeCount = 0;
 
-    initTable(&core->headers, strHash, strCmp);
+    TABLE2_INIT(core->headers, hashstr, cmpstr, const char*, int);
     core->codeIncludeBase = "emulator/runtime/";
     addHeader(core, "<stdbool.h>");
 }
@@ -64,7 +64,7 @@ void addCommand(VMCoreGen* core, Command command) {
 }
 
 void addHeader(VMCoreGen* core, const char* header) {
-    tableSet(&core->headers, (void*)header, (void*)1);
+    TABLE2_SET(core->headers, header, 1);
 }
 
 void addVariable(VMCoreGen* core, const char* format, ...) {

@@ -56,7 +56,10 @@ bool logSetFile(FILE* file) {
     return true;
 }
 
-LogContext* _log_current_context_ = NULL;
+static LogContext firstContext = {
+    .filename = "no context"
+};
+LogContext* _log_current_context_ = &firstContext;
 int _log_current_context_depth_ = 0;
 static LogContext* logWrittenContext = NULL;
 static int logDepth = 0;

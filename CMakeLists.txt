@@ -15,6 +15,7 @@ set(MY_C_FLAGS
     -Wall
     -Wextra
     -Werror
+    -pedantic
     -Wno-missing-field-initializers
 )
 

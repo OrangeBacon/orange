@@ -1,5 +1,26 @@
 #include "shared/table2.h"
 
+uint32_t hashstr(void* value) {
+    // fnv-1a hash calculation
+    // assumes null-terminated string
+    char* str = value;
+    uint32_t hash = 2166126261u;
+
+    for(size_t i = 0; i < strlen(str); i++) {
+        hash ^= str[i];
+        hash *= 16777619;
+    }
+
+    return hash;
+}
+
+bool cmpstr(void* a, void* b) {
+    char* tokA = a;
+    char* tokB = b;
+    // are the strings equal?
+    return strcmp(tokA, tokB) == 0;
+}
+
 // find an entry in a list of entries
 static Entry2* findEntry(Entry2* entries, int capacity, Key2* key, CompareFn2 cmp) {
 
@@ -22,7 +43,7 @@ static Entry2* findEntry(Entry2* entries, int capacity, Key2* key, CompareFn2 cm
 }
 
 // increase the size of a table to the given capacity
-static void adjustCapacity(Table2* table, unsigned int capacity) {
+void adjustCapacity(Table2* table, unsigned int capacity) {
 
     // create new data section and null initialise
     Entry2* entries = ArenaAlloc(sizeof(Entry2) * capacity);
@@ -54,7 +75,7 @@ void table2Set(Table2* table, void* keyPtr, void* valuePtr) {
     // create the key to be inserted into the table
     Key2 key;
     key.key = keyPtr;
-    key.hash = table->hash(valuePtr);
+    key.hash = table->hash(keyPtr);
 
     // make sure the table is big enough
     if(table->entryCount + 1 > table->entryCapacity * TABLE2_MAX_LOAD) {

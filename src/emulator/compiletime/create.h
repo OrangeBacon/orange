@@ -2,7 +2,7 @@
 #define VM_CORE_GEN_H
 
 #include "shared/memory.h"
-#include "shared/table.h"
+#include "shared/table2.h"
 
 typedef struct Argument {
     const char* name;
@@ -66,7 +66,7 @@ typedef struct Component {
 typedef struct VMCoreGen {
     ARRAY_DEFINE(Component, component);
 
-    Table headers;
+    Table2 headers;
     ARRAY_DEFINE(const char*, variable);
     ARRAY_DEFINE(const char*, loopVariable);
 

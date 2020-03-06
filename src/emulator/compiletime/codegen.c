@@ -71,9 +71,9 @@ void coreCodegen(VMCoreGen* core, const char* filename) {
     CONTEXT(INFO, "Running codegen");
     FILE* file = fopen(filename, "w");
 
-    for(unsigned int i = 0; i < core->headers.capacity; i++) {
-        Entry* entry = &core->headers.entries[i];
-        const char* header = entry->key.value;
+    for(unsigned int i = 0; i < core->headers.entryCapacity; i++) {
+        Entry2* entry = &core->headers.entrys[i];
+        const char* header = entry->key.key;
         if(header == NULL) {
             continue;
         }
