@@ -1,7 +1,7 @@
 #ifndef ARG_H
 #define ARG_H
 
-#include "shared/table.h"
+#include "shared/table2.h"
 #include "shared/memory.h"
 
 // positional argument
@@ -63,11 +63,11 @@ struct argParser {
 
     // map of all avaliable modes to parsers
     // that can handle the mode
-    Table modes;
+    Table2 modes;
 
     // map of all optional arguments
     // by their long names
-    Table options;
+    Table2 options;
 
     // has the parser run
     bool parsed;

@@ -54,16 +54,18 @@ void adjustCapacity(Table2* table, unsigned int capacity);
     do { \
         table.keyType = sizeof(kType); \
         table.valueType = sizeof(vType); \
-        adjustCapacity(&(table), 8); \
         table.hash = (hashFn); \
         table.cmp = (cmpFn); \
+        ARRAY_ZERO(table, entry); \
+        adjustCapacity(&(table), 8); \
     } while(0)
 #else
 #define TABLE2_INIT(table, hashFn, cmpFn, keyType, valueType) \
     do { \
-        ARRAY_ALLOC(Entry2, table, entry); \
         table.hash = hashFn; \
         table.cmp = cmpFn; \
+        ARRAY_ZERO(table, entry); \
+        adjustCapacity(&(table), 8); \
     } while(0)
 #endif
 

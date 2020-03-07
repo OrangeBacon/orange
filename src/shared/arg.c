@@ -116,9 +116,9 @@ static void argUsage(argParser* parser) {
         ARRAY_ALLOC(char, shortOpts, char);
 
         // gather single character options without an argument
-        for(unsigned int i = 0; i < parser->options.capacity; i++) {
-            Entry* entry = &parser->options.entries[i];
-            if(entry->key.value == NULL) {
+        for(unsigned int i = 0; i < parser->options.entryCapacity; i++) {
+            Entry2* entry = &parser->options.entrys[i];
+            if(entry->key.key == NULL) {
                 continue;
             }
             optionArg* arg = entry->value;
@@ -139,9 +139,9 @@ static void argUsage(argParser* parser) {
         // print options with a short name that take an argument
         charOptArr shortArgOpts;
         ARRAY_ALLOC(charOpt, shortArgOpts, option);
-        for(unsigned int i = 0; i < parser->options.capacity; i++) {
-            Entry* entry = &parser->options.entries[i];
-            if(entry->key.value == NULL) {
+        for(unsigned int i = 0; i < parser->options.entryCapacity; i++) {
+            Entry2* entry = &parser->options.entrys[i];
+            if(entry->key.key == NULL) {
                 continue;
             }
             optionArg* arg = entry->value;
@@ -167,9 +167,9 @@ static void argUsage(argParser* parser) {
         // print options without a short name that take an argument
         strOptArr longArgOpts;
         ARRAY_ALLOC(strOpt, longArgOpts, option);
-        for(unsigned int i = 0; i < parser->options.capacity; i++) {
-            Entry* entry = &parser->options.entries[i];
-            if(entry->key.value == NULL) {
+        for(unsigned int i = 0; i < parser->options.entryCapacity; i++) {
+            Entry2* entry = &parser->options.entrys[i];
+            if(entry->key.key == NULL) {
                 continue;
             }
             optionArg* arg = entry->value;
@@ -212,9 +212,9 @@ static void argUsage(argParser* parser) {
     ARRAY_ALLOC(argParser*, parsers, parser);
 
     // gather all sub-parsers
-    for(unsigned int i = 0; i < parser->modes.capacity; i++) {
-        Entry* entry = &parser->modes.entries[i];
-        if(entry->key.value == NULL) {
+    for(unsigned int i = 0; i < parser->modes.entryCapacity; i++) {
+        Entry2* entry = &parser->modes.entrys[i];
+        if(entry->key.key == NULL) {
             continue;
         }
         ARRAY_PUSH(parsers, parser, entry->value);
@@ -307,9 +307,9 @@ static void argHelp(argParser* parser) {
         // print option help
         optionArgArr args;
         ARRAY_ALLOC(optionArg, args, option);
-        for(unsigned int i = 0; i < parser->options.capacity; i++) {
-            Entry* entry = &parser->options.entries[i];
-            if(entry->key.value == NULL) {
+        for(unsigned int i = 0; i < parser->options.entryCapacity; i++) {
+            Entry2* entry = &parser->options.entrys[i];
+            if(entry->key.key == NULL) {
                 continue;
             }
             optionArg* arg = entry->value;
@@ -364,9 +364,9 @@ static void argHelp(argParser* parser) {
     ARRAY_ALLOC(argParser*, parsers, parser);
 
     // gather all sub-parsers
-    for(unsigned int i = 0; i < parser->modes.capacity; i++) {
-        Entry* entry = &parser->modes.entries[i];
-        if(entry->key.value == NULL) {
+    for(unsigned int i = 0; i < parser->modes.entryCapacity; i++) {
+        Entry2* entry = &parser->modes.entrys[i];
+        if(entry->key.key == NULL) {
             continue;
         }
         ARRAY_PUSH(parsers, parser, entry->value);
@@ -436,8 +436,8 @@ void argArguments(argParser* parser, int argc, char** argv) {
 }
 
 void argInit(argParser* parser, const char* name) {
-    initTable(&parser->modes, strHash, strCmp);
-    initTable(&parser->options, strHash, strCmp);
+    TABLE2_INIT(parser->modes, hashstr, cmpstr, const char*, argParser*);
+    TABLE2_INIT(parser->options, hashstr, cmpstr, const char*, optionArg*);
     ARRAY_ALLOC(posArg, *parser, posArg);
     ARRAY_ALLOC(const char*, *parser, errorMessage);
     ARRAY_ALLOC(optionArg*, *parser, universalOption);
@@ -463,7 +463,7 @@ void argInit(argParser* parser, const char* name) {
 
 optionArg* argOption(argParser* parser, char shortName, const char* longName) {
     // error checking for the names
-    if(tableHas(&parser->options, (void*)longName)) {
+    if(TABLE2_HAS(parser->options, longName)) {
         argInternalError(parser, "Option %s already exists", longName);
     }
 
@@ -490,7 +490,7 @@ optionArg* argOption(argParser* parser, char shortName, const char* longName) {
     arg->printed = false;
 
     // add it to the table of options
-    tableSet(&parser->options, (void*)longName, arg);
+    TABLE2_SET(parser->options, longName, arg);
     return arg;
 }
 
@@ -510,12 +510,12 @@ optionArg* argOptionInt(argParser* parser, char shortName, const char* longName)
 
 void argAddExistingOption(argParser* parser, optionArg* arg) {
     // error checking for the names
-    if(tableHas(&parser->options, (void*)arg->longName)) {
+    if(TABLE2_HAS(parser->options, arg->longName)) {
         argInternalError(parser, "Option %s already exists", arg->longName);
     }
 
     // add it to the table of options
-    tableSet(&parser->options, (void*)arg->longName, arg);
+    TABLE2_SET(parser->options, arg->longName, arg);
 }
 
 optionArg* argUniversalOption(argParser* parser, char shortName, const char* longName, bool childrenOnly) {
@@ -526,7 +526,7 @@ optionArg* argUniversalOption(argParser* parser, char shortName, const char* lon
 
     ARRAY_PUSH(*parser, universalOption, arg);
     if(childrenOnly) {
-        tableRemove(&parser->options, (void*)longName);
+        TABLE2_REMOVE(parser->options, longName);
     }
 
     return arg;
@@ -548,7 +548,7 @@ optionArg* argUniversalOptionInt(argParser* parser, char shortName, const char* 
 
 argParser* argMode(argParser* parser, const char* name) {
     // error checking
-    if(tableHas(&parser->modes, (void*)name)) {
+    if(TABLE2_HAS(parser->modes, name)) {
         argInternalError(parser, "Mode already exists");
     }
 
@@ -570,10 +570,10 @@ argParser* argMode(argParser* parser, const char* name) {
     for(unsigned int i = 0; i < parser->universalOptionCount; i++) {
         optionArg* arg = parser->universalOptions[i];
         ARRAY_PUSH(*new, universalOption, arg);
-        tableSet(&new->options, (void*)arg->longName, arg);
+        TABLE2_SET(new->options, arg->longName, arg);
     }
 
-    tableSet(&parser->modes, (void*)name, new);
+    TABLE2_SET(parser->modes, name, new);
     return new;
 }
 
@@ -599,9 +599,9 @@ void argSetVersionMode(argParser* parser, char shortName, const char* longName) 
 static optionArg* argFindShortName(argParser* parser, char name) {
     // loop through option table to find argument with given short name
     // table is indexed by long name only
-    for(unsigned int i = 0; i < parser->options.capacity; i++) {
-        Entry* entry = &parser->options.entries[i];
-        if(entry->key.value == NULL) {
+    for(unsigned int i = 0; i < parser->options.entryCapacity; i++) {
+        Entry2* entry = &parser->options.entrys[i];
+        if(entry->key.key == NULL) {
             continue;
         }
         optionArg* arg = entry->value;
@@ -627,8 +627,6 @@ static intmax_t parseInt(argParser* parser, char* str) {
 
 // parse argument i as a long (begins with "--") argument
 static void argParseLongArg(argParser* parser, int* i) {
-    optionArg* value;
-
     // find first equals symbol in the argument
     char* equals = strchr(&parser->argv[*i][2], '=');
 
@@ -641,7 +639,8 @@ static void argParseLongArg(argParser* parser, int* i) {
         name[equals - &parser->argv[*i][2]] = '\0';
 
         // lookup the name of the argument
-        if(tableGet(&parser->options, name, (void**)&value)) {
+        if(TABLE2_HAS(parser->options, name)) {
+            optionArg* value = TABLE2_GET(parser->options, name);
             switch(value->type) {
                 // only type of option that takes an argument is string
                 case OPT_STRING:
@@ -670,7 +669,8 @@ static void argParseLongArg(argParser* parser, int* i) {
     }
 
     // no argument to the option within this argument
-    if(tableGet(&parser->options, &parser->argv[*i][2], (void**)&value)) {
+    if(TABLE2_HAS(parser->options, &parser->argv[*i][2])) {
+        optionArg* value = TABLE2_GET(parser->options, &parser->argv[*i][2]);
         switch(value->type) {
             // assume argument after the current one is an argument to the current option
             case OPT_STRING:
@@ -802,8 +802,8 @@ void argParse(argParser* parser) {
     for(int i = 0; i < parser->argc; i++) {
 
         // is the argument one of the possible modes?
-        argParser* new;
-        if(i == 0 && tableGet(&parser->modes, parser->argv[i], (void**)&new)) {
+        if(i == 0 && TABLE2_HAS(parser->modes, parser->argv[i])) {
+            argParser* new = TABLE2_GET(parser->modes, parser->argv[i]);
             // increment arguments, ignoring the mode name
             argArguments(new, parser->argc, parser->argv);
             argParse(new);

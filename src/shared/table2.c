@@ -55,15 +55,17 @@ void adjustCapacity(Table2* table, unsigned int capacity) {
     // copy data from the table to the new data section
     // re-organises table for new memory size not just
     // copying the data across.
-    for(unsigned int i = 0; i < table->entryCapacity; i++) {
-        Entry2* entry = &table->entrys[i];
-        if(entry->key.key == NULL) {
-            continue;
-        }
+    if(table->entryCount > 0) {
+        for(unsigned int i = 0; i < table->entryCapacity; i++) {
+            Entry2* entry = &table->entrys[i];
+            if(entry->key.key == NULL) {
+                continue;
+            }
 
-        Entry2* dest = findEntry(entries, capacity, &entry->key, table->cmp);
-        dest->key = entry->key;
-        dest->value = entry->value;
+            Entry2* dest = findEntry(entries, capacity, &entry->key, table->cmp);
+            dest->key = entry->key;
+            dest->value = entry->value;
+        }
     }
 
     // set the table's data to the new data
@@ -114,7 +116,7 @@ void* table2Get(Table2* table, void* keyPtr) {
         return NULL;
     }
 
-    return &entry->value;
+    return entry->value;
 }
 
 bool table2Has(Table2* table, void* key) {
@@ -143,4 +145,5 @@ void table2Remove(Table2* table, void* key) {
 
     Entry2* entry = findEntry(table->entrys, table->entryCapacity, &test, table->cmp);
     entry->key.key = NULL;
+    entry->value = NULL;
 }
