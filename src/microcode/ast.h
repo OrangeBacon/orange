@@ -23,10 +23,7 @@ typedef struct ASTBitArray {
 } ASTBitArray;
 
 typedef struct ASTMicrocodeLine {
-    bool hasCondition;
-    ASTBitArray bitsLow;
-    ASTBitArray bitsHigh;
-    Token conditionErrorToken;
+    ASTBitArray bits;
     SourceRange range;
 } ASTMicrocodeLine;
 

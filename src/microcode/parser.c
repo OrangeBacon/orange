@@ -149,63 +149,9 @@ static ASTBitArray parseMicrocodeBitArray(Parser* parser) {
 static ASTMicrocodeLine* microcodeLine(Parser* parser) {
     CONTEXT(INFO, "Parsing single microcode line");
     ASTMicrocodeLine* line = ArenaAlloc(sizeof(ASTMicrocodeLine));
-    line->conditionErrorToken = (Token){.type = TOKEN_NULL};
     line->range = parser->current.range;
 
-    if(check(parser, TOKEN_NUMBER)) {
-        INFO("Microcode line has a condition");
-        line->hasCondition = true;
-        advance(parser);
-        bool swap = false;
-        if(parser->previous.data.value == 1) {
-            swap = false;
-        } else if(parser->previous.data.value == 0) {
-            INFO("Microcode line has swapped condition values");
-            swap = true;
-        } else {
-            Error* err = errNew(ERROR_SYNTAX);
-            errAddText(err, TextRed, "Condition values can only be 0 or 1");
-            errAddSource(err, &parser->previous.range);
-            errEmit(err, parser);
-        }
-        consume(parser, TOKEN_COLON, "Expected colon after condition");
-        line->bitsHigh = parseMicrocodeBitArray(parser);
-        consume(parser, TOKEN_SEMICOLON,
-            "Semicolon expected between parts of conditional microcode line");
-        consume(parser, TOKEN_NUMBER, "Expected second condition value");
-        if(parser->previous.data.value == 1) {
-            if(!swap) {
-                Error* err = errNew(ERROR_SEMANTIC);
-                errAddText(err, TextRed, "Condition value 1 repeated");
-                errAddSource(err, &parser->previous.range);
-                errEmit(err, parser);
-            }
-        } else if(parser->previous.data.value == 0) {
-            if(swap) {
-                Error* err = errNew(ERROR_SEMANTIC);
-                errAddText(err, TextRed, "Condition value 0 repeated");
-                errAddSource(err, &parser->previous.range);
-                errEmit(err, parser);
-            }
-        } else {
-            Error* err = errNew(ERROR_SYNTAX);
-            errAddText(err, TextRed, "Condition values can only be 0 or 1");
-            errAddSource(err, &parser->previous.range);
-            errEmit(err, parser);
-        }
-        consume(parser, TOKEN_COLON, "Expected colon after condition");
-        line->bitsLow = parseMicrocodeBitArray(parser);
-
-        if(swap) {
-            ASTBitArray temp = line->bitsHigh;
-            line->bitsHigh = line->bitsLow;
-            line->bitsLow = temp;
-        }
-    } else {
-        INFO("No condition detected");
-        line->hasCondition = false;
-        line->bitsHigh = line->bitsLow = parseMicrocodeBitArray(parser);
-    }
+    line->bits = parseMicrocodeBitArray(parser);
 
     line->range.length = parser->previous.range.tokenStart +
         parser->previous.range.length - line->range.tokenStart;
@@ -297,15 +243,7 @@ static void header(Parser* parser) {
         }
         ASTMicrocodeLine* line = microcodeLine(parser);
 
-        if(line->hasCondition) {
-            INFO("Found condition in header statement");
-            Error* err = errNew(ERROR_SEMANTIC);
-            errAddText(err, TextRed, "Condition values not allowed in header");
-            errAddSource(err, &line->conditionErrorToken.range);
-            errEmit(err, parser);
-        }
-
-        ARRAY_PUSH(s->as.header, line, line->bitsLow);
+        ARRAY_PUSH(s->as.header, line, line->bits);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }

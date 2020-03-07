@@ -43,20 +43,8 @@ static void outputLoop(VMCoreGen* core, FILE* file) {
         fprintf(file, "// %.*s\ncase %u:\n", code->nameLen, code->name, code->id);
         for(unsigned int j = 0; j < code->lineCount; j++) {
             GenOpCodeLine* line = code->lines[j];
-            if(line->hasCondition) {
-                fputs("if((conditions >> currentCondition)&1) {\n", file);
-                for(unsigned int k = 0; k < line->highBitCount; k++) {
-                    outputCommand(core, file, line->highBits[k]);
-                }
-                fputs("} else {\n", file);
-                for(unsigned int k = 0; k < line->lowBitCount; k++) {
-                    outputCommand(core, file, line->lowBits[k]);
-                }
-                fputs("}\n", file);
-            } else {
-                for(unsigned int k = 0; k < line->lowBitCount; k++) {
-                    outputCommand(core, file, line->lowBits[k]);
-                }
+            for(unsigned int k = 0; k < line->bitCount; k++) {
+                outputCommand(core, file, line->bits[k]);
             }
         }
         fputs("break;\n", file);

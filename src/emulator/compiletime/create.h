@@ -10,9 +10,7 @@ typedef struct Argument {
 } Argument;
 
 typedef struct GenOpCodeLine {
-    bool hasCondition;
-    ARRAY_DEFINE(unsigned int, highBit);
-    ARRAY_DEFINE(unsigned int, lowBit);
+    ARRAY_DEFINE(unsigned int, bit);
 } GenOpCodeLine;
 
 typedef struct GenOpCode {

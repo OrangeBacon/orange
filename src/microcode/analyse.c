@@ -306,23 +306,12 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
 
     for(unsigned int i = 0; i < opcode->lineCount; i++) {
         ASTMicrocodeLine* line = opcode->lines[i];
-        GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
-        genline->hasCondition = line->hasCondition;
 
         // by default analyse low bits
         // are all of the bits valid
-        if(!mcodeBitArrayCheck(parser, &line->bitsLow, &paramNames, state)) {
+        if(!mcodeBitArrayCheck(parser, &line->bits, &paramNames, state)) {
             passed = false;
             continue;
-        }
-
-        if(line->hasCondition) {
-            // only check high bits if there is a condition,
-            // otherwise they are identical
-            if(!mcodeBitArrayCheck(parser, &line->bitsHigh, &paramNames, state)) {
-                passed = false;
-                continue;
-            }
         }
     }
 
@@ -342,10 +331,9 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
         for(unsigned int j = 0; j < opcode->lineCount; j++) {
             ASTMicrocodeLine* line = opcode->lines[j];
             GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
-            ARRAY_ALLOC(unsigned int, *genline, lowBit);
-            genline->hasCondition = line->hasCondition;
+            ARRAY_ALLOC(unsigned int, *genline, bit);
 
-            NodeArray low = substituteAnalyseLine(&line->bitsLow, core, parser, opcode, possibility, j, state);
+            NodeArray low = substituteAnalyseLine(&line->bits, core, parser, opcode, possibility, j, state);
             if(!low.validArray) {
                 WARN("Leaving opcode analysis due to errors");
                 errored = true;
@@ -353,24 +341,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
             }
             for(unsigned int k = 0; k < low.nodeCount; k++) {
                 TRACE("Emitting %u at %u", low.nodes[k]->value, opcodeID+possibility);
-                ARRAY_PUSH(*genline, lowBit, low.nodes[k]->value);
-            }
-
-            if(line->hasCondition) {
-                ARRAY_ALLOC(unsigned int, *genline, highBit);
-                NodeArray high = substituteAnalyseLine(&line->bitsHigh, core, parser, opcode, possibility, j, state);
-                if(!high.validArray) {
-                    WARN("Leaving opcode analysis due to errors");
-                    errored = true;
-                    break;
-                }
-                for(unsigned int k = 0; k < high.nodeCount; k++) {
-                    ARRAY_PUSH(*genline, highBit, high.nodes[k]->value);
-                }
-            } else {
-                genline->highBits = genline->lowBits;
-                genline->highBitCount = genline->lowBitCount;
-                genline->highBitCapacity = genline->lowBitCapacity;
+                ARRAY_PUSH(*genline, bit, low.nodes[k]->value);
             }
 
             ARRAY_PUSH(*gencode, line, genline);
