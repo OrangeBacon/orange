@@ -6,5 +6,6 @@
 
 bool runFileName(const char* fileName);
 bool runFile(const char* fileName, const char* file, AST* ast);
+void runASTPrint(const char* fileName);
 
 #endif

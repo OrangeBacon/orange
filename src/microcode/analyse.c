@@ -12,7 +12,7 @@
 #include "microcode/error.h"
 #include "microcode/analysisTypes.h"
 #include "microcode/analyseMicrocode.h"
-
+/*
 // why does c not define this in math.h?
 static int max(int a, int b) {
     return a > b ? a : b;
@@ -626,3 +626,4 @@ void Analyse(Parser* parser, VMCoreGen* core) {
 
     INFO("Finished Analysis");
 }
+*/

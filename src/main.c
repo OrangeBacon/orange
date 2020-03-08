@@ -59,6 +59,12 @@ int main(int argc, char** argv){
     codegenOutput->helpMessage = "Where to write the generated code";
 #endif
 
+#if DEBUG_BUILD
+    argParser* printAST = argMode(&parser, "printast");
+    posArg* astinput = argString(printAST, "file");
+    astinput->helpMessage = "File to print the ast of";
+#endif
+
     argArguments(&parser, argc, argv);
     argParse(&parser);
 
@@ -113,6 +119,14 @@ int main(int argc, char** argv){
         int result = runCodegen(strArg(*codegen, 0), strArg(*codegen, 1));
         logClose();
         return result;
+    }
+#endif
+
+#if DEBUG_BUILD
+    if(printAST->parsed) {
+        runASTPrint(strArg(*printAST, 0));
+        logClose();
+        return 0;
     }
 #endif
 

@@ -38,11 +38,24 @@ bool runFile(const char* fileName, const char* file, AST* ast) {
         Parse(&parse, &scan, ast);
         VMCoreGen core;
         createEmulator(&core);
-        Analyse(&parse, &core);
+        //Analyse(&parse, &core);
         printErrors(&parse);
         return true;
     }
 
     cErrPrintf(TextRed, "\nUnknown file type \"%s\" when reading file \"%s\"\n", ext, fullFileName);
     return false;
+}
+
+void runASTPrint(const char* fileName) {
+    const char* fullFileName = resolvePath(fileName);
+
+    AST ast;
+    Scanner scan;
+    Parser parse;
+    ScannerInit(&scan, readFile(fileName), fullFileName);
+    InitAST(&ast);
+    Parse(&parse, &scan, &ast);
+    printErrors(&parse);
+    PrintAST(&ast);
 }

@@ -148,4 +148,6 @@ void InitAST(AST* mcode);
 
 ASTStatement* newStatement(struct Parser* parser, ASTStatementBlockType type);
 
+void PrintAST(AST* ast);
+
 #endif

@@ -6,7 +6,7 @@
 #include "microcode/parser.h"
 #include "microcode/analysisTypes.h"
 #include "emulator/compiletime/create.h"
-
+/*
 NodeArray analyseLine(VMCoreGen* core, Parser* parser, ASTBitArray* line,
     SourceRange* location, AnalysisState* state);
 
@@ -15,5 +15,5 @@ bool mcodeBitArrayCheck(Parser* parser, ASTBitArray* arr, Table* paramNames, Ana
 NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
     Parser* parser, ASTStatementOpcode* opcode, unsigned int possibility,
     unsigned int lineNumber, AnalysisState* state);
-
+*/
 #endif

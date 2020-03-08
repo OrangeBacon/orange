@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include "microcode/error.h"
-
+/*
 typedef enum {
     GRAPH_STATE_COMPONENT,
     GRAPH_STATE_COMMAND
@@ -250,3 +250,4 @@ NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
 
     return analyseLine(core, parser, &subsLine, &opcode->lines[lineNumber]->range, state);
 }
+*/
