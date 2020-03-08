@@ -7,28 +7,57 @@
 
 struct Parser;
 
-typedef struct ASTBitParameter {
-    Token name;
-} ASTBitParameter;
+typedef enum ASTExpressionType {
+    AST_EXPRESSION_NUMBER,
+    AST_EXPRESSION_BINARY,
+    AST_EXPRESSION_UNARY,
+    AST_EXPRESSION_CALL,
+    AST_EXPRESSION_VARIABLE,
+    AST_EXPRESSION_STRING,
+    AST_EXPRESSION_LIST,
+} ASTExpressionType;
 
-typedef struct ASTBit {
-    Token data;
-    ARRAY_DEFINE(ASTBitParameter, param);
-    SourceRange range;
-} ASTBit;
+typedef enum ASTExpressionBinaryType {
+    AST_EXPRESSION_BINARY_OR,
+    AST_EXPRESSION_BINARY_AND,
+    AST_EXPRESSION_BINARY_EQUAL,
+    AST_EXPRESSION_BINARY_NOT_EQUAL,
+} ASTExpressionBinaryType;
 
-typedef struct ASTBitArray {
-    ARRAY_DEFINE(ASTBit, data);
-    SourceRange range;
-} ASTBitArray;
+typedef enum ASTExpressionUnaryType {
+    AST_EXPRESSION_UNARY_NOT,
+} ASTExpressionUnaryType;
 
-typedef struct ASTMicrocodeLine {
-    ASTBitArray bits;
-    SourceRange range;
-} ASTMicrocodeLine;
+typedef struct ASTExpression {
+    ASTExpressionType type;
+
+    union {
+        Token number;
+        struct {
+            ASTExpressionBinaryType type;
+            Token opcode;
+            struct ASTExpression* left;
+            struct ASTExpression* right;
+        } binary;
+        struct {
+            ASTExpressionUnaryType type;
+            Token opcode;
+            struct ASTExpression* operand;
+        } unary;
+        struct {
+            struct ASTExpression* callee;
+            ARRAY_DEFINE(struct ASTExpression*, param);
+        } call;
+        Token variable;
+        Token string;
+        struct {
+            ARRAY_DEFINE(struct ASTExpression*, element);
+        } list;
+    } as;
+} ASTExpression;
 
 typedef struct ASTStatementHeader {
-    ARRAY_DEFINE(ASTBitArray, line);
+    ARRAY_DEFINE(ASTExpression*, expression);
     Token errorPoint;
     SourceRange range;
 } ASTStatementHeader;
@@ -42,7 +71,7 @@ typedef struct ASTStatementParameter {
 typedef struct ASTStatementOpcode {
     Token id;
     Token name;
-    ARRAY_DEFINE(ASTMicrocodeLine*, line);
+    ARRAY_DEFINE(ASTExpression*, expression);
     ARRAY_DEFINE(ASTStatementParameter, param);
     SourceRange range;
 } ASTStatementOpcode;
@@ -55,7 +84,7 @@ typedef struct ASTTypeEnum {
 
 typedef enum ASTTypeStatementType {
     AST_TYPE_STATEMENT_ANY,
-    AST_TYPE_STATEMENT_ENUM
+    AST_TYPE_STATEMENT_ENUM,
 } ASTTypeStatementType;
 
 typedef struct ASTStatementType {

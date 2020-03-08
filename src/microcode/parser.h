@@ -7,6 +7,16 @@
 #include "microcode/scanner.h"
 #include "microcode/ast.h"
 
+typedef enum Precidence {
+    PREC_NONE,
+    PREC_OR,
+    PREC_AND,
+    PREC_EQUALITY,
+    PREC_UNARY,
+    PREC_CALL,
+    PREC_PRIMARY
+} Precidence;
+
 // state required to create the syntax tree
 typedef struct Parser {
     // token list

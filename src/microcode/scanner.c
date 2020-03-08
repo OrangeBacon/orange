@@ -31,6 +31,16 @@ void ScannerInit(Scanner* scanner, const char* source, const char* fileName) {
     scanner->fileName = resolvePath(fileName);
 }
 
+static bool match(Scanner* scanner, char expected) {
+    if(isAtEnd(scanner)) return false;
+    if(*scanner->current != expected) return false;
+
+    scanner->current++;
+    scanner->column++;
+
+    return true;
+}
+
 Token ScanToken(Scanner* scanner){
     // all whitespace is insignificant at the start of a token
     skipWhitespace(scanner);
@@ -56,8 +66,11 @@ Token ScanToken(Scanner* scanner){
         case ';': return makeToken(scanner, TOKEN_SEMICOLON);
         case ':': return makeToken(scanner, TOKEN_COLON);
         case ',': return makeToken(scanner, TOKEN_COMMA);
-        case '=': return makeToken(scanner, TOKEN_EQUAL);
         case '$': return makeToken(scanner, TOKEN_DOLLAR);
+        case '!': return makeToken(scanner, match(scanner, '=')?
+            TOKEN_EXCLAIM_EQUAL : TOKEN_EXCLAMATION);
+        case '=': return makeToken(scanner, match(scanner, '=')?
+            TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
         case '"': return string(scanner, '"');
         case '\'': return string(scanner, '\'');
     }

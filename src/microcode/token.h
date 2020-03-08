@@ -12,7 +12,9 @@
     x(IDENTIFIER) x(OPCODE) x(HEADER) \
     x(INCLUDE) x(TYPE) x(STRING) \
     x(ENUM) x(BITGROUP) x(DOLLAR) \
-    x(ERROR) x(EOF) x(NULL)
+    x(ERROR) x(EOF) x(EXCLAMATION) \
+    x(EQUAL_EQUAL) x(EXCLAIM_EQUAL) \
+    x(OR) x(AND) x(NULL)
 
 #define ENUM_TOKEN(x) TOKEN_##x,
 #define ADD_TOKEN(x) +1

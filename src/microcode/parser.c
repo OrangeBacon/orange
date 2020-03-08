@@ -108,56 +108,143 @@ static void syncronise(Parser* parser) {
     INFO("Could not detect valid parser state");
 }
 
-static ASTBitArray parseMicrocodeBitArray(Parser* parser) {
-    CONTEXT(INFO, "Parsing microcode bit array");
-    ASTBitArray result;
-    result.range = parser->current.range;
-    ARRAY_ALLOC(ASTBit, result, data);
-    while(match(parser, TOKEN_IDENTIFIER)) {
-        ASTBit bit;
-        bit.data = parser->previous;
-        bit.range = bit.data.range;
-        ARRAY_ZERO(bit, param);
-        if(match(parser, TOKEN_LEFT_PAREN)) {
-            ARRAY_ALLOC(ASTBitParameter, bit, param);
-            while(match(parser, TOKEN_IDENTIFIER)) {
-                ASTBitParameter param;
-                param.name = parser->previous;
-                ARRAY_PUSH(bit, param, param);
-                if(!match(parser, TOKEN_COMMA)) {
-                    break;
-                }
-            }
-            consume(parser, TOKEN_RIGHT_PAREN, "Expected ')', got '%s'",
-                parser->previous.data.string);
-        }
-        bit.range.length = parser->previous.range.tokenStart +
-            parser->previous.range.length - bit.range.tokenStart;
-        ARRAY_PUSH(result, data, bit);
+//-------------------//
+// expression parser //
+//-------------------//
+typedef ASTExpression* (*PrefixFn)(Parser*);
+typedef ASTExpression* (*InfixFn)(Parser*, ASTExpression*);
 
-        if(!match(parser, TOKEN_COMMA)) {
-            break;
-        }
+typedef struct ParseRule {
+    PrefixFn prefix;
+    InfixFn infix;
+    Precidence precidence;
+} ParseRule;
+
+static ParseRule* getRule(MicrocodeTokenType type);
+
+static ASTExpression* parsePrecidence(Parser* parser, Precidence precidence) {
+    advance(parser);
+    PrefixFn prefixRule = getRule(parser->previous.type)->prefix;
+    if(prefixRule == NULL) {
+        Error* err = errNew(ERROR_SYNTAX);
+        errAddText(err, TextRed, "Expected expression");
+        errAddSource(err, &parser->previous.range);
+        errEmit(err, parser);
+        return NULL;
     }
-    result.range.length = parser->previous.range.tokenStart +
-        parser->previous.range.length - result.range.tokenStart;
-    return result;
+
+    ASTExpression* exp = prefixRule(parser);
+
+    while(precidence <= getRule(parser->current.type)->precidence) {
+        advance(parser);
+        InfixFn infixRule = getRule(parser->previous.type)->infix;
+        exp = infixRule(parser, exp);
+    }
+
+    return exp;
 }
 
-// parses a line of microcode commands with conditions
-// returns the line ast representing what was parsed
-static ASTMicrocodeLine* microcodeLine(Parser* parser) {
-    CONTEXT(INFO, "Parsing single microcode line");
-    ASTMicrocodeLine* line = ArenaAlloc(sizeof(ASTMicrocodeLine));
-    line->range = parser->current.range;
-
-    line->bits = parseMicrocodeBitArray(parser);
-
-    line->range.length = parser->previous.range.tokenStart +
-        parser->previous.range.length - line->range.tokenStart;
-
-    return line;
+static ASTExpression* expression(Parser* parser) {
+    return parsePrecidence(parser, PREC_OR);
 }
+
+static ASTExpression* number(Parser* parser) {
+    ASTExpression* e = ArenaAlloc(sizeof(*e));
+    e->type = AST_EXPRESSION_NUMBER;
+    e->as.number = parser->previous;
+    return e;
+}
+
+static ASTExpression* grouping(Parser* parser) {
+    ASTExpression* e = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after expression");
+    return e;
+}
+
+static ASTExpression* unary(Parser* parser) {
+    Token opcode = parser->previous;
+
+    ASTExpression* e = parsePrecidence(parser, PREC_UNARY);
+
+    ASTExpression* unary = ArenaAlloc(sizeof(*unary));
+    unary->type = AST_EXPRESSION_UNARY;
+    unary->as.unary.opcode = opcode;
+    unary->as.unary.operand = e;
+
+    if(opcode.type == TOKEN_EXCLAMATION) {
+        unary->as.unary.type = AST_EXPRESSION_UNARY_NOT;
+    } else {
+        ERROR("Unreachable state reached");
+    }
+
+    return unary;
+}
+
+static ASTExpression* binary(Parser* parser, ASTExpression* prev) {
+    Token opcode = parser->previous;
+
+    ParseRule* rule = getRule(opcode.type);
+    ASTExpression* e = parsePrecidence(parser,
+        (Precidence)(rule->precidence + 1));
+
+    ASTExpression* binary = ArenaAlloc(sizeof(*binary));
+    binary->type = AST_EXPRESSION_BINARY;
+    binary->as.binary.opcode = opcode;
+    binary->as.binary.left = prev;
+    binary->as.binary.right = e;
+
+    switch(opcode.type) {
+        case TOKEN_EXCLAIM_EQUAL:
+            binary->as.binary.type = AST_EXPRESSION_BINARY_NOT_EQUAL;
+            break;
+        case TOKEN_EQUAL_EQUAL:
+            binary->as.binary.type = AST_EXPRESSION_BINARY_EQUAL;
+            break;
+        default:
+            ERROR("Unreachable state reached");
+    }
+
+    return binary;
+}
+
+ParseRule rules[] = {
+    [TOKEN_LEFT_PAREN] = { grouping, NULL, PREC_NONE},
+    [TOKEN_RIGHT_PAREN] = { NULL, NULL, PREC_NONE},
+    [TOKEN_LEFT_BRACE] = { NULL, NULL, PREC_NONE},
+    [TOKEN_RIGHT_BRACE] = { NULL, NULL, PREC_NONE},
+    [TOKEN_COMMA] = { NULL, NULL, PREC_NONE},
+    [TOKEN_DOT] = { NULL, NULL, PREC_NONE},
+    [TOKEN_COLON] = { NULL, NULL, PREC_NONE},
+    [TOKEN_NUMBER] = { number, NULL, PREC_NONE},
+    [TOKEN_SEMICOLON] = { NULL, NULL, PREC_NONE},
+    [TOKEN_BINARY] = { NULL, NULL, PREC_NONE},
+    [TOKEN_EQUAL] = { NULL, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER] = { NULL, NULL, PREC_NONE},
+    [TOKEN_OPCODE] = { NULL, NULL, PREC_NONE},
+    [TOKEN_HEADER] = { NULL, NULL, PREC_NONE},
+    [TOKEN_INCLUDE] = { NULL, NULL, PREC_NONE},
+    [TOKEN_TYPE] = { NULL, NULL, PREC_NONE},
+    [TOKEN_STRING] = { NULL, NULL, PREC_NONE},
+    [TOKEN_ENUM] = { NULL, NULL, PREC_NONE},
+    [TOKEN_BITGROUP] = { NULL, NULL, PREC_NONE},
+    [TOKEN_DOLLAR] = { NULL, NULL, PREC_NONE},
+    [TOKEN_ERROR] = { NULL, NULL, PREC_NONE},
+    [TOKEN_EOF] = { NULL, NULL, PREC_NONE},
+    [TOKEN_EXCLAMATION] = { unary, NULL, PREC_NONE},
+    [TOKEN_EQUAL_EQUAL] = { NULL, binary, PREC_EQUALITY},
+    [TOKEN_EXCLAIM_EQUAL] = { NULL, binary, PREC_EQUALITY},
+    [TOKEN_OR] = { NULL, NULL, PREC_NONE},
+    [TOKEN_AND] = { NULL, NULL, PREC_NONE},
+    [TOKEN_NULL] = { NULL, NULL, PREC_NONE},
+};
+
+static ParseRule* getRule(MicrocodeTokenType type) {
+    return &rules[type];
+}
+
+//-------------------//
+// statement parsing //
+//-------------------//
 
 static void typeEnum(Parser* parser, ASTStatement* s) {
     CONTEXT(INFO, "Parsing enum type expression");
@@ -232,7 +319,7 @@ static void header(Parser* parser) {
     newErrorState(parser);
 
     ASTStatement* s = newStatement(parser, AST_BLOCK_HEADER);
-    ARRAY_ALLOC(ASTBitArray, s->as.header, line);
+    ARRAY_ALLOC(ASTExpression*, s->as.header, expression);
     s->as.header.errorPoint = parser->previous;
 
     consume(parser, TOKEN_LEFT_BRACE, "Expected \"{\" at start of block");
@@ -241,9 +328,10 @@ static void header(Parser* parser) {
         if(check(parser, TOKEN_RIGHT_BRACE)) {
             break;
         }
-        ASTMicrocodeLine* line = microcodeLine(parser);
 
-        ARRAY_PUSH(s->as.header, line, line->bits);
+        ASTExpression* e = expression(parser);
+
+        ARRAY_PUSH(s->as.header, expression, e);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
@@ -259,7 +347,7 @@ static void opcode(Parser* parser) {
     newErrorState(parser);
 
     ASTStatement* s = newStatement(parser, AST_BLOCK_OPCODE);
-    ARRAY_ALLOC(ASTMicrocodeLine*, s->as.opcode, line);
+    ARRAY_ALLOC(ASTExpression*, s->as.opcode, expression);
 
     s->as.opcode.range = parser->previous.range;
 
@@ -300,8 +388,8 @@ static void opcode(Parser* parser) {
         if(check(parser, TOKEN_RIGHT_BRACE)) {
             break;
         }
-        ASTMicrocodeLine* line = microcodeLine(parser);
-        ARRAY_PUSH(s->as.opcode, line, line);
+        ASTExpression* e = expression(parser);
+        ARRAY_PUSH(s->as.opcode, expression, e);
         if(!match(parser, TOKEN_SEMICOLON)) {
             break;
         }
