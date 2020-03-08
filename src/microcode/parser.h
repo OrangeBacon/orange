@@ -9,6 +9,7 @@
 
 typedef enum Precidence {
     PREC_NONE,
+    PREC_COMMA,
     PREC_OR,
     PREC_AND,
     PREC_EQUALITY,

@@ -145,7 +145,13 @@ static ASTExpression* parsePrecidence(Parser* parser, Precidence precidence) {
 }
 
 static ASTExpression* expression(Parser* parser) {
-    return parsePrecidence(parser, PREC_OR);
+    return parsePrecidence(parser, PREC_COMMA);
+}
+
+static ASTExpression* grouping(Parser* parser) {
+    ASTExpression* e = expression(parser);
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after expression");
+    return e;
 }
 
 static ASTExpression* number(Parser* parser) {
@@ -155,9 +161,17 @@ static ASTExpression* number(Parser* parser) {
     return e;
 }
 
-static ASTExpression* grouping(Parser* parser) {
-    ASTExpression* e = expression(parser);
-    consume(parser, TOKEN_RIGHT_PAREN, "Expected ')' after expression");
+static ASTExpression* variable(Parser* parser) {
+    ASTExpression* e = ArenaAlloc(sizeof(*e));
+    e->type = AST_EXPRESSION_VARIABLE;
+    e->as.variable = parser->previous;
+    return e;
+}
+
+static ASTExpression* string(Parser* parser) {
+    ASTExpression* e = ArenaAlloc(sizeof(*e));
+    e->type = AST_EXPRESSION_STRING;
+    e->as.string = parser->previous;
     return e;
 }
 
@@ -178,6 +192,36 @@ static ASTExpression* unary(Parser* parser) {
     }
 
     return unary;
+}
+
+static ASTExpression* call(Parser* parser, ASTExpression* prev) {
+    ASTExpression* call = ArenaAlloc(sizeof(*call));
+    call->type = AST_EXPRESSION_CALL;
+    call->as.call.callee = prev;
+    ARRAY_ALLOC(ASTExpression*, call->as.call, param);
+
+    do {
+        ASTExpression* e = parsePrecidence(parser, PREC_OR);
+        ARRAY_PUSH(call->as.call, param, e);
+    } while(match(parser, TOKEN_COMMA));
+
+    consume(parser, TOKEN_RIGHT_PAREN, "Expected closing ')' after call");
+
+    return call;
+}
+
+static ASTExpression* comma(Parser* parser, ASTExpression* prev) {
+    ASTExpression* comma = ArenaAlloc(sizeof(*comma));
+    comma->type = AST_EXPRESSION_LIST;
+    ARRAY_ALLOC(ASTExpression*, comma->as.list, element);
+    ARRAY_PUSH(comma->as.list, element, prev);
+
+    do {
+        ASTExpression* e = parsePrecidence(parser, PREC_OR);
+        ARRAY_PUSH(comma->as.list, element, e);
+    } while(match(parser, TOKEN_COMMA));
+
+    return comma;
 }
 
 static ASTExpression* binary(Parser* parser, ASTExpression* prev) {
@@ -208,23 +252,23 @@ static ASTExpression* binary(Parser* parser, ASTExpression* prev) {
 }
 
 ParseRule rules[] = {
-    [TOKEN_LEFT_PAREN] = { grouping, NULL, PREC_NONE},
+    [TOKEN_LEFT_PAREN] = { grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = { NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE] = { NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_COMMA] = { NULL, NULL, PREC_NONE},
+    [TOKEN_COMMA] = { NULL, comma, PREC_COMMA},
     [TOKEN_DOT] = { NULL, NULL, PREC_NONE},
     [TOKEN_COLON] = { NULL, NULL, PREC_NONE},
     [TOKEN_NUMBER] = { number, NULL, PREC_NONE},
     [TOKEN_SEMICOLON] = { NULL, NULL, PREC_NONE},
     [TOKEN_BINARY] = { NULL, NULL, PREC_NONE},
     [TOKEN_EQUAL] = { NULL, NULL, PREC_NONE},
-    [TOKEN_IDENTIFIER] = { NULL, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER] = { variable, NULL, PREC_NONE},
     [TOKEN_OPCODE] = { NULL, NULL, PREC_NONE},
     [TOKEN_HEADER] = { NULL, NULL, PREC_NONE},
     [TOKEN_INCLUDE] = { NULL, NULL, PREC_NONE},
     [TOKEN_TYPE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_STRING] = { NULL, NULL, PREC_NONE},
+    [TOKEN_STRING] = { string, NULL, PREC_NONE},
     [TOKEN_ENUM] = { NULL, NULL, PREC_NONE},
     [TOKEN_BITGROUP] = { NULL, NULL, PREC_NONE},
     [TOKEN_DOLLAR] = { NULL, NULL, PREC_NONE},

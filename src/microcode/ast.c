@@ -87,8 +87,8 @@ static void PrintCallExpression(ASTExpression* e, int depth) {
     printf("parameters: ");
     for(unsigned int i = 0; i < e->as.call.paramCount; i++) {
         PrintExpression(e->as.call.params[i], depth + 2);
-        printf("\n");
     }
+    printf("\n");
 }
 
 static void PrintListExpression(ASTExpression* e, int depth) {
@@ -96,8 +96,8 @@ static void PrintListExpression(ASTExpression* e, int depth) {
     printf("List expression: ");
     for(unsigned int i = 0; i < e->as.list.elementCount; i++) {
         PrintExpression(e->as.list.elements[i], depth + 1);
-        printf("\n");
     }
+    printf("\n");
 }
 
 static void PrintExpression(ASTExpression* e, int depth) {
