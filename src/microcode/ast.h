@@ -19,6 +19,7 @@ typedef enum ASTExpressionType {
     AST_EXPRESSION_VARIABLE,
     AST_EXPRESSION_STRING,
     AST_EXPRESSION_LIST,
+    AST_EXPRESSION_BOOLEAN,
 } ASTExpressionType;
 
 typedef enum ASTExpressionBinaryType {
@@ -57,6 +58,7 @@ typedef struct ASTExpression {
         struct {
             ARRAY_DEFINE(struct ASTExpression*, element);
         } list;
+        Token boolean;
     } as;
 } ASTExpression;
 

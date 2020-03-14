@@ -269,7 +269,14 @@ static MicrocodeTokenType identifierType(Scanner* scanner) {
         case 'h': return checkKeyword(scanner, 1, 5, "eader", TOKEN_HEADER);
         case 'i': return checkKeyword(scanner, 1, 6, "nclude", TOKEN_INCLUDE);
         case 'o': return checkKeyword(scanner, 1, 5, "pcode", TOKEN_OPCODE);
-        case 't': return checkKeyword(scanner, 1, 3, "ype", TOKEN_TYPE);
+        case 't':
+            if(scanner->start[1] == 'y') {
+                return checkKeyword(scanner, 2, 2, "pe", TOKEN_TYPE);
+            } else if(scanner->start[1] == 'r') {
+                return checkKeyword(scanner, 2, 2, "ue", TOKEN_TRUE);
+            }
+            break;
+        case 'f': return checkKeyword(scanner, 1, 4, "alse", TOKEN_FALSE);
     }
     return TOKEN_IDENTIFIER;
 }

@@ -194,6 +194,20 @@ static ASTExpression* unary(Parser* parser) {
     return unary;
 }
 
+static ASTExpression* boolean(Parser* parser) {
+    ASTExpression* lit = ArenaAlloc(sizeof(*lit));
+    lit->type = AST_EXPRESSION_BOOLEAN;
+    lit->as.boolean = parser->previous;
+
+    if(lit->as.boolean.type == TOKEN_TRUE) {
+        lit->as.boolean.data.value = 1;
+    } else {
+        lit->as.boolean.data.value = 0;
+    }
+
+    return lit;
+}
+
 static ASTExpression* call(Parser* parser, ASTExpression* prev) {
     ASTExpression* call = ArenaAlloc(sizeof(*call));
     call->type = AST_EXPRESSION_CALL;
@@ -280,6 +294,8 @@ ParseRule rules[] = {
     [TOKEN_EXCLAIM_EQUAL] = { NULL,     binary, PREC_EQUALITY},
     [TOKEN_OR] =            { NULL,     NULL,   PREC_NONE},
     [TOKEN_AND] =           { NULL,     NULL,   PREC_NONE},
+    [TOKEN_TRUE] =          { boolean,  NULL,   PREC_NONE},
+    [TOKEN_FALSE] =         { boolean,  NULL,   PREC_NONE},
     [TOKEN_NULL] =          { NULL,     NULL,   PREC_NONE},
 };
 

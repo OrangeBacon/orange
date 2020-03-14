@@ -133,6 +133,12 @@ static void PrintExpression(ASTExpression* e, int depth) {
         case AST_EXPRESSION_LIST:
             PrintListExpression(e, depth);
             break;
+        case AST_EXPRESSION_BOOLEAN:
+            PrintTabs(depth);
+            printf("Boolean expression:");
+            PrintTabs(depth + 1);
+            TokenPrint(&e->as.boolean);
+            break;
     }
 }
 
