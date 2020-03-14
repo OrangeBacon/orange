@@ -168,7 +168,7 @@ static void PrintParameter(ASTStatementParameter* p) {
     printf("\tParameter Statement:\n\t\tname: ");
     TokenPrint(&p->name);
     printf("\n\t\tvalue: ");
-    TokenPrint(&p->value);
+    PrintExpression(p->value, 3);
     printf("\n");
 }
 

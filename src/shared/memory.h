@@ -64,7 +64,7 @@ void* ArenaReAlloc(void* old_ptr, size_t old_size, size_t new_size);
     do { \
         if(sizeof(value) != (container).name##ElementSize) { \
             WARN("Push to array with incorrect item size (%u), array item " \
-                "size does is %u", sizeof(value), \
+                "size is %u", sizeof(value), \
             (container).name##ElementSize); \
         } \
         if((container).name##Count == (container).name##Capacity) { \

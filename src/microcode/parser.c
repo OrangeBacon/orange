@@ -252,34 +252,35 @@ static ASTExpression* binary(Parser* parser, ASTExpression* prev) {
 }
 
 ParseRule rules[] = {
-    [TOKEN_LEFT_PAREN] = { grouping, call, PREC_CALL},
-    [TOKEN_RIGHT_PAREN] = { NULL, NULL, PREC_NONE},
-    [TOKEN_LEFT_BRACE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_RIGHT_BRACE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_COMMA] = { NULL, comma, PREC_COMMA},
-    [TOKEN_DOT] = { NULL, NULL, PREC_NONE},
-    [TOKEN_COLON] = { NULL, NULL, PREC_NONE},
-    [TOKEN_NUMBER] = { number, NULL, PREC_NONE},
-    [TOKEN_SEMICOLON] = { NULL, NULL, PREC_NONE},
-    [TOKEN_BINARY] = { NULL, NULL, PREC_NONE},
-    [TOKEN_EQUAL] = { NULL, NULL, PREC_NONE},
-    [TOKEN_IDENTIFIER] = { variable, NULL, PREC_NONE},
-    [TOKEN_OPCODE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_HEADER] = { NULL, NULL, PREC_NONE},
-    [TOKEN_INCLUDE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_TYPE] = { NULL, NULL, PREC_NONE},
-    [TOKEN_STRING] = { string, NULL, PREC_NONE},
-    [TOKEN_ENUM] = { NULL, NULL, PREC_NONE},
-    [TOKEN_BITGROUP] = { NULL, NULL, PREC_NONE},
-    [TOKEN_DOLLAR] = { NULL, NULL, PREC_NONE},
-    [TOKEN_ERROR] = { NULL, NULL, PREC_NONE},
-    [TOKEN_EOF] = { NULL, NULL, PREC_NONE},
-    [TOKEN_EXCLAMATION] = { unary, NULL, PREC_NONE},
-    [TOKEN_EQUAL_EQUAL] = { NULL, binary, PREC_EQUALITY},
-    [TOKEN_EXCLAIM_EQUAL] = { NULL, binary, PREC_EQUALITY},
-    [TOKEN_OR] = { NULL, NULL, PREC_NONE},
-    [TOKEN_AND] = { NULL, NULL, PREC_NONE},
-    [TOKEN_NULL] = { NULL, NULL, PREC_NONE},
+    //[Token type] =        { prefix,   infix,  infix precidence}
+    [TOKEN_LEFT_PAREN] =    { grouping, call,   PREC_CALL},
+    [TOKEN_RIGHT_PAREN] =   { NULL,     NULL,   PREC_NONE},
+    [TOKEN_LEFT_BRACE] =    { NULL,     NULL,   PREC_NONE},
+    [TOKEN_RIGHT_BRACE] =   { NULL,     NULL,   PREC_NONE},
+    [TOKEN_COMMA] =         { NULL,     comma,  PREC_COMMA},
+    [TOKEN_DOT] =           { NULL,     NULL,   PREC_NONE},
+    [TOKEN_COLON] =         { NULL,     NULL,   PREC_NONE},
+    [TOKEN_NUMBER] =        { number,   NULL,   PREC_NONE},
+    [TOKEN_SEMICOLON] =     { NULL,     NULL,   PREC_NONE},
+    [TOKEN_BINARY] =        { NULL,     NULL,   PREC_NONE},
+    [TOKEN_EQUAL] =         { NULL,     NULL,   PREC_NONE},
+    [TOKEN_IDENTIFIER] =    { variable, NULL,   PREC_NONE},
+    [TOKEN_OPCODE] =        { NULL,     NULL,   PREC_NONE},
+    [TOKEN_HEADER] =        { NULL,     NULL,   PREC_NONE},
+    [TOKEN_INCLUDE] =       { NULL,     NULL,   PREC_NONE},
+    [TOKEN_TYPE] =          { NULL,     NULL,   PREC_NONE},
+    [TOKEN_STRING] =        { string,   NULL,   PREC_NONE},
+    [TOKEN_ENUM] =          { NULL,     NULL,   PREC_NONE},
+    [TOKEN_BITGROUP] =      { NULL,     NULL,   PREC_NONE},
+    [TOKEN_DOLLAR] =        { NULL,     NULL,   PREC_NONE},
+    [TOKEN_ERROR] =         { NULL,     NULL,   PREC_NONE},
+    [TOKEN_EOF] =           { NULL,     NULL,   PREC_NONE},
+    [TOKEN_EXCLAMATION] =   { unary,     NULL,  PREC_NONE},
+    [TOKEN_EQUAL_EQUAL] =   { NULL,     binary, PREC_EQUALITY},
+    [TOKEN_EXCLAIM_EQUAL] = { NULL,     binary, PREC_EQUALITY},
+    [TOKEN_OR] =            { NULL,     NULL,   PREC_NONE},
+    [TOKEN_AND] =           { NULL,     NULL,   PREC_NONE},
+    [TOKEN_NULL] =          { NULL,     NULL,   PREC_NONE},
 };
 
 static ParseRule* getRule(MicrocodeTokenType type) {
@@ -350,9 +351,7 @@ static void parameter(Parser* parser) {
     consume(parser, TOKEN_COLON,
         "Missing colon seperating property %s from its value",
         name->data.string);
-    consume(parser, TOKEN_NUMBER, "Missing value of %s parameter",
-        name->data.string);
-    s->as.parameter.value = parser->previous;
+    s->as.parameter.value = expression(parser);
 
     s->isValid = !endErrorState(parser);
 }
@@ -402,11 +401,11 @@ static void opcode(Parser* parser) {
         TokenNames[parser->current.type]);
     s->as.opcode.id = parser->previous;
 
-    ARRAY_ALLOC(ASTStatementParameter, s->as.opcode, param);
+    ARRAY_ALLOC(ASTFunctionParameter, s->as.opcode, param);
     consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s",
         TokenNames[parser->current.type]);
     while(match(parser, TOKEN_IDENTIFIER)) {
-        ASTStatementParameter param = {0};
+        ASTFunctionParameter param = {0};
         param.name = parser->previous;
 
         consume(parser, TOKEN_IDENTIFIER,
@@ -500,11 +499,11 @@ static void bitgroup(Parser* parser) {
     consume(parser, TOKEN_IDENTIFIER, "A bitgroup statement requires a name");
     s->as.bitGroup.name = parser->previous;
 
-    ARRAY_ALLOC(ASTStatementParameter, s->as.bitGroup, param);
+    ARRAY_ALLOC(ASTFunctionParameter, s->as.bitGroup, param);
     consume(parser, TOKEN_LEFT_PAREN, "Expected left paren, got %s",
         TokenNames[parser->current.type]);
     while(match(parser, TOKEN_IDENTIFIER)) {
-        ASTStatementParameter param = {0};
+        ASTFunctionParameter param = {0};
         param.name = parser->previous;
 
         consume(parser, TOKEN_IDENTIFIER,

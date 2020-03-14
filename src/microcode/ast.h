@@ -7,6 +7,10 @@
 
 struct Parser;
 
+// ----------- //
+// expressions //
+// ----------- //
+
 typedef enum ASTExpressionType {
     AST_EXPRESSION_NUMBER,
     AST_EXPRESSION_BINARY,
@@ -56,6 +60,11 @@ typedef struct ASTExpression {
     } as;
 } ASTExpression;
 
+
+// ---------- //
+// Statements //
+// ---------- //
+
 typedef struct ASTStatementHeader {
     ARRAY_DEFINE(ASTExpression*, expression);
     Token errorPoint;
@@ -64,15 +73,21 @@ typedef struct ASTStatementHeader {
 
 typedef struct ASTStatementParameter {
     Token name;
-    Token value;
+    ASTExpression* value;
     SourceRange range;
 } ASTStatementParameter;
+
+typedef struct ASTFunctionParameter {
+    Token name;
+    Token value;
+    SourceRange range;
+} ASTFunctionParameter;
 
 typedef struct ASTStatementOpcode {
     Token id;
     Token name;
     ARRAY_DEFINE(ASTExpression*, expression);
-    ARRAY_DEFINE(ASTStatementParameter, param);
+    ARRAY_DEFINE(ASTFunctionParameter, param);
     SourceRange range;
 } ASTStatementOpcode;
 
@@ -111,7 +126,7 @@ typedef struct ASTBitGroupIdentifier {
 
 typedef struct ASTStatementBitGroup {
     Token name;
-    ARRAY_DEFINE(ASTStatementParameter, param);
+    ARRAY_DEFINE(ASTFunctionParameter, param);
     ARRAY_DEFINE(ASTBitGroupIdentifier, segment);
     SourceRange range;
 } ASTStatementBitGroup;
