@@ -24,7 +24,7 @@ void initCore(VMCoreGen* core) {
     core->opcodes = NULL;
     core->opcodeCount = 0;
 
-    TABLE2_INIT(core->headers, hashstr, cmpstr, const char*, int);
+    TABLE2_INIT(core->headers, int);
     core->codeIncludeBase = "emulator/runtime/";
     addHeader(core, "<stdbool.h>");
 }

@@ -43,29 +43,6 @@ Token* createUIntTokenPtr(unsigned int num) {
     return t;
 }
 
-// FNV-1a
-uint32_t tokenHash(void* value) {
-    Token* token = value;
-    uint32_t hash = 2166126261u;
-
-    for(int i = 0; i < token->range.length; i++) {
-        hash ^= token->range.tokenStart[i];
-        hash *= 16777619;
-    }
-
-    return hash;
-}
-
-bool tokenCmp(void* a, void* b) {
-    Token* tokA = a;
-    Token* tokB = b;
-
-    if(tokA->range.length != tokB->range.length) {
-        return false;
-    }
-    return strncmp(tokA->range.tokenStart, tokB->range.tokenStart, tokA->range.length) == 0;
-}
-
 const char* tokenAllocName(Token* tok) {
     char* ret = ArenaAlloc(sizeof(char) * tok->range.length + 1);
     strncpy(ret, tok->range.tokenStart, tok->range.length);

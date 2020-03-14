@@ -436,8 +436,8 @@ void argArguments(argParser* parser, int argc, char** argv) {
 }
 
 void argInit(argParser* parser, const char* name) {
-    TABLE2_INIT(parser->modes, hashstr, cmpstr, const char*, argParser*);
-    TABLE2_INIT(parser->options, hashstr, cmpstr, const char*, optionArg*);
+    TABLE2_INIT(parser->modes, argParser*);
+    TABLE2_INIT(parser->options, optionArg*);
     ARRAY_ALLOC(posArg, *parser, posArg);
     ARRAY_ALLOC(const char*, *parser, errorMessage);
     ARRAY_ALLOC(optionArg*, *parser, universalOption);

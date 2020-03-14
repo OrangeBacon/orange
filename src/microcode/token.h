@@ -56,8 +56,6 @@ Token createStrToken(const char* str);
 Token* createStrTokenPtr(const char* str);
 Token* createUIntTokenPtr(unsigned int num);
 
-uint32_t tokenHash(void* value);
-bool tokenCmp(void* a, void* b);
 const char* tokenAllocName(Token* tok);
 
 #endif
