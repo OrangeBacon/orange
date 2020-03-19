@@ -16,5 +16,5 @@ void AnalysisStateInit(AnalysisState* state) {
     state->erroredParametersInitialized = false;
     state->parsedHeader = false;
     state->firstHeader = NULL;
-    initTable(&state->identifiers, strHash, strCmp);
+    TABLE2_INIT(state->identifiers, Identifier*);
 }

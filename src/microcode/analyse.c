@@ -12,7 +12,7 @@
 #include "microcode/error.h"
 #include "microcode/analysisTypes.h"
 #include "microcode/analyseMicrocode.h"
-/*
+
 // why does c not define this in math.h?
 static int max(int a, int b) {
     return a > b ? a : b;
@@ -27,21 +27,21 @@ static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
     char* usage, AnalysisState* state)
 {
     if(!state->erroredParametersInitialized) {
-        initTable(&state->erroredParameters, strHash, strCmp);
+        TABLE2_INIT(state->erroredParameters, int);
     }
 
-    if(tableHas(&state->erroredParameters, name)) {
+    if(TABLE2_HAS(state->erroredParameters, name)) {
         return NULL;
     }
 
-    Identifier* value;
-    if(!tableGet(&state->identifiers, name, (void**)&value)) {
+    Identifier* value = TABLE2_GET(state->identifiers, name);
+    if(value == NULL) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Parameter '%s' required to parse %s not "
             "found", name, usage);
         errAddSource(err, &errPoint->range);
         errEmit(err, parser);
-        tableSet(&state->erroredParameters, name, (void*)1);
+        TABLE2_SET(state->erroredParameters, name, 1);
         return NULL;
     }
 
@@ -56,7 +56,7 @@ static Identifier* getParameter(Parser* parser, Token* errPoint, char* name,
     errAddSource(err, &errPoint->range);
     errEmit(err, parser);
 
-    tableSet(&state->erroredParameters, name, (void*)1);
+    TABLE2_SET(state->erroredParameters, name, 1);
     return NULL;
 }
 
@@ -95,10 +95,9 @@ void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
 // check if a type name has the required user defined type
 // if not, report an error
 static bool userTypeCheck(Parser* parser, ASTTypeStatementType typeRequired,
-    ASTStatementParameter *typePair, AnalysisState* state) {
-    Identifier* ident;
-    if(!tableGet(&state->identifiers, (char*)typePair->name.data.string,
-        (void**)&ident))
+    ASTFunctionParameter *typePair, AnalysisState* state) {
+    Identifier* ident = TABLE2_GET(state->identifiers, typePair->name.data.string);
+    if(ident == NULL)
     {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Identifier '%s' is not defined, %s type "
@@ -136,8 +135,8 @@ static void analyseParameter(Parser* parser, ASTStatement* s, AnalysisState* sta
 
     char* key = (char*)s->as.parameter.name.data.string;
 
-    Identifier* current;
-    if(tableGet(&state->identifiers, key, (void**)&current)) {
+    Identifier* current = TABLE2_GET(state->identifiers, key);
+    if(current == NULL) {
         alreadyDefined(parser, key, current, s);
         return;
     }
@@ -145,8 +144,8 @@ static void analyseParameter(Parser* parser, ASTStatement* s, AnalysisState* sta
     Identifier* value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_PARAMETER;
     value->as.parameter.definition = &s->as.parameter.name;
-    value->as.parameter.value = s->as.parameter.value.data.value;
-    tableSet(&state->identifiers, key, (void*)value);
+    value->as.parameter.value = s->as.parameter.value;
+    TABLE2_SET(state->identifiers, key, value);
 }
 
 // check a header statement and put results into codegen
@@ -172,20 +171,20 @@ static void analyseHeader(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
     Identifier* phase = getParameter(parser, &s->as.header.errorPoint,
         "phase", "header", state);
     if(phase == NULL) return;
-    unsigned int maxLines = (1 << phase->as.parameter.value);
+    unsigned int maxLines = 20;//(1 << phase->as.parameter.value);
 
-    if(s->as.header.lineCount > maxLines) {
+    if(s->as.header.expressionCount > maxLines) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Number of lines in header (%u) is too high, "
-            "the maximum is %u", s->as.header.lineCount, maxLines);
+            "the maximum is %u", s->as.header.expressionCount, maxLines);
         errAddSource(err, &s->as.header.errorPoint.range);
         errEmit(err, parser);
     }
 
-    for(unsigned int i = 0; i < s->as.header.lineCount; i++) {
-        ASTBitArray* line = &s->as.header.lines[i];
+    for(unsigned int i = 0; i < s->as.header.expressionCount; i++) {
+        ASTExpression* line = s->as.header.expressions[i];
 
-        Table noParams;
+        Table2 noParams;
         if(!mcodeBitArrayCheck(parser, line, &noParams, state)) {
             continue;
         }
@@ -219,13 +218,13 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
     Identifier* phase = getParameter(parser, &opcode->name,
         "phase", "opcode", state);
     if(phase == NULL) return;
-    unsigned int maxLines = (1 << phase->as.parameter.value) -
-        state->firstHeader->as.header.lineCount;
+    unsigned int maxLines = /*(1 << phase->as.parameter.value)*/ 20 -
+        state->firstHeader->as.header.expressionCount;
 
     Identifier* opsize = getParameter(parser, &opcode->name,
         "opsize", "opcode", state);
     if(opsize == NULL) return;
-    unsigned int maxHeaderBitLength = opsize->as.parameter.value;
+    unsigned int maxHeaderBitLength = 20;//opsize->as.parameter.value;
 
     if(core->opcodes == NULL) {
         core->opcodeCount = 1 << maxHeaderBitLength;
@@ -239,8 +238,8 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
     }
 
     // basic header checking
-    Table paramNames;
-    initTable(&paramNames, tokenHash, tokenCmp);
+    Table2 paramNames;
+    TABLE2_INIT(paramNames, char*);
 
     unsigned int headerBitLength = 0;
     unsigned int opcodeID = opcode->id.data.value;
@@ -249,11 +248,11 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
 
     headerBitLength += opcode->id.range.length - 2;
     for(unsigned int i = 0; i < opcode->paramCount; i++) {
-        ASTStatementParameter* pair = &opcode->params[i];
+        ASTFunctionParameter* pair = &opcode->params[i];
         passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ANY, pair, state);
 
         bool checkLength = true;
-        if(tableHas(&paramNames, &pair->value)) {
+        if(TABLE2_HAS(paramNames, pair->value.data.string)) {
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "Parameter name \"%s\" is used multiple "
                 "times", pair->value.data.string);
@@ -261,11 +260,10 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
             errEmit(err, parser);
             checkLength = false;
         }
-        tableSet(&paramNames, &pair->value, &pair->name);
+        TABLE2_SET(paramNames, pair->value.data.string, pair->name.data.string);
 
         if(checkLength) {
-            Identifier* ident;
-            tableGet(&state->identifiers, (char*)pair->name.data.string, (void**)&ident);
+            Identifier* ident = TABLE2_GET(state->identifiers, pair->name.data.string);
             unsigned int width = ident->as.userType.as.enumType.bitWidth;
             headerBitLength += width;
             opcodeID <<= width;
@@ -295,7 +293,7 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
         return;
     }
 
-    if(opcode->lineCount > maxLines) {
+    if(opcode->expressionCount > maxLines) {
         Error* err = errNew(ERROR_SEMANTIC);
         errAddText(err, TextRed, "Number of lines in opcode is too high",
             headerBitLength, maxHeaderBitLength);
@@ -304,12 +302,12 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
         return;
     }
 
-    for(unsigned int i = 0; i < opcode->lineCount; i++) {
-        ASTMicrocodeLine* line = opcode->lines[i];
+    for(unsigned int i = 0; i < opcode->expressionCount; i++) {
+        ASTExpression* line = opcode->expressions[i];
 
         // by default analyse low bits
         // are all of the bits valid
-        if(!mcodeBitArrayCheck(parser, &line->bits, &paramNames, state)) {
+        if(!mcodeBitArrayCheck(parser, line, &paramNames, state)) {
             passed = false;
             continue;
         }
@@ -328,12 +326,12 @@ static void analyseOpcode(Parser* parser, ASTStatement* s, VMCoreGen* core, Anal
         gencode->nameLen = opcode->name.range.length;
         ARRAY_ALLOC(GenOpCodeLine*, *gencode, line);
 
-        for(unsigned int j = 0; j < opcode->lineCount; j++) {
-            ASTMicrocodeLine* line = opcode->lines[j];
+        for(unsigned int j = 0; j < opcode->expressionCount; j++) {
+            ASTExpression* line = opcode->expressions[j];
             GenOpCodeLine* genline = ArenaAlloc(sizeof(GenOpCodeLine));
             ARRAY_ALLOC(unsigned int, *genline, bit);
 
-            NodeArray low = substituteAnalyseLine(&line->bits, core, parser, opcode, possibility, j, state);
+            NodeArray low = substituteAnalyseLine(line, core, parser, opcode, possibility, j, state);
             if(!low.validArray) {
                 WARN("Leaving opcode analysis due to errors");
                 errored = true;
@@ -360,8 +358,8 @@ static void analyseEnum(Parser* parser, ASTStatement* s, AnalysisState* state) {
     ASTTypeEnum* enumStatement = &typeStatement->as.enumType;
 
     Token* type = &s->as.type.name;
-    Identifier* value;
-    if(tableGet(&state->identifiers, (char*)type->data.string, (void**)&value)) {
+    Identifier* value = TABLE2_GET(state->identifiers, type->data.string);
+    if(value == NULL) {
         alreadyDefined(parser, (char*)type->data.string, value, s);
         return;
     }
@@ -371,7 +369,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s, AnalysisState* state) {
     value->as.userType.type = AST_TYPE_STATEMENT_ENUM;
     IdentifierEnum* enumIdent = &value->as.userType.as.enumType;
     enumIdent->definition = &s->as.type.name;
-    tableSet(&state->identifiers, (char*)type->data.string, (void*)value);
+    TABLE2_SET(state->identifiers, type->data.string, value);
 
     // check the correct number of members are present
     unsigned int size = enumStatement->width.data.value;
@@ -397,17 +395,16 @@ static void analyseEnum(Parser* parser, ASTStatement* s, AnalysisState* state) {
     // as enums cannot be used directly, no issues if
     // enum values collide with other identifiers
 
-    Table membersTable;
-    initTable(&membersTable, tokenHash, tokenCmp);
+    Table2 membersTable;
+    TABLE2_INIT(membersTable, Token);
     ARRAY_ALLOC(Token*, *enumIdent, member);
     enumIdent->identifierLength = 0;
 
     // check there are no duplicated names
     for(unsigned int i = 0; i < enumStatement->memberCount; i++) {
         Token* tok = &enumStatement->members[i];
-        if(tableHas(&membersTable, tok)) {
-            Token* original;
-            tableGetKey(&membersTable, tok, (void**)&original);
+        if(TABLE2_HAS(membersTable, tok->data.string)) {
+            Token* original = TABLE2_GET(membersTable, tok->data.string);
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "Duplicated enum member");
             errAddSource(err, &tok->range);
@@ -415,7 +412,7 @@ static void analyseEnum(Parser* parser, ASTStatement* s, AnalysisState* state) {
             errAddSource(err, &original->range);
             errEmit(err, parser);
         } else {
-            tableSet(&membersTable, tok, NULL);
+            TABLE2_SET(membersTable, tok->data.string, tok);
             ARRAY_PUSH(*enumIdent, member, tok);
             enumIdent->identifierLength =
                 max(enumIdent->identifierLength, tok->range.length);
@@ -440,38 +437,36 @@ static void analyseType(Parser* parser, ASTStatement* s, AnalysisState* state) {
 static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* state) {
     CONTEXT(INFO, "Analysing type statement");
 
-    Identifier* value;
-    if(tableGet(&state->identifiers, (char*)s->as.bitGroup.name.data.string,
-                (void**)&value)) {
-        alreadyDefined(parser, (char*)s->as.bitGroup.name.data.string,
-            value, s);
+    Identifier* value = TABLE2_GET(state->identifiers, s->as.bitGroup.name.data.string);
+    if(value == NULL) {
+        alreadyDefined(parser, (char*)s->as.bitGroup.name.data.string, value, s);
         return;
     }
 
     value = ArenaAlloc(sizeof(Identifier));
     value->type = TYPE_BITGROUP;
     value->as.bitgroup.definition = &s->as.type.name;
-    tableSet(&state->identifiers, (char*)s->as.type.name.data.string, (void*)value);
+    TABLE2_SET(state->identifiers, s->as.type.name.data.string, value);
 
-    Table paramNames;
-    initTable(&paramNames, tokenHash, tokenCmp);
+    Table2 paramNames;
+    TABLE2_INIT(paramNames, char*);
 
     bool passed = true;
 
     // check that all parameters are valid enums and that the assigned names
     // are not duplicated
     for(unsigned int i = 0; i < s->as.bitGroup.paramCount; i++) {
-        ASTStatementParameter* pair = &s->as.bitGroup.params[i];
+        ASTFunctionParameter* pair = &s->as.bitGroup.params[i];
         passed &= userTypeCheck(parser, AST_TYPE_STATEMENT_ENUM, pair, state);
 
-        if(tableHas(&paramNames, &pair->value)) {
+        if(TABLE2_HAS(paramNames, &pair->value)) {
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "Parameter name '%s' collides with "
                 "another parameter of the same name", pair->value.data.string);
             errAddSource(err, &pair->value.range);
             errEmit(err, parser);
         }
-        tableSet(&paramNames, &pair->value, &pair->name);
+        TABLE2_SET(paramNames, &pair->value, &pair->name);
     }
     if(!passed) {
         return;
@@ -486,8 +481,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* stat
     for(unsigned int i = 0; i < s->as.bitGroup.segmentCount; i++) {
         ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[i];
         if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
-            Token* typeName;
-            if(!tableGet(&paramNames, &seg->identifier, (void**)&typeName)) {
+            Token* typeName = TABLE2_GET(paramNames, &seg->identifier.data.string);
+            if(typeName == NULL) {
                 Error* err = errNew(ERROR_SEMANTIC);
                 errAddText(err, TextRed, "Variable to substitute is not "
                     "defined");
@@ -495,9 +490,7 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* stat
                 errEmit(err, parser);
                 passed = false;
             } else {
-                Identifier* type;
-                tableGet(&state->identifiers, (char*)typeName->data.string,
-                    (void**)&type);
+                Identifier* type = TABLE2_GET(state->identifiers, typeName->data.string);
                 IdentifierEnum* enumType = &type->as.userType.as.enumType;
                 lineLength += enumType->identifierLength;
                 possibilities *= enumType->memberCount;
@@ -519,10 +512,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* stat
     for(unsigned int i = 0; i < s->as.bitGroup.segmentCount; i++){
         ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[i];
         if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
-            Token* typeName;
-            tableGet(&paramNames, &seg->identifier, (void**)&typeName);
-            Identifier* type;
-            tableGet(&state->identifiers, (char*)typeName->data.string, (void**)&type);
+            Token* typeName = TABLE2_GET(paramNames, &seg->identifier.data.string);
+            Identifier* type = TABLE2_GET(state->identifiers, typeName->data.string);
             unsigned int level =
                 type->as.userType.as.enumType.memberCount;
             unsigned int nreps = possibilities / ncycles;
@@ -552,11 +543,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* stat
             ASTBitGroupIdentifier* seg = &s->as.bitGroup.segments[j];
             if(seg->type == AST_BIT_GROUP_IDENTIFIER_SUBST) {
                 // type varified to be valid earlier in function
-                Token* typeName;
-                tableGet(&paramNames, &seg->identifier, (void**)&typeName);
-                Identifier* type;
-                tableGet(&state->identifiers, (char*)typeName->data.string,
-                    (void**)&type);
+                Token* typeName = TABLE2_GET(paramNames, &seg->identifier);
+                Identifier* type = TABLE2_GET(state->identifiers, typeName->data.string);
                 IdentifierEnum* enumIdent = &type->as.userType.as.enumType;
 
                 // Played around in excel to work this out, cannot remember
@@ -572,8 +560,8 @@ static void analyseBitgroup(Parser* parser, ASTStatement* s, AnalysisState* stat
 
         // check that after the substitutions have completed, a valid
         // control bit was formed
-        Identifier* val;
-        if(!tableGet(&state->identifiers, currentIdent, (void**)&val)) {
+        Identifier* val = TABLE2_GET(state->identifiers, currentIdent);
+        if(val == NULL) {
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "Found undefined resultant identifier "
                 "while substituting into bitgroup");
@@ -609,7 +597,7 @@ void Analyse(Parser* parser, VMCoreGen* core) {
         Identifier* value = ArenaAlloc(sizeof(Identifier));
         value->type = TYPE_VM_CONTROL_BIT;
         value->as.control.value = i;
-        tableSet(&state.identifiers, key, (void*)value);
+        TABLE2_SET(state.identifiers, key, value);
     }
 
     for(unsigned int i = 0; i < parser->ast->statementCount; i++) {
@@ -626,4 +614,3 @@ void Analyse(Parser* parser, VMCoreGen* core) {
 
     INFO("Finished Analysis");
 }
-*/

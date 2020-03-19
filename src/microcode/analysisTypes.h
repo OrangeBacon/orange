@@ -2,7 +2,7 @@
 #define ANALYSIS_TYPES_H
 
 #include "shared/memory.h"
-#include "shared/table.h"
+#include "shared/table2.h"
 #include "microcode/ast.h"
 
 typedef struct IdentifierEnum {
@@ -15,7 +15,7 @@ typedef struct IdentifierEnum {
     unsigned int identifierLength;
 
     // those names, but in a hash map
-    Table membersTable;
+    Table2 membersTable;
 
     // number of bits this enum takes
     unsigned int bitWidth;
@@ -31,7 +31,7 @@ typedef struct IdentifierParameter {
     // name of the parameter
     Token* definition;
 
-    unsigned int value;
+    ASTExpression* value;
 } IdentifierParameter;
 
 // bit defined by structure of VM, not found in code
@@ -80,18 +80,29 @@ typedef struct Identifier {
     } as;
 } Identifier;
 
+typedef struct AnalysisLocal {
+    Token name;
+    unsigned int depth;
+} AnalysisLocal;
+
 typedef struct AnalysisState {
     // table mapping names to types
-    Table identifiers;
+    Table2 identifiers;
 
-    Table erroredParameters;
+    Table2 erroredParameters;
     bool erroredParametersInitialized;
 
     // has a header statement been analysed yet?
     bool parsedHeader;
 
-// the header statement AST, used for emitting duplicate header errors
+    // the header statement AST, used for emitting duplicate header errors
     ASTStatement* firstHeader;
+
+    // global variables - eg opcode, ...
+    Table2 globals;
+
+    // local variables - eg parameters
+    ARRAY_DEFINE(AnalysisLocal, local);
 } AnalysisState;
 
 void AnalysisStateInit(AnalysisState* state);

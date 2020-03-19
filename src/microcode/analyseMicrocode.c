@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include "microcode/error.h"
-/*
+
 typedef enum {
     GRAPH_STATE_COMPONENT,
     GRAPH_STATE_COMMAND
@@ -18,22 +18,20 @@ void printGraphState(void* g, graphPrintFn printFn) {
 
 // analyse an array of microcode bits
 // assumes that all the identifiers in the array exist and have the correct type
-NodeArray analyseLine(VMCoreGen* core, Parser* parser, ASTBitArray* line,
+NodeArray analyseLine(VMCoreGen* core, Parser* parser, ASTExpression* line,
     SourceRange* location, AnalysisState* state) {
     CONTEXT(INFO, "Analysing line");
 
     Graph graph;
     InitGraph(&graph, printGraphState);
 
-    for(unsigned int i = 0; i < line->dataCount; i++) {
+    for(unsigned int i = 0; i < line->as.list.elementCount; i++) {
         // adds a command to the graph
         // the command gets a node in the graph
         // add edge command -> everything it changes
         // add edge everything it depends on -> command
 
-        Identifier* bitIdent;
-        tableGet(&state->identifiers, (char*)line->datas[i].data.data.string,
-            (void**)&bitIdent);
+        Identifier* bitIdent = TABLE2_GET(state->identifiers, line->as.list.elements[i]->as.variable.data.string);
         unsigned int commandID = bitIdent->as.control.value;
         Command* coreCommand = &core->commands[commandID];
 
@@ -74,9 +72,9 @@ NodeArray analyseLine(VMCoreGen* core, Parser* parser, ASTBitArray* line,
         errAddText(err, TextBlue, "Instruction graph (graphviz dot): ");
         errAddGraph(err, &graph);
         errAddText(err, TextBlue, "Substitutions: ");
-        for(unsigned int i = 0; i < line->dataCount; i++) {
-            if(line->datas[i].paramCount > 0) {
-                errAddText(err, TextWhite, line->datas[i].data.data.string);
+        for(unsigned int i = 0; i < line->as.list.elementCount; i++) {
+            if(line->as.list.elements[i]->type == AST_EXPRESSION_CALL) {
+                errAddText(err, TextWhite, line->as.call.params[i]->as.variable.data.string);
             }
         }
         errEmit(err, parser);
@@ -147,20 +145,20 @@ void wrongType(Parser* parser, Token* errLoc, IdentifierType expected,
     Identifier* val);
 
 // check if all identifers in the array reperesent a control bit
-bool mcodeBitArrayCheck(Parser* parser, ASTBitArray* arr, Table* paramNames, AnalysisState* state) {
+bool mcodeBitArrayCheck(Parser* parser, ASTExpression* arr, Table2* paramNames, AnalysisState* state) {
     CONTEXT(INFO, "Checking bit array");
 
     bool passed = true;
 
-    for(unsigned int i = 0; i < arr->dataCount; i++) {
-        ASTBit* bit = &arr->datas[i];
+    for(unsigned int i = 0; i < arr->as.list.elementCount; i++) {
+        ASTExpression* bit = arr->as.list.elements[i];
 
         // look up to check the identifier is defined
-        Identifier* val;
-        if(!tableGet(&state->identifiers, (char*)bit->data.data.string, (void**)&val)) {
+        Identifier* val = TABLE2_GET(state->identifiers, bit->as.variable.data.string);
+        if(val == NULL) {
             Error* err = errNew(ERROR_SEMANTIC);
             errAddText(err, TextRed, "Identifier was not defined");
-            errAddSource(err, &bit->range);
+            errAddSource(err, &bit->as.variable.range);
             errEmit(err, parser);
             passed = false;
             continue;
@@ -170,29 +168,29 @@ bool mcodeBitArrayCheck(Parser* parser, ASTBitArray* arr, Table* paramNames, Ana
             continue;
         } else if(val->type == TYPE_BITGROUP) {
             // check that there is only 1 parameter passed to a bitgroup
-            if(bit->paramCount != 1) {
+            if(bit->as.call.paramCount != 1) {
                 passed = false;
                 Error* err = errNew(ERROR_SEMANTIC);
                 errAddText(err, TextRed, "Only one parameter accepted by enum");
-                errAddSource(err, &bit->data.range);
+                errAddSource(err, &bit->as.call.callee->as.variable.range);
                 errEmit(err, parser);
             }
             // check all of the parameters of the bitgroup, regardless of how
             // many should have been passed
-            for(unsigned int j = 0; j < bit->paramCount; j++) {
-                ASTBitParameter* param = &bit->params[j];
-                if(!tableHas(paramNames, param)) {
+            for(unsigned int j = 0; j < bit->as.call.paramCount; j++) {
+                ASTExpression* param = bit->as.call.params[j];
+                if(!TABLE2_HAS(*paramNames, param)) {
                     passed = false;
                     Error* err = errNew(ERROR_SEMANTIC);
                     errAddText(err, TextRed,
                         "Could not resolve argument name \"%s\"",
-                        param->name.data.string);
-                    errAddSource(err, &param->name.range);
+                        param->as.call.callee->as.variable.data.string);
+                    errAddSource(err, &param->as.variable.range);
                     errEmit(err, parser);
                 }
             }
         } else {
-            wrongType(parser, &bit->data, TYPE_VM_CONTROL_BIT, val);
+            wrongType(parser, &bit->as.variable, TYPE_VM_CONTROL_BIT, val);
             passed = false;
         }
     }
@@ -200,18 +198,17 @@ bool mcodeBitArrayCheck(Parser* parser, ASTBitArray* arr, Table* paramNames, Ana
     return passed;
 }
 
-NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
+NodeArray substituteAnalyseLine(ASTExpression* bits, VMCoreGen* core,
     Parser* parser, ASTStatementOpcode* opcode, unsigned int possibility,
     unsigned int lineNumber, AnalysisState* state)
 {
-    ASTBitArray subsLine;
-    ARRAY_ALLOC(ASTBit, subsLine, data);
-    for(unsigned int i = 0; i < bits->dataCount; i++) {
-        ASTBit* bit = &bits->datas[i];
-        Identifier* val;
-        tableGet(&state->identifiers, (char*)bit->data.data.string, (void**)&val);
+    ASTExpression subsLine;
+    ARRAY_ALLOC(ASTExpression*, subsLine.as.list, element);
+    for(unsigned int i = 0; i < bits->as.list.elementCount; i++) {
+        ASTExpression* bit = bits->as.list.elements[i];
+        Identifier* val = TABLE2_GET(state->identifiers, bit->as.variable.data.string);
         if(val->type == TYPE_VM_CONTROL_BIT) {
-            ARRAY_PUSH(subsLine, data, *bit);
+            ARRAY_PUSH(subsLine.as.list, element, bit);
         } else {
             // assume bitarray checks have been done before, so
             // bit->paramCount is always 1
@@ -221,10 +218,8 @@ NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
             for(int j = opcode->paramCount - 1; j >= 0; j--) {
 
                 // get the type specified in the opcode's header
-                Identifier* paramType;
-                tableGet(&state->identifiers,
-                    (char*)opcode->params[j].name.data.string,
-                    (void**)&paramType);
+                Identifier* paramType = TABLE2_GET(state->identifiers,
+                    opcode->params[j].name.data.string);
 
                 // possibility is a number outof the member counts of all
                 // parameters multiplied together.  Therefore, dividing
@@ -239,15 +234,14 @@ NodeArray substituteAnalyseLine(ASTBitArray* bits, VMCoreGen* core,
                 possibility -= currentNumber;
                 possibility /= paramType->as.userType.as.enumType.memberCount;
 
-                if(strcmp(bit->params[0].name.data.string, opcode->params[j].value.data.string) == 0) {
-                    ASTBit newBit;
-                    newBit.data = createStrToken((char*)&val->as.bitgroup.substitutedIdentifiers[currentNumber*val->as.bitgroup.lineLength]);
-                    ARRAY_PUSH(subsLine, data, newBit);
+                if(strcmp(bit->as.call.params[0]->as.variable.data.string, opcode->params[j].value.data.string) == 0) {
+                    ASTExpression newBit;
+                    newBit.as.call.callee->as.variable = createStrToken((char*)&val->as.bitgroup.substitutedIdentifiers[currentNumber*val->as.bitgroup.lineLength]);
+                    ARRAY_PUSH(subsLine.as.list, element, &newBit);
                 }
             }
         }
     }
 
-    return analyseLine(core, parser, &subsLine, &opcode->lines[lineNumber]->range, state);
+    return analyseLine(core, parser, &subsLine, &opcode->expressions[lineNumber]->as.list.elements[0]->as.variable.range, state);
 }
-*/
